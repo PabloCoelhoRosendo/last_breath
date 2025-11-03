@@ -1,15 +1,14 @@
 // src/jogo.c
 
 #include "raylib.h"
-#include "include/jogo.h"
-#include "include/arquivo.h"
+#include "jogo.h"
+#include "arquivo.h"
 
 #include <stdlib.h> // Para malloc e free (Requisito: Alocação Dinâmica de Memória)
 #include <stdio.h>
 
 // Definição da Matriz do Mapa
 int mapaDoJogo[TAMANHO_MAPA][TAMANHO_MAPA];
-
 
 // --- Funções do Módulo de Balas (- Pablo) ---
 
