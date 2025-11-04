@@ -156,13 +156,49 @@ void desenharJogo(Player *jogador, Zumbi *zumbis, Bala *balas) {
         balaAtual = balaAtual->proximo;
     }
 
-    // Desenhar HUD (Interface)
-    DrawText(TextFormat("Vida: %d", jogador->vida), 10, 10, 20, GREEN);
-    DrawText(TextFormat("Municao: %d", jogador->municao), 10, 35, 20, WHITE);
-    DrawText(TextFormat("Pontos: %d", jogador->pontos), 10, 60, 20, GOLD);
+    // --- HUD MELHORADO ---
+    
+    // Barra de Vida (com cores baseadas na vida)
+    Color corVida = GREEN;
+    if (jogador->vida <= 30) {
+        corVida = RED;
+    } else if (jogador->vida <= 60) {
+        corVida = ORANGE;
+    }
+    
+    // Desenhar fundo da barra de vida
+    DrawRectangle(10, 10, 204, 24, DARKGRAY);
+    // Desenhar barra de vida atual
+    DrawRectangle(12, 12, (jogador->vida * 2), 20, corVida);
+    // Contorno da barra
+    DrawRectangleLines(10, 10, 204, 24, WHITE);
+    // Texto da vida
+    DrawText(TextFormat("Vida: %d/100", jogador->vida), 15, 13, 20, WHITE);
+    
+    // Munição (com aviso de pouca munição)
+    Color corMunicao = WHITE;
+    if (jogador->municao <= 5) {
+        corMunicao = RED;
+        // Piscar quando está sem munição
+        if ((int)(GetTime() * 2) % 2 == 0) {
+            DrawText("MUNICAO BAIXA!", 10, 85, 20, RED);
+        }
+    }
+    DrawText(TextFormat("Municao: %d", jogador->municao), 10, 40, 20, corMunicao);
+    
+    // Pontos
+    DrawText(TextFormat("Pontos: %d", jogador->pontos), 10, 65, 20, GOLD);
     
     // Instruções
     DrawText("WASD - Mover | Mouse - Mirar | Click - Atirar", 200, 570, 15, LIGHTGRAY);
+    
+    // Aviso de Game Over
+    if (jogador->vida <= 0) {
+        DrawRectangle(0, 0, 800, 600, (Color){0, 0, 0, 150});
+        DrawText("GAME OVER", 250, 250, 60, RED);
+        DrawText(TextFormat("Pontuacao Final: %d", jogador->pontos), 280, 320, 30, WHITE);
+        DrawText("Pressione ESC para sair", 260, 360, 20, LIGHTGRAY);
+    }
 }
 // --- Funções do Módulo de Zumbis ---
 
@@ -403,13 +439,56 @@ void verificarColisoesBalaZumbi(Bala **balas, Zumbi **zumbis, Player *jogador) {
 
 // Função para verificar colisões entre jogador e zumbis
 void verificarColisoesJogadorZumbi(Player *jogador, Zumbi *zumbis) {
+    static float cooldownDano = 0.0f;
+    static float flashDano = 0.0f; // Para piscar a tela em vermelho
+    
+    // Atualizar timers
+    cooldownDano -= GetFrameTime();
+    if (flashDano > 0.0f) {
+        flashDano -= GetFrameTime();
+    }
+    
     Zumbi *zumbiAtual = zumbis;
 
     while (zumbiAtual != NULL) {
         // Verificar colisão (raio do jogador = 15, raio do zumbi = 20)
         if (verificarColisaoCirculos(jogador->posicao, 15.0f, zumbiAtual->posicao, zumbiAtual->raio)) {
-            // Aplicar dano ao jogador (20 HP por segundo)
-            jogador->vida -= (int)(20.0f * GetFrameTime());
+            
+            // Aplicar dano apenas se o cooldown acabou (a cada 0.5 segundos)
+            if (cooldownDano <= 0.0f) {
+                int dano = 10; // Dano fixo de 10 HP
+                jogador->vida -= dano;
+                cooldownDano = 0.5f; // Esperar 0.5 segundos para próximo dano
+                flashDano = 0.15f;   // Ativar flash vermelho por 0.15 segundos
+                
+                printf("OUCH! Jogador recebeu %d de dano. Vida: %d\n", dano, jogador->vida);
+                
+                // KNOCKBACK: Empurrar jogador para trás
+                Vector2 direcaoEmpurrao = {
+                    jogador->posicao.x - zumbiAtual->posicao.x,
+                    jogador->posicao.y - zumbiAtual->posicao.y
+                };
+                
+                // Normalizar direção
+                float magnitude = sqrtf(direcaoEmpurrao.x * direcaoEmpurrao.x + 
+                                       direcaoEmpurrao.y * direcaoEmpurrao.y);
+                
+                if (magnitude > 0) {
+                    direcaoEmpurrao.x /= magnitude;
+                    direcaoEmpurrao.y /= magnitude;
+                    
+                    // Aplicar força de empurrão
+                    float forcaEmpurrao = 40.0f;
+                    jogador->posicao.x += direcaoEmpurrao.x * forcaEmpurrao;
+                    jogador->posicao.y += direcaoEmpurrao.y * forcaEmpurrao;
+                    
+                    // Garantir que o jogador não saia da tela após o knockback
+                    if (jogador->posicao.x < 20) jogador->posicao.x = 20;
+                    if (jogador->posicao.x > 780) jogador->posicao.x = 780;
+                    if (jogador->posicao.y < 20) jogador->posicao.y = 20;
+                    if (jogador->posicao.y > 580) jogador->posicao.y = 580;
+                }
+            }
 
             // Garantir que a vida não fique negativa
             if (jogador->vida < 0) {
@@ -418,6 +497,13 @@ void verificarColisoesJogadorZumbi(Player *jogador, Zumbi *zumbis) {
         }
 
         zumbiAtual = zumbiAtual->proximo;
+    }
+    
+    // Desenhar flash vermelho se tomou dano recente
+    if (flashDano > 0.0f) {
+        // Intensidade do flash diminui com o tempo
+        int alpha = (int)(flashDano * 200.0f); // 0-200 de transparência
+        DrawRectangle(0, 0, 800, 600, (Color){255, 0, 0, alpha});
     }
 }
 
