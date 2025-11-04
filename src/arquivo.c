@@ -1,11 +1,41 @@
 // src/arquivo.c
 
+#include <stdio.h>
+#include <stdlib.h>
+
 // Definição do tamanho do ranking
 #define MAX_SCORES 5
 
-// Protótipos das funções que você já criou:
-void loadScores(int scores[], int count);
-void saveScores(int scores[], int count);
+// Implementação das funções de arquivo
+void loadScores(int scores[], int count) {
+    FILE *file = fopen("scores.txt", "r");
+    
+    // Inicializar com zeros
+    for (int i = 0; i < count; i++) {
+        scores[i] = 0;
+    }
+    
+    // Se o arquivo existe, carregar scores
+    if (file != NULL) {
+        for (int i = 0; i < count; i++) {
+            if (fscanf(file, "%d", &scores[i]) != 1) {
+                break;
+            }
+        }
+        fclose(file);
+    }
+}
+
+void saveScores(int scores[], int count) {
+    FILE *file = fopen("scores.txt", "w");
+    
+    if (file != NULL) {
+        for (int i = 0; i < count; i++) {
+            fprintf(file, "%d\n", scores[i]);
+        }
+        fclose(file);
+    }
+}
 
 // Função para verificar, ordenar e salvar o High Score
 void checkAndSaveHighScore(int newScore) {

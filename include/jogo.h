@@ -7,8 +7,8 @@
 
 #define TAMANHO_MAPA 20
 
-// Declaração da matriz global do mapa
-int mapaDoJogo[TAMANHO_MAPA][TAMANHO_MAPA];
+// Declaração externa da matriz global do mapa
+extern int mapaDoJogo[TAMANHO_MAPA][TAMANHO_MAPA];
 
 // 1. Estrutura do Jogador (Henrique/Geral - Requisito: Structs)
 typedef struct {
