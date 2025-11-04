@@ -53,4 +53,10 @@ void atualizarZumbis(struct Zumbi **cabeca, Vector2 posicaoJogador, float deltaT
 void desenharZumbis(struct Zumbi *cabeca);
 void liberarZumbis(struct Zumbi **cabeca);
 
+// Protótipos das Funções de Colisão
+int verificarColisaoCirculos(Vector2 pos1, float raio1, Vector2 pos2, float raio2);
+void verificarColisoesBalaZumbi(struct Bala **balas, struct Zumbi **zumbis, Player *jogador);
+void verificarColisoesJogadorZumbi(Player *jogador, struct Zumbi *zumbis);
+void verificarColisoesZumbiZumbi(struct Zumbi *zumbis);
+
 #endif

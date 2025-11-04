@@ -21,6 +21,17 @@ void mapa(int mapa[TAMANHO_MAPA][TAMANHO_MAPA]){
     }
 }
 
+// --- Funções Auxiliares de Colisão ---
+
+// Função para verificar colisão entre dois círculos
+int verificarColisaoCirculos(Vector2 pos1, float raio1, Vector2 pos2, float raio2) {
+    float dx = pos2.x - pos1.x;
+    float dy = pos2.y - pos1.y;
+    float distanciaAoQuadrado = dx * dx + dy * dy;
+    float raiosCombinados = raio1 + raio2;
+    return distanciaAoQuadrado < (raiosCombinados * raiosCombinados);
+}
+
 // --- Funções do Módulo de Balas (- Pablo) ---
 
 // Função para Alocação Dinâmica e inserção de uma nova Bala na Lista Encadeada
@@ -123,6 +134,11 @@ void atualizarJogo(Player *jogador, Zumbi **zumbis, Bala **balas) {
 
     // Atualizar zumbis
     atualizarZumbis(zumbis, jogador->posicao, GetFrameTime());
+
+    // Verificar colisões
+    verificarColisoesBalaZumbi(balas, zumbis, jogador);
+    verificarColisoesJogadorZumbi(jogador, *zumbis);
+    verificarColisoesZumbiZumbi(*zumbis);
 }
 
 // Função para desenhar todos os elementos do jogo
@@ -240,12 +256,134 @@ void desenharZumbis(Zumbi *cabeca) {
 // Função para liberar toda a lista de zumbis (chamar ao finalizar o jogo)
 void liberarZumbis(Zumbi **cabeca) {
     Zumbi *atual = *cabeca;
-    
+
     while (atual != NULL) {
         Zumbi *proximo = atual->proximo;
         free(atual);
         atual = proximo;
     }
-    
+
     *cabeca = NULL;
+}
+
+// --- Funções de Verificação de Colisão ---
+
+// Função para verificar colisões entre balas e zumbis
+void verificarColisoesBalaZumbi(Bala **balas, Zumbi **zumbis, Player *jogador) {
+    Bala *balaAtual = *balas;
+    Bala *balaAnterior = NULL;
+
+    // Iterar sobre todas as balas
+    while (balaAtual != NULL) {
+        Zumbi *zumbiAtual = *zumbis;
+        Zumbi *zumbiAnterior = NULL;
+        int balaRemovida = 0;
+
+        // Iterar sobre todos os zumbis
+        while (zumbiAtual != NULL && !balaRemovida) {
+            // Verificar colisão (raio da bala = 5, raio do zumbi = 20)
+            if (verificarColisaoCirculos(balaAtual->posicao, 5.0f, zumbiAtual->posicao, zumbiAtual->raio)) {
+                // Aplicar dano ao zumbi
+                zumbiAtual->vida -= 25;
+
+                // Se o zumbi morreu
+                if (zumbiAtual->vida <= 0) {
+                    jogador->pontos += 10; // Adicionar pontos
+
+                    // Remover zumbi da lista
+                    Zumbi *zumbiRemover = zumbiAtual;
+                    if (zumbiAnterior == NULL) {
+                        *zumbis = zumbiAtual->proximo;
+                    } else {
+                        zumbiAnterior->proximo = zumbiAtual->proximo;
+                    }
+                    zumbiAtual = zumbiAtual->proximo;
+                    free(zumbiRemover);
+                } else {
+                    zumbiAtual = zumbiAtual->proximo;
+                }
+
+                // Remover a bala da lista
+                Bala *balaRemover = balaAtual;
+                if (balaAnterior == NULL) {
+                    *balas = balaAtual->proximo;
+                } else {
+                    balaAnterior->proximo = balaAtual->proximo;
+                }
+                balaAtual = balaAtual->proximo;
+                free(balaRemover);
+                balaRemovida = 1;
+            } else {
+                zumbiAnterior = zumbiAtual;
+                zumbiAtual = zumbiAtual->proximo;
+            }
+        }
+
+        // Se a bala não foi removida, avançar para a próxima
+        if (!balaRemovida) {
+            balaAnterior = balaAtual;
+            balaAtual = balaAtual->proximo;
+        }
+    }
+}
+
+// Função para verificar colisões entre jogador e zumbis
+void verificarColisoesJogadorZumbi(Player *jogador, Zumbi *zumbis) {
+    Zumbi *zumbiAtual = zumbis;
+
+    while (zumbiAtual != NULL) {
+        // Verificar colisão (raio do jogador = 15, raio do zumbi = 20)
+        if (verificarColisaoCirculos(jogador->posicao, 15.0f, zumbiAtual->posicao, zumbiAtual->raio)) {
+            // Aplicar dano ao jogador (20 HP por segundo)
+            jogador->vida -= (int)(20.0f * GetFrameTime());
+
+            // Garantir que a vida não fique negativa
+            if (jogador->vida < 0) {
+                jogador->vida = 0;
+            }
+        }
+
+        zumbiAtual = zumbiAtual->proximo;
+    }
+}
+
+// Função para verificar e resolver colisões entre zumbis
+void verificarColisoesZumbiZumbi(Zumbi *zumbis) {
+    Zumbi *zumbi1 = zumbis;
+
+    while (zumbi1 != NULL) {
+        Zumbi *zumbi2 = zumbi1->proximo;
+
+        while (zumbi2 != NULL) {
+            // Verificar colisão entre dois zumbis
+            if (verificarColisaoCirculos(zumbi1->posicao, zumbi1->raio, zumbi2->posicao, zumbi2->raio)) {
+                // Calcular vetor de separação
+                float dx = zumbi2->posicao.x - zumbi1->posicao.x;
+                float dy = zumbi2->posicao.y - zumbi1->posicao.y;
+                float distancia = sqrtf(dx * dx + dy * dy);
+
+                // Evitar divisão por zero
+                if (distancia > 0) {
+                    // Normalizar o vetor de direção
+                    float nx = dx / distancia;
+                    float ny = dy / distancia;
+
+                    // Calcular quanto os zumbis estão sobrepostos
+                    float sobreposicao = (zumbi1->raio + zumbi2->raio) - distancia;
+
+                    // Separar os zumbis pela metade da sobreposição cada um
+                    float separacao = sobreposicao / 2.0f;
+
+                    zumbi1->posicao.x -= nx * separacao;
+                    zumbi1->posicao.y -= ny * separacao;
+                    zumbi2->posicao.x += nx * separacao;
+                    zumbi2->posicao.y += ny * separacao;
+                }
+            }
+
+            zumbi2 = zumbi2->proximo;
+        }
+
+        zumbi1 = zumbi1->proximo;
+    }
 }
