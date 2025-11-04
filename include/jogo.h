@@ -19,11 +19,13 @@ typedef struct {
 } Player;
 
 // 2. Estrutura para Zumbis (Victor - Requisito: Structs, Lista Encadeada)
-typedef struct Zombie {
+typedef struct Zumbi {
     Vector2 posicao;
-    int saude;
-    struct Zombie *proximo; // Ponteiro para o próximo zumbi
-} Zombie;
+    Vector2 velocidade;
+    int vida;
+    float raio;
+    struct Zumbi *proximo; // Ponteiro para o próximo zumbi
+} Zumbi;
 
 // 3. Estrutura para Balas ( - Pablo - Requisito: Structs, Lista Encadeada)
 typedef struct Bala {
@@ -38,11 +40,17 @@ void mapa(int mapa[TAMANHO_MAPA][TAMANHO_MAPA]);
 
 // Protótipos das funções principais (a serem implementadas em src/jogo.c)
 void iniciarJogo(Player *jogador);
-void atualizarJogo(Player *jogador, struct Zombie **zumbis, struct Bala **balas);
-void desenharJogo(Player *jogador, struct Zombie *zumbis, struct Bala *balas);
+void atualizarJogo(Player *jogador, struct Zumbi **zumbis, struct Bala **balas);
+void desenharJogo(Player *jogador, struct Zumbi *zumbis, struct Bala *balas);
 
 // Protótipos do Módulo de Balas ( - Pablo)
 void adicionarBala(struct Bala **cabeca, Vector2 posInicial, Vector2 alvo);
 void atualizarBalas(struct Bala **cabeca);
+
+// Protótipos do Módulo de Zumbis ( - Victor)
+void adicionarZumbi(struct Zumbi **cabeca, Vector2 posInicial);
+void atualizarZumbis(struct Zumbi **cabeca, Vector2 posicaoJogador, float deltaTime);
+void desenharZumbis(struct Zumbi *cabeca);
+void liberarZumbis(struct Zumbi **cabeca);
 
 #endif

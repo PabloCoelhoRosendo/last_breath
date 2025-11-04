@@ -98,7 +98,7 @@ void iniciarJogo(Player *jogador) {
 }
 
 // Função para atualizar a lógica do jogo
-void atualizarJogo(Player *jogador, Zombie **zumbis, Bala **balas) {
+void atualizarJogo(Player *jogador, Zumbi **zumbis, Bala **balas) {
     // Movimento do jogador com WASD
     if (IsKeyDown(KEY_W)) jogador->posicao.y -= 200 * GetFrameTime();
     if (IsKeyDown(KEY_S)) jogador->posicao.y += 200 * GetFrameTime();
@@ -120,20 +120,26 @@ void atualizarJogo(Player *jogador, Zombie **zumbis, Bala **balas) {
     
     // Atualizar balas
     atualizarBalas(balas);
+
+    // Atualizar zumbis
+    atualizarZumbis(zumbis, jogador->posicao, GetFrameTime());
 }
 
 // Função para desenhar todos os elementos do jogo
-void desenharJogo(Player *jogador, Zombie *zumbis, Bala *balas) {
+void desenharJogo(Player *jogador, Zumbi *zumbis, Bala *balas) {
+    // Desenhar os zumbis primeiro (para ficarem atrás)
+    desenharZumbis(zumbis);
+
     // Desenhar o jogador
     DrawCircleV(jogador->posicao, 15, BLUE);
-    
+
     // Desenhar as balas
     Bala *balaAtual = balas;
     while (balaAtual != NULL) {
         DrawCircleV(balaAtual->posicao, 5, YELLOW);
         balaAtual = balaAtual->proximo;
     }
-    
+
     // Desenhar HUD (Interface)
     DrawText(TextFormat("Vida: %d", jogador->vida), 10, 10, 20, GREEN);
     DrawText(TextFormat("Municao: %d", jogador->municao), 10, 35, 20, WHITE);
