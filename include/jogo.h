@@ -7,6 +7,9 @@
 
 #define TAMANHO_MAPA 20
 
+// Declaração da matriz global do mapa
+int mapaDoJogo[TAMANHO_MAPA][TAMANHO_MAPA];
+
 // 1. Estrutura do Jogador (Henrique/Geral - Requisito: Structs)
 typedef struct {
     Vector2 posicao;
@@ -29,6 +32,9 @@ typedef struct Bala {
     struct Bala *proximo; // Ponteiro para a próxima bala (Requisito: Ponteiros)
 } Bala;
 
+
+// Protótipo da função de inicialização do mapa
+void mapa(int mapa[TAMANHO_MAPA][TAMANHO_MAPA]);
 
 // Protótipos das funções principais (a serem implementadas em src/jogo.c)
 void iniciarJogo(Player *jogador);

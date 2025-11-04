@@ -7,8 +7,15 @@
 #include <stdlib.h> // Para malloc e free (Requisito: Alocação Dinâmica de Memória)
 #include <stdio.h>
 
-// Definição da Matriz do Mapa
-int mapaDoJogo[TAMANHO_MAPA][TAMANHO_MAPA];
+//  Matriz do Mapa (- Leo)
+    
+void mapa(int mapa[TAMANHO_MAPA][TAMANHO_MAPA]){
+    for (int i = 0; i < TAMANHO_MAPA; i++){
+        for(int j = 0; j <  TAMANHO_MAPA; j++){
+            mapa[i][j] = 0;
+        }
+    }
+}
 
 // --- Funções do Módulo de Balas (- Pablo) ---
 
