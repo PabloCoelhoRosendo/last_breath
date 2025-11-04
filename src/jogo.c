@@ -142,3 +142,104 @@ void desenharJogo(Player *jogador, Zombie *zumbis, Bala *balas) {
     // Instruções
     DrawText("WASD - Mover | Mouse - Mirar | Click - Atirar", 200, 570, 15, LIGHTGRAY);
 }
+// --- Funções do Módulo de Zumbis ---
+
+// Função para adicionar um novo Zumbi na Lista Encadeada
+void adicionarZumbi(Zumbi **cabeca, Vector2 posInicial) {
+    
+    // 1. Alocação Dinâmica de Memória
+    Zumbi *novoZumbi = (Zumbi *)malloc(sizeof(Zumbi));
+    
+    if (novoZumbi == NULL) {
+        printf("ERRO: Falha na alocacao de memoria para novo Zumbi!\n");
+        return;
+    }
+    
+    // 2. Inicializar o novo zumbi
+    novoZumbi->posicao = posInicial;
+    novoZumbi->velocidade = (Vector2){0, 0}; // Será calculada depois
+    novoZumbi->vida = 100;
+    novoZumbi->raio = 20.0f;
+    
+    // 3. Inserir no início da lista
+    novoZumbi->proximo = *cabeca;
+    *cabeca = novoZumbi;
+}
+// Função para atualizar todos os zumbis (movimento em direção ao jogador)
+void atualizarZumbis(Zumbi **cabeca, Vector2 posicaoJogador, float deltaTime) {
+    Zumbi *atual = *cabeca;
+    Zumbi *anterior = NULL;
+    
+    while (atual != NULL) {
+        // Calcular direção para o jogador
+        Vector2 direcao = {
+            posicaoJogador.x - atual->posicao.x,
+            posicaoJogador.y - atual->posicao.y
+        };
+        
+        // Normalizar direção
+        float magnitude = sqrtf(direcao.x * direcao.x + direcao.y * direcao.y);
+        if (magnitude > 0) {
+            direcao.x /= magnitude;
+            direcao.y /= magnitude;
+        }
+        
+        // Velocidade do zumbi
+        float velocidadeZumbi = 50.0f; // pixels por segundo
+        atual->velocidade.x = direcao.x * velocidadeZumbi;
+        atual->velocidade.y = direcao.y * velocidadeZumbi;
+        
+        // Atualizar posição
+        atual->posicao.x += atual->velocidade.x * deltaTime;
+        atual->posicao.y += atual->velocidade.y * deltaTime;
+        // Verificar se o zumbi morreu
+        if (atual->vida <= 0) {
+            // Remover da lista
+            Zumbi *removido = atual;
+            if (anterior == NULL) {
+                *cabeca = atual->proximo;
+            } else {
+                anterior->proximo = atual->proximo;
+            }
+            atual = atual->proximo;
+            free(removido); // Liberar memória
+        } else {
+            anterior = atual;
+            atual = atual->proximo;
+        }
+    }
+}
+// Função para desenhar todos os zumbis
+void desenharZumbis(Zumbi *cabeca) {
+    Zumbi *atual = cabeca;
+    
+    while (atual != NULL) {
+        // Desenhar zumbi (círculo verde)
+        DrawCircleV(atual->posicao, atual->raio, GREEN);
+        
+        // Desenhar barra de vida
+        float barraLargura = 40.0f;
+        float porcentagemVida = atual->vida / 100.0f;
+        DrawRectangle(
+            atual->posicao.x - barraLargura/2,
+            atual->posicao.y - atual->raio - 10,
+            barraLargura * porcentagemVida,
+            5,
+            RED
+        );
+        
+        atual = atual->proximo;
+    }
+}
+// Função para liberar toda a lista de zumbis (chamar ao finalizar o jogo)
+void liberarZumbis(Zumbi **cabeca) {
+    Zumbi *atual = *cabeca;
+    
+    while (atual != NULL) {
+        Zumbi *proximo = atual->proximo;
+        free(atual);
+        atual = proximo;
+    }
+    
+    *cabeca = NULL;
+}
