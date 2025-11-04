@@ -24,7 +24,11 @@ typedef struct Zumbi {
     Vector2 velocidade;
     int vida;
     float raio;
-    struct Zumbi *proximo; // Ponteiro para o próximo zumbi
+    float velocidadeBase;     // Velocidade original do zumbi
+    float tempoDesvio;        // Timer para mudança de direção
+    float anguloDesvio;       // Ângulo de desvio aleatório
+    int tipoMovimento;        // 0=direto, 1=zigzag, 2=circular, 3=imprevisível
+    struct Zumbi *proximo;    // Ponteiro para o próximo zumbi
 } Zumbi;
 
 // 3. Estrutura para Balas ( - Pablo - Requisito: Structs, Lista Encadeada)

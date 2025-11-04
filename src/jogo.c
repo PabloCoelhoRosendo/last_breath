@@ -177,23 +177,33 @@ void adicionarZumbi(Zumbi **cabeca, Vector2 posInicial) {
         return;
     }
     
-    // 2. Inicializar o novo zumbi
+    // 2. Inicializar o novo zumbi com comportamento aleatório
     novoZumbi->posicao = posInicial;
-    novoZumbi->velocidade = (Vector2){0, 0}; // Será calculada depois
+    novoZumbi->velocidade = (Vector2){0, 0};
     novoZumbi->vida = 100;
     novoZumbi->raio = 20.0f;
+    
+    // Atribuir tipo de movimento aleatório (0-3)
+    novoZumbi->tipoMovimento = GetRandomValue(0, 3);
+    
+    // Velocidade base varia entre zumbis
+    novoZumbi->velocidadeBase = 30.0f + GetRandomValue(0, 40); // 30-70 pixels/s
+    
+    // Inicializar timers e ângulos aleatórios
+    novoZumbi->tempoDesvio = 0.0f;
+    novoZumbi->anguloDesvio = (float)GetRandomValue(0, 360) * DEG2RAD;
     
     // 3. Inserir no início da lista
     novoZumbi->proximo = *cabeca;
     *cabeca = novoZumbi;
 }
-// Função para atualizar todos os zumbis (movimento em direção ao jogador)
+// Função para atualizar todos os zumbis com diferentes comportamentos
 void atualizarZumbis(Zumbi **cabeca, Vector2 posicaoJogador, float deltaTime) {
     Zumbi *atual = *cabeca;
     Zumbi *anterior = NULL;
     
     while (atual != NULL) {
-        // Calcular direção para o jogador
+        // Calcular direção base para o jogador
         Vector2 direcao = {
             posicaoJogador.x - atual->posicao.x,
             posicaoJogador.y - atual->posicao.y
@@ -206,10 +216,74 @@ void atualizarZumbis(Zumbi **cabeca, Vector2 posicaoJogador, float deltaTime) {
             direcao.y /= magnitude;
         }
         
-        // Velocidade do zumbi
-        float velocidadeZumbi = 50.0f; // pixels por segundo
-        atual->velocidade.x = direcao.x * velocidadeZumbi;
-        atual->velocidade.y = direcao.y * velocidadeZumbi;
+        // Aplicar comportamento baseado no tipo
+        Vector2 direcaoFinal = direcao;
+        float velocidadeFinal = atual->velocidadeBase;
+        
+        switch (atual->tipoMovimento) {
+            case 0: // DIRETO - vai reto pro jogador
+                // Usa direção e velocidade padrão
+                break;
+                
+            case 1: // ZIGZAG - movimento em onda
+                atual->tempoDesvio += deltaTime * 3.0f;
+                {
+                    float desvio = sinf(atual->tempoDesvio) * 0.5f;
+                    // Adiciona movimento perpendicular
+                    direcaoFinal.x += -direcao.y * desvio;
+                    direcaoFinal.y += direcao.x * desvio;
+                    
+                    // Renormalizar
+                    float mag = sqrtf(direcaoFinal.x * direcaoFinal.x + 
+                                     direcaoFinal.y * direcaoFinal.y);
+                    if (mag > 0) {
+                        direcaoFinal.x /= mag;
+                        direcaoFinal.y /= mag;
+                    }
+                }
+                break;
+                
+            case 2: // CIRCULAR - faz círculos enquanto se aproxima
+                atual->tempoDesvio += deltaTime * 2.0f;
+                atual->anguloDesvio += deltaTime * 2.0f;
+                {
+                    float cosA = cosf(atual->anguloDesvio);
+                    float sinA = sinf(atual->anguloDesvio);
+                    // Mistura movimento circular com aproximação
+                    direcaoFinal.x = direcao.x * 0.7f + (-direcao.y * cosA) * 0.3f;
+                    direcaoFinal.y = direcao.y * 0.7f + (direcao.x * sinA) * 0.3f;
+                    
+                    // Renormalizar
+                    float mag = sqrtf(direcaoFinal.x * direcaoFinal.x + 
+                                     direcaoFinal.y * direcaoFinal.y);
+                    if (mag > 0) {
+                        direcaoFinal.x /= mag;
+                        direcaoFinal.y /= mag;
+                    }
+                }
+                break;
+                
+            case 3: // IMPREVISÍVEL - muda de direção aleatoriamente
+                atual->tempoDesvio += deltaTime;
+                if (atual->tempoDesvio > 1.0f) { // Muda direção a cada 1 segundo
+                    atual->tempoDesvio = 0.0f;
+                    atual->anguloDesvio = (float)GetRandomValue(-45, 45) * DEG2RAD;
+                }
+                {
+                    float cosA = cosf(atual->anguloDesvio);
+                    float sinA = sinf(atual->anguloDesvio);
+                    // Aplica rotação à direção
+                    float tempX = direcao.x * cosA - direcao.y * sinA;
+                    float tempY = direcao.x * sinA + direcao.y * cosA;
+                    direcaoFinal.x = tempX;
+                    direcaoFinal.y = tempY;
+                }
+                break;
+        }
+        
+        // Calcular velocidade final
+        atual->velocidade.x = direcaoFinal.x * velocidadeFinal;
+        atual->velocidade.y = direcaoFinal.y * velocidadeFinal;
         
         // Atualizar posição
         atual->posicao.x += atual->velocidade.x * deltaTime;
