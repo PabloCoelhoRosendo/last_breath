@@ -11,14 +11,120 @@
 // Definição da matriz global do mapa
 int mapaDoJogo[TAMANHO_MAPA][TAMANHO_MAPA];
 
-//  Matriz do Mapa (- Leo)
-    
+// ===== SISTEMA DE MAPA DA CIDADE =====
+// 0 = área livre (branco)
+// 1 = prédio (vermelho) - jogador não pode atravessar
+
 void mapa(int mapa[TAMANHO_MAPA][TAMANHO_MAPA]){
-    for (int i = 0; i < TAMANHO_MAPA; i++){
-        for(int j = 0; j <  TAMANHO_MAPA; j++){
+    int i, j;
+
+    // Passo 1: Inicializar tudo como área livre (0)
+    for (i = 0; i < TAMANHO_MAPA; i++){
+        for(j = 0; j < TAMANHO_MAPA; j++){
             mapa[i][j] = 0;
         }
     }
+
+    // Passo 2: Criar os prédios (colocar 1 nas posições desejadas)
+    // Nota: A tela tem 800x600 pixels = 20x15 células (cada célula = 40 pixels)
+
+    // Prédio 1: Canto superior esquerdo
+    for (i = 1; i < 4; i++) {
+        for (j = 1; j < 5; j++) {
+            mapa[i][j] = 1;
+        }
+    }
+
+    // Prédio 2: Canto superior direito
+    for (i = 1; i < 4; i++) {
+        for (j = 15; j < 19; j++) {
+            mapa[i][j] = 1;
+        }
+    }
+
+    // Prédio 3: Centro do mapa - REMOVIDO
+
+    // Prédio 4: Canto inferior esquerdo
+    for (i = 11; i < 14; i++) {
+        for (j = 1; j < 6; j++) {
+            mapa[i][j] = 1;
+        }
+    }
+
+    // Prédio 5: Canto inferior direito
+    for (i = 11; i < 14; i++) {
+        for (j = 14; j < 19; j++) {
+            mapa[i][j] = 1;
+        }
+    }
+}
+
+// Função para desenhar o mapa
+void desenharMapa(int mapa[TAMANHO_MAPA][TAMANHO_MAPA], Texture2D texturaMapa) {
+    // Passo 1: Desenhar os retângulos de colisão (base)
+    for (int i = 0; i < TAMANHO_MAPA; i++) {
+        for (int j = 0; j < TAMANHO_MAPA; j++) {
+            int x = j * TAMANHO_CELULA;
+            int y = i * TAMANHO_CELULA;
+
+            if (mapa[i][j] == 1) {
+                // Prédios em vermelho
+                DrawRectangle(x, y, TAMANHO_CELULA, TAMANHO_CELULA, RED);
+                DrawRectangleLines(x, y, TAMANHO_CELULA, TAMANHO_CELULA, DARKGRAY);
+            } else {
+                // Áreas livres em branco
+                DrawRectangle(x, y, TAMANHO_CELULA, TAMANHO_CELULA, WHITE);
+                DrawRectangleLines(x, y, TAMANHO_CELULA, TAMANHO_CELULA, LIGHTGRAY);
+            }
+        }
+    }
+
+    // Passo 2: Desenhar a imagem por cima (se foi carregada)
+    if (texturaMapa.id > 0) {
+        DrawTexture(texturaMapa, 0, 0, WHITE);
+    }
+}
+
+// Função para verificar colisão com o mapa
+// Retorna 1 se colidiu com prédio, 0 se está livre
+int verificarColisaoMapa(Vector2 novaPosicao, float raio, int mapa[TAMANHO_MAPA][TAMANHO_MAPA]) {
+    // Passo 1: Converter posição do jogador (em pixels) para posição na matriz
+    int linha = (int)(novaPosicao.y / TAMANHO_CELULA);
+    int coluna = (int)(novaPosicao.x / TAMANHO_CELULA);
+
+    // Passo 2: Verificar se a célula onde o jogador está é um prédio (valor 1)
+    if (linha >= 0 && linha < TAMANHO_MAPA && coluna >= 0 && coluna < TAMANHO_MAPA) {
+        if (mapa[linha][coluna] == 1) {
+            return 1; // Colidiu com prédio
+        }
+    }
+
+    return 0; // Não colidiu
+}
+
+// Função para gerar uma posição válida de spawn (não dentro de prédios)
+Vector2 gerarPosicaoValidaSpawn(int mapa[TAMANHO_MAPA][TAMANHO_MAPA], float raio) {
+    Vector2 posicao;
+    int tentativas = 0;
+    int maxTentativas = 100; // Limite de tentativas para evitar loop infinito
+
+    do {
+        // Gerar posição aleatória dentro da tela
+        posicao.x = (float)GetRandomValue((int)raio, 800 - (int)raio);
+        posicao.y = (float)GetRandomValue((int)raio, 600 - (int)raio);
+
+        tentativas++;
+
+        // Se tentar muitas vezes sem sucesso, usar posição padrão segura
+        if (tentativas >= maxTentativas) {
+            posicao.x = 400;
+            posicao.y = 300;
+            break;
+        }
+
+    } while (verificarColisaoMapa(posicao, raio, mapa)); // Repetir se colidiu com prédio
+
+    return posicao;
 }
 
 // --- Funções Auxiliares de Colisão ---
@@ -101,21 +207,57 @@ void atualizarBalas(Bala **cabeca) {
 
 // Função para inicializar o jogador
 void iniciarJogo(Player *jogador) {
-    jogador->posicao.x = 400;
-    jogador->posicao.y = 300;
+    // Gerar uma posição válida (não dentro de prédios) para o jogador spawnar
+    Vector2 posicaoInicial = {400, 300}; // Posição padrão no centro
+
+    // Verificar se a posição padrão colide com prédio
+    if (verificarColisaoMapa(posicaoInicial, 15.0f, mapaDoJogo)) {
+        // Se colidir, gerar uma posição válida aleatória
+        posicaoInicial = gerarPosicaoValidaSpawn(mapaDoJogo, 15.0f);
+    }
+
+    jogador->posicao = posicaoInicial;
     jogador->vida = 100;
     jogador->municao = 30;
     jogador->pontos = 0;
+    jogador->direcaoVertical = 0;   // Começa olhando para frente
+    jogador->direcaoHorizontal = 1; // Começa olhando para direita
 }
 
 // Função para atualizar a lógica do jogo
 void atualizarJogo(Player *jogador, Zumbi **zumbis, Bala **balas) {
+    // Salvar posição anterior
+    Vector2 posicaoAnterior = jogador->posicao;
+
     // Movimento do jogador com WASD
-    if (IsKeyDown(KEY_W)) jogador->posicao.y -= 200 * GetFrameTime();
-    if (IsKeyDown(KEY_S)) jogador->posicao.y += 200 * GetFrameTime();
-    if (IsKeyDown(KEY_A)) jogador->posicao.x -= 200 * GetFrameTime();
-    if (IsKeyDown(KEY_D)) jogador->posicao.x += 200 * GetFrameTime();
-    
+    float velocidade = 200 * GetFrameTime();
+
+    // Atualizar direção vertical baseado no movimento
+    if (IsKeyDown(KEY_W)) {
+        jogador->posicao.y -= velocidade;
+        jogador->direcaoVertical = 1; // Costas (indo para cima)
+    }
+    if (IsKeyDown(KEY_S)) {
+        jogador->posicao.y += velocidade;
+        jogador->direcaoVertical = 0; // Frente (indo para baixo)
+    }
+
+    // Atualizar direção horizontal baseado no movimento
+    if (IsKeyDown(KEY_A)) {
+        jogador->posicao.x -= velocidade;
+        jogador->direcaoHorizontal = 0; // Esquerda
+    }
+    if (IsKeyDown(KEY_D)) {
+        jogador->posicao.x += velocidade;
+        jogador->direcaoHorizontal = 1; // Direita
+    }
+
+    // Verificar colisão com o mapa
+    if (verificarColisaoMapa(jogador->posicao, 15.0f, mapaDoJogo)) {
+        // Se houve colisão, voltar para a posição anterior
+        jogador->posicao = posicaoAnterior;
+    }
+
     // Limitar o jogador dentro da tela
     if (jogador->posicao.x < 20) jogador->posicao.x = 20;
     if (jogador->posicao.x > 780) jogador->posicao.x = 780;
@@ -142,12 +284,34 @@ void atualizarJogo(Player *jogador, Zumbi **zumbis, Bala **balas) {
 }
 
 // Função para desenhar todos os elementos do jogo
-void desenharJogo(Player *jogador, Zumbi *zumbis, Bala *balas) {
-    // Desenhar os zumbis primeiro (para ficarem atrás)
+void desenharJogo(Player *jogador, Zumbi *zumbis, Bala *balas, Texture2D texturaMapa) {
+    // Desenhar o mapa primeiro (fundo)
+    desenharMapa(mapaDoJogo, texturaMapa);
+
+    // Desenhar os zumbis
     desenharZumbis(zumbis);
 
     // Desenhar o jogador
-    DrawCircleV(jogador->posicao, 15, BLUE);
+    if (jogador->spriteAtual.id > 0) {
+        // Desenhar sprite centralizado na posição do jogador
+        float escala = 0.06f; // Ajuste conforme o tamanho do seu sprite
+        float largura = jogador->spriteAtual.width * escala;
+        float altura = jogador->spriteAtual.height * escala;
+
+        Rectangle destino = {
+            jogador->posicao.x - largura / 2,
+            jogador->posicao.y - altura / 2,
+            largura,
+            altura
+        };
+
+        Rectangle origem = {0, 0, (float)jogador->spriteAtual.width, (float)jogador->spriteAtual.height};
+
+        DrawTexturePro(jogador->spriteAtual, origem, destino, (Vector2){0, 0}, 0.0f, WHITE);
+    } else {
+        // Fallback: desenhar círculo se sprite não carregou
+        DrawCircleV(jogador->posicao, 15, BLUE);
+    }
 
     // Desenhar as balas
     Bala *balaAtual = balas;
@@ -204,32 +368,38 @@ void desenharJogo(Player *jogador, Zumbi *zumbis, Bala *balas) {
 
 // Função para adicionar um novo Zumbi na Lista Encadeada
 void adicionarZumbi(Zumbi **cabeca, Vector2 posInicial) {
-    
+
     // 1. Alocação Dinâmica de Memória
     Zumbi *novoZumbi = (Zumbi *)malloc(sizeof(Zumbi));
-    
+
     if (novoZumbi == NULL) {
         printf("ERRO: Falha na alocacao de memoria para novo Zumbi!\n");
         return;
     }
-    
-    // 2. Inicializar o novo zumbi com comportamento aleatório
+
+    // 2. Verificar se a posição inicial é válida (não está em um prédio)
+    // Se estiver em um prédio, gerar uma posição válida
+    if (verificarColisaoMapa(posInicial, 20.0f, mapaDoJogo)) {
+        posInicial = gerarPosicaoValidaSpawn(mapaDoJogo, 20.0f);
+    }
+
+    // 3. Inicializar o novo zumbi com comportamento aleatório
     novoZumbi->posicao = posInicial;
     novoZumbi->velocidade = (Vector2){0, 0};
     novoZumbi->vida = 100;
     novoZumbi->raio = 20.0f;
-    
+
     // Atribuir tipo de movimento aleatório (0-3)
     novoZumbi->tipoMovimento = GetRandomValue(0, 3);
-    
+
     // Velocidade base varia entre zumbis
     novoZumbi->velocidadeBase = 30.0f + GetRandomValue(0, 40); // 30-70 pixels/s
-    
+
     // Inicializar timers e ângulos aleatórios
     novoZumbi->tempoDesvio = 0.0f;
     novoZumbi->anguloDesvio = (float)GetRandomValue(0, 360) * DEG2RAD;
-    
-    // 3. Inserir no início da lista
+
+    // 4. Inserir no início da lista
     novoZumbi->proximo = *cabeca;
     *cabeca = novoZumbi;
 }
@@ -320,10 +490,20 @@ void atualizarZumbis(Zumbi **cabeca, Vector2 posicaoJogador, float deltaTime) {
         // Calcular velocidade final
         atual->velocidade.x = direcaoFinal.x * velocidadeFinal;
         atual->velocidade.y = direcaoFinal.y * velocidadeFinal;
-        
+
+        // Salvar posição anterior do zumbi
+        Vector2 posicaoAnteriorZumbi = atual->posicao;
+
         // Atualizar posição
         atual->posicao.x += atual->velocidade.x * deltaTime;
         atual->posicao.y += atual->velocidade.y * deltaTime;
+
+        // Verificar colisão com o mapa
+        if (verificarColisaoMapa(atual->posicao, atual->raio, mapaDoJogo)) {
+            // Se colidiu com prédio, voltar para posição anterior
+            atual->posicao = posicaoAnteriorZumbi;
+        }
+
         // Verificar se o zumbi morreu
         if (atual->vida <= 0) {
             // Remover da lista

@@ -6,6 +6,7 @@
 #include "raylib.h"
 
 #define TAMANHO_MAPA 20
+#define TAMANHO_CELULA 40 // Tamanho de cada célula do mapa em pixels
 
 // Declaração externa da matriz global do mapa
 extern int mapaDoJogo[TAMANHO_MAPA][TAMANHO_MAPA];
@@ -16,6 +17,9 @@ typedef struct {
     int vida;
     int municao;
     int pontos;
+    int direcaoVertical;   // 0 = frente, 1 = costas
+    int direcaoHorizontal; // 0 = esquerda, 1 = direita
+    Texture2D spriteAtual; // Sprite atual sendo exibido
 } Player;
 
 // 2. Estrutura para Zumbis (Victor - Requisito: Structs, Lista Encadeada)
@@ -39,13 +43,16 @@ typedef struct Bala {
 } Bala;
 
 
-// Protótipo da função de inicialização do mapa
+// Protótipos das funções do mapa
 void mapa(int mapa[TAMANHO_MAPA][TAMANHO_MAPA]);
+void desenharMapa(int mapa[TAMANHO_MAPA][TAMANHO_MAPA], Texture2D texturaMapa);
+int verificarColisaoMapa(Vector2 novaPosicao, float raio, int mapa[TAMANHO_MAPA][TAMANHO_MAPA]);
+Vector2 gerarPosicaoValidaSpawn(int mapa[TAMANHO_MAPA][TAMANHO_MAPA], float raio);
 
 // Protótipos das funções principais (a serem implementadas em src/jogo.c)
 void iniciarJogo(Player *jogador);
 void atualizarJogo(Player *jogador, struct Zumbi **zumbis, struct Bala **balas);
-void desenharJogo(Player *jogador, struct Zumbi *zumbis, struct Bala *balas);
+void desenharJogo(Player *jogador, struct Zumbi *zumbis, struct Bala *balas, Texture2D texturaMapa);
 
 // Protótipos do Módulo de Balas ( - Pablo)
 void adicionarBala(struct Bala **cabeca, Vector2 posInicial, Vector2 alvo);
