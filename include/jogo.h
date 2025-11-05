@@ -32,6 +32,14 @@ typedef struct Zumbi {
     float tempoDesvio;        // Timer para mudança de direção
     float anguloDesvio;       // Ângulo de desvio aleatório
     int tipoMovimento;        // 0=direto, 1=zigzag, 2=circular, 3=imprevisível
+    int direcaoVertical;      // 0 = frente, 1 = costas
+    int direcaoHorizontal;    // 0 = esquerda, 1 = direita
+    int tipoSkin;             // 0-4 (qual dos 5 tipos de zumbi)
+    Texture2D spriteFrenteDireita;
+    Texture2D spriteFrenteEsquerda;
+    Texture2D spriteCostasDireita;
+    Texture2D spriteCostasEsquerda;
+    Texture2D spriteAtual;    // Sprite sendo renderizado
     struct Zumbi *proximo;    // Ponteiro para o próximo zumbi
 } Zumbi;
 
@@ -59,7 +67,7 @@ void adicionarBala(struct Bala **cabeca, Vector2 posInicial, Vector2 alvo);
 void atualizarBalas(struct Bala **cabeca);
 
 // Protótipos do Módulo de Zumbis ( - Victor)
-void adicionarZumbi(struct Zumbi **cabeca, Vector2 posInicial);
+void adicionarZumbi(struct Zumbi **cabeca, Vector2 posInicial, Texture2D sprites[][4]);
 void atualizarZumbis(struct Zumbi **cabeca, Vector2 posicaoJogador, float deltaTime);
 void desenharZumbis(struct Zumbi *cabeca);
 void liberarZumbis(struct Zumbi **cabeca);

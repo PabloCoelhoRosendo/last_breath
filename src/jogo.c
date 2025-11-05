@@ -367,7 +367,7 @@ void desenharJogo(Player *jogador, Zumbi *zumbis, Bala *balas, Texture2D textura
 // --- Funções do Módulo de Zumbis ---
 
 // Função para adicionar um novo Zumbi na Lista Encadeada
-void adicionarZumbi(Zumbi **cabeca, Vector2 posInicial) {
+void adicionarZumbi(Zumbi **cabeca, Vector2 posInicial, Texture2D sprites[][4]) {
 
     // 1. Alocação Dinâmica de Memória
     Zumbi *novoZumbi = (Zumbi *)malloc(sizeof(Zumbi));
@@ -398,6 +398,20 @@ void adicionarZumbi(Zumbi **cabeca, Vector2 posInicial) {
     // Inicializar timers e ângulos aleatórios
     novoZumbi->tempoDesvio = 0.0f;
     novoZumbi->anguloDesvio = (float)GetRandomValue(0, 360) * DEG2RAD;
+
+    // Atribuir skin aleatória (0-4 = 5 tipos diferentes)
+    novoZumbi->tipoSkin = GetRandomValue(0, 4);
+
+    // Atribuir sprites baseado na skin escolhida
+    novoZumbi->spriteFrenteDireita = sprites[novoZumbi->tipoSkin][0];
+    novoZumbi->spriteFrenteEsquerda = sprites[novoZumbi->tipoSkin][1];
+    novoZumbi->spriteCostasDireita = sprites[novoZumbi->tipoSkin][2];
+    novoZumbi->spriteCostasEsquerda = sprites[novoZumbi->tipoSkin][3];
+
+    // Inicializar direções (começa olhando para frente/direita)
+    novoZumbi->direcaoVertical = 0;
+    novoZumbi->direcaoHorizontal = 1;
+    novoZumbi->spriteAtual = novoZumbi->spriteFrenteDireita;
 
     // 4. Inserir no início da lista
     novoZumbi->proximo = *cabeca;
@@ -491,6 +505,36 @@ void atualizarZumbis(Zumbi **cabeca, Vector2 posicaoJogador, float deltaTime) {
         atual->velocidade.x = direcaoFinal.x * velocidadeFinal;
         atual->velocidade.y = direcaoFinal.y * velocidadeFinal;
 
+        // Atualizar direções do sprite baseado no movimento
+        // Direção vertical: se está indo mais para cima (velocidade.y negativa) = costas, senão = frente
+        if (atual->velocidade.y < -5.0f) {
+            atual->direcaoVertical = 1; // Costas (indo para cima)
+        } else if (atual->velocidade.y > 5.0f) {
+            atual->direcaoVertical = 0; // Frente (indo para baixo)
+        }
+
+        // Direção horizontal: se está indo mais para esquerda (velocidade.x negativa) = esquerda, senão = direita
+        if (atual->velocidade.x < -5.0f) {
+            atual->direcaoHorizontal = 0; // Esquerda
+        } else if (atual->velocidade.x > 5.0f) {
+            atual->direcaoHorizontal = 1; // Direita
+        }
+
+        // Selecionar sprite correto baseado nas direções
+        if (atual->direcaoVertical == 0) { // Frente
+            if (atual->direcaoHorizontal == 0) {
+                atual->spriteAtual = atual->spriteFrenteEsquerda;
+            } else {
+                atual->spriteAtual = atual->spriteFrenteDireita;
+            }
+        } else { // Costas
+            if (atual->direcaoHorizontal == 0) {
+                atual->spriteAtual = atual->spriteCostasEsquerda;
+            } else {
+                atual->spriteAtual = atual->spriteCostasDireita;
+            }
+        }
+
         // Salvar posição anterior do zumbi
         Vector2 posicaoAnteriorZumbi = atual->posicao;
 
@@ -524,11 +568,30 @@ void atualizarZumbis(Zumbi **cabeca, Vector2 posicaoJogador, float deltaTime) {
 // Função para desenhar todos os zumbis
 void desenharZumbis(Zumbi *cabeca) {
     Zumbi *atual = cabeca;
-    
+
     while (atual != NULL) {
-        // Desenhar zumbi (círculo verde)
-        DrawCircleV(atual->posicao, atual->raio, GREEN);
-        
+        // Desenhar sprite do zumbi
+        if (atual->spriteAtual.id > 0) {
+            // Desenhar sprite centralizado na posição do zumbi
+            float escala = 0.07f; // Zumbis ligeiramente maiores que o jogador
+            float largura = atual->spriteAtual.width * escala;
+            float altura = atual->spriteAtual.height * escala;
+
+            Rectangle destino = {
+                atual->posicao.x - largura / 2,
+                atual->posicao.y - altura / 2,
+                largura,
+                altura
+            };
+
+            Rectangle origem = {0, 0, (float)atual->spriteAtual.width, (float)atual->spriteAtual.height};
+
+            DrawTexturePro(atual->spriteAtual, origem, destino, (Vector2){0, 0}, 0.0f, WHITE);
+        } else {
+            // Fallback: desenhar círculo verde se sprite não carregou
+            DrawCircleV(atual->posicao, atual->raio, GREEN);
+        }
+
         // Desenhar barra de vida
         float barraLargura = 40.0f;
         float porcentagemVida = atual->vida / 100.0f;
@@ -539,7 +602,7 @@ void desenharZumbis(Zumbi *cabeca) {
             5,
             RED
         );
-        
+
         atual = atual->proximo;
     }
 }
@@ -644,24 +707,32 @@ void verificarColisoesJogadorZumbi(Player *jogador, Zumbi *zumbis) {
                 printf("OUCH! Jogador recebeu %d de dano. Vida: %d\n", dano, jogador->vida);
                 
                 // KNOCKBACK: Empurrar jogador para trás
+                Vector2 posicaoAnteriorKnockback = jogador->posicao; // Salvar posição antes do knockback
+
                 Vector2 direcaoEmpurrao = {
                     jogador->posicao.x - zumbiAtual->posicao.x,
                     jogador->posicao.y - zumbiAtual->posicao.y
                 };
-                
+
                 // Normalizar direção
-                float magnitude = sqrtf(direcaoEmpurrao.x * direcaoEmpurrao.x + 
+                float magnitude = sqrtf(direcaoEmpurrao.x * direcaoEmpurrao.x +
                                        direcaoEmpurrao.y * direcaoEmpurrao.y);
-                
+
                 if (magnitude > 0) {
                     direcaoEmpurrao.x /= magnitude;
                     direcaoEmpurrao.y /= magnitude;
-                    
+
                     // Aplicar força de empurrão
                     float forcaEmpurrao = 40.0f;
                     jogador->posicao.x += direcaoEmpurrao.x * forcaEmpurrao;
                     jogador->posicao.y += direcaoEmpurrao.y * forcaEmpurrao;
-                    
+
+                    // Verificar se colidiu com prédio após knockback
+                    if (verificarColisaoMapa(jogador->posicao, 15.0f, mapaDoJogo)) {
+                        // Se colidiu, voltar para posição anterior
+                        jogador->posicao = posicaoAnteriorKnockback;
+                    }
+
                     // Garantir que o jogador não saia da tela após o knockback
                     if (jogador->posicao.x < 20) jogador->posicao.x = 20;
                     if (jogador->posicao.x > 780) jogador->posicao.x = 780;
