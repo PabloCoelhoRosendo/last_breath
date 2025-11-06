@@ -141,7 +141,7 @@ int verificarColisaoCirculos(Vector2 pos1, float raio1, Vector2 pos2, float raio
 // --- Funções do Módulo de Balas (- Pablo) ---
 
 // Função para Alocação Dinâmica e inserção de uma nova Bala na Lista Encadeada
-void adicionarBala(Bala **cabeca, Vector2 posInicial, Vector2 alvo) {
+void adicionarBala(Bala **cabeca, Vector2 posInicial, Vector2 alvo, int tipo, float dano) {
     
     // 1. Alocação Dinâmica de Memória (Requisito: Alocação Dinâmica)
     Bala *novaBala = (Bala *)malloc(sizeof(Bala));
@@ -153,15 +153,20 @@ void adicionarBala(Bala **cabeca, Vector2 posInicial, Vector2 alvo) {
 
     // 2. Inicializar a nova bala
     novaBala->posicao = posInicial;
+    novaBala->tipo = tipo;
+    novaBala->dano = dano;
+    novaBala->raio = (tipo == 0) ? 3.0f : 5.0f;  // Balas do boss são maiores
+    novaBala->tempoVida = 0.0f;  // Começa em 0 e incrementa
 
-    // Calcular a direção da bala (do jogador para o alvo)
+    // Calcular a direção da bala (do atirador para o alvo)
     Vector2 direcao = {alvo.x - posInicial.x, alvo.y - posInicial.y};
     
     // Normalizar a direção e aplicar velocidade
     float comprimento = sqrtf(direcao.x * direcao.x + direcao.y * direcao.y);
     if (comprimento > 0) {
-        novaBala->velocidade.x = (direcao.x / comprimento) * 500.0f;
-        novaBala->velocidade.y = (direcao.y / comprimento) * 500.0f;
+        float velocidadeBase = (tipo == 0) ? 500.0f : 300.0f; // Boss tem projéteis mais lentos
+        novaBala->velocidade.x = (direcao.x / comprimento) * velocidadeBase;
+        novaBala->velocidade.y = (direcao.y / comprimento) * velocidadeBase;
     } else {
         novaBala->velocidade.x = 0;
         novaBala->velocidade.y = 0;
@@ -176,15 +181,23 @@ void adicionarBala(Bala **cabeca, Vector2 posInicial, Vector2 alvo) {
 void atualizarBalas(Bala **cabeca) {
     Bala *atual = *cabeca;
     Bala *anterior = NULL;
+    float deltaTime = GetFrameTime();
     
     while (atual != NULL) {
         // Atualizar posição da bala
-        atual->posicao.x += atual->velocidade.x * GetFrameTime();
-        atual->posicao.y += atual->velocidade.y * GetFrameTime();
+        atual->posicao.x += atual->velocidade.x * deltaTime;
+        atual->posicao.y += atual->velocidade.y * deltaTime;
         
-        // Verificar se a bala saiu da tela
+        // Atualizar tempo de vida
+        atual->tempoVida += deltaTime;
+        
+        // Tempo máximo de vida: 2 segundos para balas normais, 3 para boss
+        float tempoMaximo = (atual->tipo == 0) ? 2.0f : 3.0f;
+        
+        // Verificar se a bala saiu da tela ou expirou
         if (atual->posicao.x < 0 || atual->posicao.x > 800 ||
-            atual->posicao.y < 0 || atual->posicao.y > 600) {
+            atual->posicao.y < 0 || atual->posicao.y > 600 ||
+            atual->tempoVida >= tempoMaximo) {
             
             // Remover a bala da lista
             Bala *temp = atual;
@@ -218,6 +231,8 @@ void iniciarJogo(Player *jogador) {
 
     jogador->posicao = posicaoInicial;
     jogador->vida = 100;
+    jogador->tempoTotal = 0.0f;  // Inicializa o tempo
+    jogador->fase = 1;           // Começa na fase 1
     jogador->municao = 30;
     jogador->pontos = 0;
     jogador->direcaoVertical = 0;   // Começa olhando para frente
@@ -267,7 +282,7 @@ void atualizarJogo(Player *jogador, Zumbi **zumbis, Bala **balas) {
     // Atirar com o botão esquerdo do mouse
     if (IsMouseButtonPressed(MOUSE_LEFT_BUTTON) && jogador->municao > 0) {
         Vector2 mousePos = GetMousePosition();
-        adicionarBala(balas, jogador->posicao, mousePos);
+        adicionarBala(balas, jogador->posicao, mousePos, 0, 10.0f);  // tipo 0 = jogador, dano = 10
         jogador->municao--;
     }
     
@@ -281,6 +296,11 @@ void atualizarJogo(Player *jogador, Zumbi **zumbis, Bala **balas) {
     verificarColisoesBalaZumbi(balas, zumbis, jogador);
     verificarColisoesJogadorZumbi(jogador, *zumbis);
     verificarColisoesZumbiZumbi(*zumbis);
+    
+    // Atualizar o tempo total se o jogador estiver vivo
+    if (jogador->vida > 0) {
+        jogador->tempoTotal += GetFrameTime();
+    }
 }
 
 // Função para desenhar todos os elementos do jogo
@@ -350,18 +370,49 @@ void desenharJogo(Player *jogador, Zumbi *zumbis, Bala *balas, Texture2D textura
     }
     DrawText(TextFormat("Municao: %d", jogador->municao), 10, 40, 20, corMunicao);
     
-    // Pontos
-    DrawText(TextFormat("Pontos: %d", jogador->pontos), 10, 65, 20, GOLD);
+    // Tempo e fase
+    int minutos = (int)jogador->tempoTotal / 60;
+    float segundos = fmod(jogador->tempoTotal, 60.0f);
+    DrawText(TextFormat("Tempo: %02d:%05.2f", minutos, segundos), 10, 65, 20, GOLD);
+    DrawText(TextFormat("Fase: %d/3", jogador->fase), 10, 90, 20, WHITE);
     
     // Instruções
     DrawText("WASD - Mover | Mouse - Mirar | Click - Atirar", 200, 570, 15, LIGHTGRAY);
     
     // Aviso de Game Over
     if (jogador->vida <= 0) {
+        // Formatar o tempo final
+        int minutos = (int)jogador->tempoTotal / 60;
+        float segundos = fmod(jogador->tempoTotal, 60.0f);
+        
+        // Carregar os melhores tempos para comparação
+        float tempos[MAX_SCORES];
+        loadTimes(tempos, MAX_SCORES);
+        
+        // Verificar se o tempo entra no ranking
+        int posicao = -1;
+        for (int i = 0; i < MAX_SCORES; i++) {
+            if (jogador->tempoTotal < tempos[i]) {
+                posicao = i + 1;
+                break;
+            }
+        }
+        
+        // Quando o jogador morre, salvamos o tempo se for um recorde
+        checkAndSaveTime(jogador->tempoTotal);
+        
+        // Fundo escuro semi-transparente
         DrawRectangle(0, 0, 800, 600, (Color){0, 0, 0, 150});
-        DrawText("GAME OVER", 250, 250, 60, RED);
-        DrawText(TextFormat("Pontuacao Final: %d", jogador->pontos), 280, 320, 30, WHITE);
-        DrawText("Pressione ESC para sair", 260, 360, 20, LIGHTGRAY);
+        
+        // Mensagens de game over
+        DrawText("GAME OVER", 250, 200, 60, RED);
+        DrawText(TextFormat("Seu tempo: %02d:%05.2f", minutos, segundos), 280, 280, 30, WHITE);
+        
+        if (posicao > 0) {
+            DrawText(TextFormat("NOVO RECORDE! %dº Lugar!", posicao), 250, 320, 30, GOLD);
+        }
+        
+        DrawText("Pressione ESC para sair", 260, 380, 20, LIGHTGRAY);
     }
 }
 // --- Funções do Módulo de Zumbis ---
@@ -634,10 +685,10 @@ void verificarColisoesBalaZumbi(Bala **balas, Zumbi **zumbis, Player *jogador) {
 
         // Iterar sobre todos os zumbis
         while (zumbiAtual != NULL && !balaRemovida) {
-            // Verificar colisão (raio da bala = 5, raio do zumbi = 20)
-            if (verificarColisaoCirculos(balaAtual->posicao, 5.0f, zumbiAtual->posicao, zumbiAtual->raio)) {
-                // Aplicar dano ao zumbi
-                zumbiAtual->vida -= 25;
+            // Verificar colisão usando o raio da bala
+            if (verificarColisaoCirculos(balaAtual->posicao, balaAtual->raio, zumbiAtual->posicao, zumbiAtual->raio)) {
+                // Aplicar dano ao zumbi usando o dano específico da bala
+                zumbiAtual->vida -= (int)balaAtual->dano;
 
                 // Se o zumbi morreu
                 if (zumbiAtual->vida <= 0) {

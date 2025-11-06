@@ -10,13 +10,13 @@
 // Top 5 melhores pontuações
 #define MAX_SCORES 5
 
-// Carrega pontuações do arquivo
-void loadScores(int scores[], int count);
+// Carrega tempos do arquivo
+void loadTimes(float times[], int count);
 
-// Salva pontuações no arquivo
-void saveScores(int scores[], int count);
+// Salva tempos no arquivo
+void saveTimes(float times[], int count);
 
-// Verifica se a pontuação entra no ranking e atualiza
-void checkAndSaveHighScore(int newScore);
+// Verifica se o tempo entra no ranking e atualiza (menor tempo = melhor)
+void checkAndSaveTime(float newTime);
 
 #endif // ARQUIVO_H

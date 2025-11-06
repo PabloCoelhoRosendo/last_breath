@@ -2,23 +2,24 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <math.h>    // Para fmod()
 
 // Definição do tamanho do ranking
 #define MAX_SCORES 5
 
 // Implementação das funções de arquivo
-void loadScores(int scores[], int count) {
+void loadTimes(float times[], int count) {
     FILE *file = fopen("scores.txt", "r");
     
-    // Inicializar com zeros
+    // Inicializar com valores altos (pior tempo possível)
     for (int i = 0; i < count; i++) {
-        scores[i] = 0;
+        times[i] = 999999.999f;  // ~16 minutos, tempo bem alto
     }
     
-    // Se o arquivo existe, carregar scores
+    // Se o arquivo existe, carregar tempos
     if (file != NULL) {
         for (int i = 0; i < count; i++) {
-            if (fscanf(file, "%d", &scores[i]) != 1) {
+            if (fscanf(file, "%f", &times[i]) != 1) {
                 break;
             }
         }
@@ -26,60 +27,59 @@ void loadScores(int scores[], int count) {
     }
 }
 
-void saveScores(int scores[], int count) {
+void saveTimes(float times[], int count) {
     FILE *file = fopen("scores.txt", "w");
     
     if (file != NULL) {
         for (int i = 0; i < count; i++) {
-            fprintf(file, "%d\n", scores[i]);
+            fprintf(file, "%.3f\n", times[i]);  // Salva com 3 casas decimais
         }
         fclose(file);
     }
 }
 
-// Função para verificar, ordenar e salvar o High Score
-void checkAndSaveHighScore(int newScore) {
-    int scores[MAX_SCORES]; // Array para armazenar os 5 melhores scores lidos
+// Função para verificar, ordenar e salvar o tempo (menor = melhor)
+void checkAndSaveTime(float newTime) {
+    float times[MAX_SCORES]; // Array para armazenar os 5 melhores tempos
 
-    // 1. Carregar os scores existentes
-    loadScores(scores, MAX_SCORES); // Chama a função que lê os scores do arquivo scores.txt
+    // 1. Carregar os tempos existentes
+    loadTimes(times, MAX_SCORES);
 
-    // 2. Verificar se o novo score entra no ranking
-    // O ranking é ordenado do maior para o menor. O menor score é o último elemento do array.
-    if (newScore > scores[MAX_SCORES - 1]) {
-        
-        // --- O score é um High Score, precisamos inseri-lo ---
+    // 2. Verificar se o novo tempo entra no ranking
+    // O ranking é ordenado do menor para o maior. O maior tempo é o último elemento.
+    if (newTime < times[MAX_SCORES - 1]) {
+        // --- O tempo é bom o suficiente para entrar no ranking ---
 
-        // 3. Encontrar a posição correta e deslocar os scores menores
+        // 3. Encontrar a posição correta e deslocar os tempos maiores
         int i;
-        // Loop que começa do último elemento (MAX_SCORES - 1, o menor score) e vai até o primeiro (0)
         for (i = MAX_SCORES - 1; i >= 0; i--) {
-            
-            // Condição de comparação: O novo score é maior que o score atual?
-            if (newScore > scores[i]) {
-                
-                // Se o score atual (scores[i]) não for o último do ranking (para evitar erro de índice)
+            // Condição de comparação: O novo tempo é menor que o tempo atual?
+            if (newTime < times[i]) {
                 if (i < MAX_SCORES - 1) {
-                    // Deslocamento: O score atual desce uma posição no ranking
-                    scores[i + 1] = scores[i]; 
+                    // Deslocamento: O tempo atual sobe uma posição no ranking
+                    times[i + 1] = times[i];
                 }
             } else {
-                // Se o newScore não for maior que scores[i], significa que encontramos
-                // a posição correta de inserção (o score anterior é maior que o newScore).
                 break; 
             }
         }
         
-        // 4. Inserir o novo score na posição correta
-        // O loop parou no índice 'i', então a posição de inserção é 'i + 1'.
-        scores[i + 1] = newScore;
+        // 4. Inserir o novo tempo na posição correta
+        times[i + 1] = newTime;
 
-        printf("HIGH SCORE! Novo score de %d adicionado ao ranking.\n", newScore);
+        // Formatar o tempo em minutos:segundos.milissegundos
+        int minutos = (int)newTime / 60;
+        float segundos = fmod(newTime, 60.0f);
+        printf("NOVO RECORDE! Tempo de %d:%06.3f adicionado ao ranking.\n", 
+               minutos, segundos);
 
-        // 5. Salvar o novo ranking ordenado no arquivo
-        saveScores(scores, MAX_SCORES); // Chama a função que sobrescreve o arquivo scores.txt
+        // 5. Salvar o novo ranking ordenado
+        saveTimes(times, MAX_SCORES);
     } else {
-        // Se a pontuação não é maior que o menor score do ranking, ela é ignorada.
-        printf("Score de %d nao entrou no Top %d. Ranking inalterado.\n", newScore, MAX_SCORES);
+        // Se o tempo não é menor que o pior tempo do ranking
+        int minutos = (int)newTime / 60;
+        float segundos = fmod(newTime, 60.0f);
+        printf("Tempo de %d:%06.3f nao entrou no Top %d.\n", 
+               minutos, segundos, MAX_SCORES);
     }
 }

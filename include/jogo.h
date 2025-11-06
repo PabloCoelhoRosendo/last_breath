@@ -20,6 +20,8 @@ typedef struct {
     int direcaoVertical;   // 0 = frente, 1 = costas
     int direcaoHorizontal; // 0 = esquerda, 1 = direita
     Texture2D spriteAtual; // Sprite atual sendo exibido
+    float tempoTotal;      // Tempo total de jogo
+    int fase;              // Fase atual (1-3)
 } Player;
 
 // 2. Estrutura para Zumbis (Victor - Requisito: Structs, Lista Encadeada)
@@ -47,7 +49,11 @@ typedef struct Zumbi {
 typedef struct Bala {
     Vector2 posicao;
     Vector2 velocidade;
-    struct Bala *proximo; // Ponteiro para a próxima bala (Requisito: Ponteiros)
+    int tipo;           // 0 = jogador, 1 = boss
+    float dano;         // Quantidade de dano causado
+    float raio;         // Raio da bala para colisão
+    float tempoVida;    // Tempo que a bala existe (para efeitos ou limitar alcance)
+    struct Bala *proximo;
 } Bala;
 
 
@@ -63,7 +69,7 @@ void atualizarJogo(Player *jogador, struct Zumbi **zumbis, struct Bala **balas);
 void desenharJogo(Player *jogador, struct Zumbi *zumbis, struct Bala *balas, Texture2D texturaMapa);
 
 // Protótipos do Módulo de Balas ( - Pablo)
-void adicionarBala(struct Bala **cabeca, Vector2 posInicial, Vector2 alvo);
+void adicionarBala(struct Bala **cabeca, Vector2 posInicial, Vector2 alvo, int tipo, float dano);
 void atualizarBalas(struct Bala **cabeca);
 
 // Protótipos do Módulo de Zumbis ( - Victor)
