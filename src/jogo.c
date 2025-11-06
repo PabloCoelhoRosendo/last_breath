@@ -231,12 +231,14 @@ void iniciarJogo(Player *jogador) {
 
     jogador->posicao = posicaoInicial;
     jogador->vida = 100;
-    jogador->tempoTotal = 0.0f;  // Inicializa o tempo
-    jogador->fase = 1;           // Começa na fase 1
+    jogador->tempoTotal = 0.0f;
+    jogador->fase = 1;
     jogador->municao = 30;
     jogador->pontos = 0;
-    jogador->direcaoVertical = 0;   // Começa olhando para frente
-    jogador->direcaoHorizontal = 1; // Começa olhando para direita
+    jogador->direcaoVertical = 0;
+    jogador->direcaoHorizontal = 1;
+    jogador->estaRecarregando = false;
+    jogador->tempoRecarga = 0.0f;
 }
 
 // Função para atualizar a lógica do jogo
@@ -278,11 +280,28 @@ void atualizarJogo(Player *jogador, Zumbi **zumbis, Bala **balas) {
     if (jogador->posicao.x > 780) jogador->posicao.x = 780;
     if (jogador->posicao.y < 20) jogador->posicao.y = 20;
     if (jogador->posicao.y > 580) jogador->posicao.y = 580;
-    
+
+    // Sistema de Recarga
+    if (jogador->estaRecarregando) {
+        jogador->tempoRecarga -= GetFrameTime();
+
+        if (jogador->tempoRecarga <= 0.0f) {
+            jogador->municao = 30;
+            jogador->estaRecarregando = false;
+            jogador->tempoRecarga = 0.0f;
+        }
+    }
+
+    // Iniciar recarga ao pressionar R
+    if (IsKeyPressed(KEY_R) && !jogador->estaRecarregando) {
+        jogador->estaRecarregando = true;
+        jogador->tempoRecarga = 2.0f;
+    }
+
     // Atirar com o botão esquerdo do mouse
-    if (IsMouseButtonPressed(MOUSE_LEFT_BUTTON) && jogador->municao > 0) {
+    if (IsMouseButtonPressed(MOUSE_LEFT_BUTTON) && jogador->municao > 0 && !jogador->estaRecarregando) {
         Vector2 mousePos = GetMousePosition();
-        adicionarBala(balas, jogador->posicao, mousePos, 0, 10.0f);  // tipo 0 = jogador, dano = 10
+        adicionarBala(balas, jogador->posicao, mousePos, 0, 10.0f);
         jogador->municao--;
     }
     
@@ -359,25 +378,29 @@ void desenharJogo(Player *jogador, Zumbi *zumbis, Bala *balas, Texture2D textura
     // Texto da vida
     DrawText(TextFormat("Vida: %d/100", jogador->vida), 15, 13, 20, WHITE);
     
-    // Munição (com aviso de pouca munição)
+    // Munição
     Color corMunicao = WHITE;
     if (jogador->municao <= 5) {
         corMunicao = RED;
-        // Piscar quando está sem munição
-        if ((int)(GetTime() * 2) % 2 == 0) {
-            DrawText("MUNICAO BAIXA!", 10, 85, 20, RED);
-        }
     }
     DrawText(TextFormat("Municao: %d", jogador->municao), 10, 40, 20, corMunicao);
-    
+
+    // Barra de recarga
+    if (jogador->estaRecarregando) {
+        float progresso = 1.0f - (jogador->tempoRecarga / 2.0f);
+        DrawRectangle(10, 65, 204, 14, DARKGRAY);
+        DrawRectangle(12, 67, (int)(200 * progresso), 10, YELLOW);
+        DrawRectangleLines(10, 65, 204, 14, WHITE);
+    }
+
     // Tempo e fase
     int minutos = (int)jogador->tempoTotal / 60;
     float segundos = fmod(jogador->tempoTotal, 60.0f);
-    DrawText(TextFormat("Tempo: %02d:%05.2f", minutos, segundos), 10, 65, 20, GOLD);
-    DrawText(TextFormat("Fase: %d/3", jogador->fase), 10, 90, 20, WHITE);
+    DrawText(TextFormat("Tempo: %02d:%05.2f", minutos, segundos), 10, 85, 20, GOLD);
+    DrawText(TextFormat("Fase: %d/3", jogador->fase), 10, 110, 20, WHITE);
     
     // Instruções
-    DrawText("WASD - Mover | Mouse - Mirar | Click - Atirar", 200, 570, 15, LIGHTGRAY);
+    DrawText("WASD - Mover | Mouse - Mirar | Click - Atirar | R - Recarregar", 160, 570, 15, LIGHTGRAY);
     
     // Aviso de Game Over
     if (jogador->vida <= 0) {

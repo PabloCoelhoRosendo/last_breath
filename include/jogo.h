@@ -22,6 +22,8 @@ typedef struct {
     Texture2D spriteAtual; // Sprite atual sendo exibido
     float tempoTotal;      // Tempo total de jogo
     int fase;              // Fase atual (1-3)
+    bool estaRecarregando; // Flag se está recarregando
+    float tempoRecarga;    // Tempo restante de recarga
 } Player;
 
 // 2. Estrutura para Zumbis (Victor - Requisito: Structs, Lista Encadeada)
