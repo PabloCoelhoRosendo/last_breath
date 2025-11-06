@@ -218,6 +218,99 @@ void atualizarBalas(Bala **cabeca) {
     }
 }
 
+// --- Funções do Sistema de Armas ---
+
+// Função para inicializar uma arma com base no tipo
+void inicializarArma(Arma *arma, TipoArma tipo) {
+    arma->tipo = tipo;
+    arma->cooldown = 0.0f;
+    
+    switch(tipo) {
+        case ARMA_PISTOL:
+            arma->dano = 10;
+            arma->taxaTiroMS = 400;
+            arma->penteMax = 12;
+            arma->penteAtual = 12;
+            arma->municaoTotal = 60;  // 5 pentes extras
+            arma->tempoRecarga = 2.0f;
+            break;
+            
+        case ARMA_SHOTGUN:
+            arma->dano = 35;
+            arma->taxaTiroMS = 1000;
+            arma->penteMax = 6;
+            arma->penteAtual = 6;
+            arma->municaoTotal = 24;  // 4 pentes extras
+            arma->tempoRecarga = 3.0f;
+            break;
+            
+        case ARMA_SMG:
+            arma->dano = 8;
+            arma->taxaTiroMS = 100;
+            arma->penteMax = 30;
+            arma->penteAtual = 30;
+            arma->municaoTotal = 120;  // 4 pentes extras
+            arma->tempoRecarga = 2.5f;
+            break;
+            
+        case ARMA_NENHUMA:
+        default:
+            arma->dano = 0;
+            arma->taxaTiroMS = 0;
+            arma->penteMax = 0;
+            arma->penteAtual = 0;
+            arma->municaoTotal = 0;
+            arma->tempoRecarga = 0.0f;
+            break;
+    }
+}
+
+// Função para equipar uma arma de um slot específico
+void equiparArma(Player *jogador, int slot) {
+    // Verificar se o slot é válido (0, 1 ou 2)
+    if (slot < 0 || slot > 2) return;
+    
+    // Verificar se o slot tem uma arma
+    if (jogador->slots[slot].tipo == ARMA_NENHUMA) return;
+    
+    // Equipar a arma
+    jogador->slotAtivo = slot;
+}
+
+// Função para recarregar a arma equipada
+void recarregarArma(Player *jogador) {
+    if (jogador->estaRecarregando) return;
+    
+    Arma *armaAtual = &jogador->slots[jogador->slotAtivo];
+    
+    // Verificar se precisa recarregar
+    if (armaAtual->penteAtual >= armaAtual->penteMax) return;
+    if (armaAtual->municaoTotal <= 0) return;
+    
+    // Iniciar recarga
+    jogador->estaRecarregando = true;
+    jogador->tempoRecargaAtual = armaAtual->tempoRecarga;
+}
+
+// Função para atirar com a arma equipada
+void atirarArma(Player *jogador, Bala **balas, Vector2 alvo) {
+    Arma *armaAtual = &jogador->slots[jogador->slotAtivo];
+    
+    // Verificar se pode atirar
+    if (armaAtual->penteAtual <= 0) return;
+    if (armaAtual->cooldown > 0.0f) return;
+    if (jogador->estaRecarregando) return;
+    
+    // Adicionar bala
+    adicionarBala(balas, jogador->posicao, alvo, 0, (float)armaAtual->dano);
+    
+    // Reduzir munição
+    armaAtual->penteAtual--;
+    
+    // Aplicar cooldown (converter MS para segundos)
+    armaAtual->cooldown = armaAtual->taxaTiroMS / 1000.0f;
+}
+
 // Função para inicializar o jogador
 void iniciarJogo(Player *jogador) {
     // Gerar uma posição válida (não dentro de prédios) para o jogador spawnar
@@ -233,21 +326,75 @@ void iniciarJogo(Player *jogador) {
     jogador->vida = 100;
     jogador->tempoTotal = 0.0f;
     jogador->fase = 1;
-    jogador->municao = 30;
-    jogador->pontos = 0;
+    jogador->velocidadeBase = 4.0f;  // Velocidade inicial 4.0 m/s
     jogador->direcaoVertical = 0;
     jogador->direcaoHorizontal = 1;
     jogador->estaRecarregando = false;
-    jogador->tempoRecarga = 0.0f;
+    jogador->tempoRecargaAtual = 0.0f;
+    jogador->tempoJaSalvo = false;
+    
+    // Inicializar slots de arma
+    inicializarArma(&jogador->slots[0], ARMA_PISTOL);   // Slot 1: Pistol (inicial)
+    inicializarArma(&jogador->slots[1], ARMA_NENHUMA);  // Slot 2: Vazio
+    inicializarArma(&jogador->slots[2], ARMA_NENHUMA);  // Slot 3: Vazio
+    jogador->slotAtivo = 0;  // Começa com a Pistol equipada
 }
 
 // Função para atualizar a lógica do jogo
 void atualizarJogo(Player *jogador, Zumbi **zumbis, Bala **balas) {
+    float deltaTime = GetFrameTime();
+    Arma *armaAtual = &jogador->slots[jogador->slotAtivo];
+    
+    // Atualizar cooldown da arma
+    if (armaAtual->cooldown > 0.0f) {
+        armaAtual->cooldown -= deltaTime;
+    }
+    
+    // Sistema de Recarga
+    if (jogador->estaRecarregando) {
+        jogador->tempoRecargaAtual -= deltaTime;
+        
+        if (jogador->tempoRecargaAtual <= 0.0f) {
+            // Recarga completa
+            int municaoNecessaria = armaAtual->penteMax - armaAtual->penteAtual;
+            int municaoDisponivel = armaAtual->municaoTotal;
+            int municaoRecarregar = (municaoNecessaria <= municaoDisponivel) ? municaoNecessaria : municaoDisponivel;
+            
+            armaAtual->penteAtual += municaoRecarregar;
+            armaAtual->municaoTotal -= municaoRecarregar;
+            
+            jogador->estaRecarregando = false;
+            jogador->tempoRecargaAtual = 0.0f;
+        }
+    }
+    
+    // Tecla R para recarregar
+    if (IsKeyPressed(KEY_R) && !jogador->estaRecarregando) {
+        recarregarArma(jogador);
+    }
+    
+    // Teclas 1, 2, 3 para trocar de arma
+    if (IsKeyPressed(KEY_ONE)) {
+        equiparArma(jogador, 0);
+    }
+    if (IsKeyPressed(KEY_TWO)) {
+        equiparArma(jogador, 1);
+    }
+    if (IsKeyPressed(KEY_THREE)) {
+        equiparArma(jogador, 2);
+    }
+    
+    // Calcular velocidade baseada no estado
+    float velocidadeAtual = jogador->velocidadeBase;
+    if (jogador->estaRecarregando) {
+        velocidadeAtual = 2.0f;  // Reduz para 2.0 m/s durante recarga
+    }
+    
+    // Converter m/s para pixels/frame (assumindo 60 FPS e 1 pixel = 1 metro)
+    float velocidade = velocidadeAtual * 60.0f * deltaTime;
+    
     // Salvar posição anterior
     Vector2 posicaoAnterior = jogador->posicao;
-
-    // Movimento do jogador com WASD
-    float velocidade = 200 * GetFrameTime();
 
     // Atualizar direção vertical baseado no movimento
     if (IsKeyDown(KEY_W)) {
@@ -280,36 +427,18 @@ void atualizarJogo(Player *jogador, Zumbi **zumbis, Bala **balas) {
     if (jogador->posicao.x > 780) jogador->posicao.x = 780;
     if (jogador->posicao.y < 20) jogador->posicao.y = 20;
     if (jogador->posicao.y > 580) jogador->posicao.y = 580;
-
-    // Sistema de Recarga
-    if (jogador->estaRecarregando) {
-        jogador->tempoRecarga -= GetFrameTime();
-
-        if (jogador->tempoRecarga <= 0.0f) {
-            jogador->municao = 30;
-            jogador->estaRecarregando = false;
-            jogador->tempoRecarga = 0.0f;
-        }
-    }
-
-    // Iniciar recarga ao pressionar R
-    if (IsKeyPressed(KEY_R) && !jogador->estaRecarregando) {
-        jogador->estaRecarregando = true;
-        jogador->tempoRecarga = 2.0f;
-    }
-
+    
     // Atirar com o botão esquerdo do mouse
-    if (IsMouseButtonPressed(MOUSE_LEFT_BUTTON) && jogador->municao > 0 && !jogador->estaRecarregando) {
+    if (IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) {
         Vector2 mousePos = GetMousePosition();
-        adicionarBala(balas, jogador->posicao, mousePos, 0, 10.0f);
-        jogador->municao--;
+        atirarArma(jogador, balas, mousePos);
     }
     
     // Atualizar balas
     atualizarBalas(balas);
 
     // Atualizar zumbis
-    atualizarZumbis(zumbis, jogador->posicao, GetFrameTime());
+    atualizarZumbis(zumbis, jogador->posicao, deltaTime);
 
     // Verificar colisões
     verificarColisoesBalaZumbi(balas, zumbis, jogador);
@@ -361,6 +490,8 @@ void desenharJogo(Player *jogador, Zumbi *zumbis, Bala *balas, Texture2D textura
 
     // --- HUD MELHORADO ---
     
+    Arma *armaAtual = &jogador->slots[jogador->slotAtivo];
+    
     // Barra de Vida (com cores baseadas na vida)
     Color corVida = GREEN;
     if (jogador->vida <= 30) {
@@ -378,32 +509,82 @@ void desenharJogo(Player *jogador, Zumbi *zumbis, Bala *balas, Texture2D textura
     // Texto da vida
     DrawText(TextFormat("Vida: %d/100", jogador->vida), 15, 13, 20, WHITE);
     
-    // Munição
+    // Munição com reserva [Pente] / [Total]
     Color corMunicao = WHITE;
-    if (jogador->municao <= 5) {
+    if (armaAtual->penteAtual <= 5) {
         corMunicao = RED;
+        // Piscar quando munição está baixa
+        if ((int)(GetTime() * 2) % 2 == 0 && !jogador->estaRecarregando) {
+            DrawText("RECARREGUE!", 10, 85, 20, RED);
+        }
     }
-    DrawText(TextFormat("Municao: %d", jogador->municao), 10, 40, 20, corMunicao);
-
-    // Barra de recarga
+    
+    // Mostrar estado de recarga
     if (jogador->estaRecarregando) {
-        float progresso = 1.0f - (jogador->tempoRecarga / 2.0f);
-        DrawRectangle(10, 65, 204, 14, DARKGRAY);
-        DrawRectangle(12, 67, (int)(200 * progresso), 10, YELLOW);
-        DrawRectangleLines(10, 65, 204, 14, WHITE);
+        DrawText("RECARREGANDO...", 10, 40, 20, YELLOW);
+        // Barra de progresso da recarga
+        float progresso = 1.0f - (jogador->tempoRecargaAtual / armaAtual->tempoRecarga);
+        DrawRectangle(10, 65, 200, 10, DARKGRAY);
+        DrawRectangle(10, 65, (int)(200 * progresso), 10, YELLOW);
+        DrawRectangleLines(10, 65, 200, 10, WHITE);
+    } else {
+        DrawText(TextFormat("Municao: [%d] / %d", armaAtual->penteAtual, armaAtual->municaoTotal), 10, 40, 20, corMunicao);
     }
-
+    
     // Tempo e fase
     int minutos = (int)jogador->tempoTotal / 60;
     float segundos = fmod(jogador->tempoTotal, 60.0f);
-    DrawText(TextFormat("Tempo: %02d:%05.2f", minutos, segundos), 10, 85, 20, GOLD);
-    DrawText(TextFormat("Fase: %d/3", jogador->fase), 10, 110, 20, WHITE);
+    DrawText(TextFormat("Tempo: %02d:%05.2f", minutos, segundos), 10, 90, 20, GOLD);
+    DrawText(TextFormat("Fase: %d/3", jogador->fase), 10, 115, 20, WHITE);
     
-    // Instruções
-    DrawText("WASD - Mover | Mouse - Mirar | Click - Atirar | R - Recarregar", 160, 570, 15, LIGHTGRAY);
+    // HUD de Slots de Arma (Inferior Central)
+    int hudX = 300;  // Centro horizontal
+    int hudY = 550;  // Parte inferior
+    int slotWidth = 60;
+    int slotHeight = 60;
+    int slotSpacing = 10;
+    
+    const char* nomesArmas[] = {"Vazio", "Pistol", "Shotgun", "SMG"};
+    
+    for (int i = 0; i < 3; i++) {
+        int posX = hudX + (i * (slotWidth + slotSpacing));
+        Color corSlot = DARKGRAY;
+        Color corTexto = LIGHTGRAY;
+        
+        // Destaque para slot ativo
+        if (i == jogador->slotAtivo) {
+            corSlot = GREEN;
+            corTexto = WHITE;
+            DrawRectangle(posX - 2, hudY - 2, slotWidth + 4, slotHeight + 4, LIME);
+        }
+        
+        // Desenhar slot
+        DrawRectangle(posX, hudY, slotWidth, slotHeight, corSlot);
+        DrawRectangleLines(posX, hudY, slotWidth, slotHeight, WHITE);
+        
+        // Número do slot
+        DrawText(TextFormat("%d", i + 1), posX + 5, hudY + 5, 20, corTexto);
+        
+        // Nome da arma (se tiver)
+        if (jogador->slots[i].tipo != ARMA_NENHUMA) {
+            const char* nomeArma = nomesArmas[jogador->slots[i].tipo];
+            DrawText(nomeArma, posX + 5, hudY + 30, 15, corTexto);
+        } else {
+            DrawText("---", posX + 15, hudY + 30, 15, GRAY);
+        }
+    }
+    
+    // Instruções atualizadas
+    DrawText("WASD - Mover | 1,2,3 - Armas | R - Recarregar | Click - Atirar", 130, 520, 15, LIGHTGRAY);
     
     // Aviso de Game Over
     if (jogador->vida <= 0) {
+        // Salvar tempo apenas uma vez
+        if (!jogador->tempoJaSalvo) {
+            checkAndSaveTime(jogador->tempoTotal);
+            jogador->tempoJaSalvo = true;
+        }
+        
         // Formatar o tempo final
         int minutos = (int)jogador->tempoTotal / 60;
         float segundos = fmod(jogador->tempoTotal, 60.0f);
@@ -420,9 +601,6 @@ void desenharJogo(Player *jogador, Zumbi *zumbis, Bala *balas, Texture2D textura
                 break;
             }
         }
-        
-        // Quando o jogador morre, salvamos o tempo se for um recorde
-        checkAndSaveTime(jogador->tempoTotal);
         
         // Fundo escuro semi-transparente
         DrawRectangle(0, 0, 800, 600, (Color){0, 0, 0, 150});
@@ -715,7 +893,7 @@ void verificarColisoesBalaZumbi(Bala **balas, Zumbi **zumbis, Player *jogador) {
 
                 // Se o zumbi morreu
                 if (zumbiAtual->vida <= 0) {
-                    jogador->pontos += 10; // Adicionar pontos
+                    // Remover zumbi da lista (não precisa mais de pontos)
 
                     // Remover zumbi da lista
                     Zumbi *zumbiRemover = zumbiAtual;
@@ -870,542 +1048,5 @@ void verificarColisoesZumbiZumbi(Zumbi *zumbis) {
         }
 
         zumbi1 = zumbi1->proximo;
-    }
-}
-
-// ===== MÓDULO DE ZUMBI FORTE =====
-
-// Função para adicionar um novo Zumbi Forte na Lista Encadeada
-void adicionarZumbiForte(ZumbiForte **cabeca, Vector2 posInicial) {
-    // 1. Alocação Dinâmica de Memória
-    ZumbiForte *novoZumbiForte = (ZumbiForte *)malloc(sizeof(ZumbiForte));
-
-    if (novoZumbiForte == NULL) {
-        printf("ERRO: Falha na alocacao de memoria para novo Zumbi Forte!\n");
-        return;
-    }
-
-    // 2. Verificar se a posição inicial é válida
-    if (verificarColisaoMapa(posInicial, 30.0f, mapaDoJogo)) {
-        posInicial = gerarPosicaoValidaSpawn(mapaDoJogo, 30.0f);
-    }
-
-    // 3. Inicializar o Zumbi Forte com atributos superiores
-    novoZumbiForte->posicao = posInicial;
-    novoZumbiForte->velocidade = (Vector2){0, 0};
-    novoZumbiForte->vida = 300;              // 3x mais vida que zumbi normal
-    novoZumbiForte->raio = 30.0f;            // Maior que zumbi normal (20.0f)
-    novoZumbiForte->dano = 20;               // Dano dobrado
-    novoZumbiForte->armadura = 0.5f;         // Reduz 50% do dano recebido
-    novoZumbiForte->cor = (Color){139, 0, 0, 255}; // Vermelho escuro
-
-    // Tipo de movimento aleatório
-    novoZumbiForte->tipoMovimento = GetRandomValue(0, 3);
-
-    // Velocidade reduzida (mais lento mas mais resistente)
-    novoZumbiForte->velocidadeBase = 20.0f + GetRandomValue(0, 20); // 20-40 pixels/s
-
-    // Inicializar timers e ângulos
-    novoZumbiForte->tempoDesvio = 0.0f;
-    novoZumbiForte->anguloDesvio = (float)GetRandomValue(0, 360) * DEG2RAD;
-
-    // 4. Inserir no início da lista
-    novoZumbiForte->proximo = *cabeca;
-    *cabeca = novoZumbiForte;
-
-    printf("Zumbi Forte adicionado! Vida: %d, Dano: %d, Armadura: %.0f%%\n", 
-           novoZumbiForte->vida, novoZumbiForte->dano, novoZumbiForte->armadura * 100);
-}
-
-// Função para atualizar todos os Zumbis Fortes
-void atualizarZumbisFortes(ZumbiForte **cabeca, Vector2 posicaoJogador, float deltaTime) {
-    ZumbiForte *atual = *cabeca;
-    ZumbiForte *anterior = NULL;
-    
-    while (atual != NULL) {
-        // Calcular direção base para o jogador
-        Vector2 direcao = {
-            posicaoJogador.x - atual->posicao.x,
-            posicaoJogador.y - atual->posicao.y
-        };
-        
-        // Normalizar direção
-        float magnitude = sqrtf(direcao.x * direcao.x + direcao.y * direcao.y);
-        if (magnitude > 0) {
-            direcao.x /= magnitude;
-            direcao.y /= magnitude;
-        }
-        
-        // Aplicar comportamento baseado no tipo
-        Vector2 direcaoFinal = direcao;
-        float velocidadeFinal = atual->velocidadeBase;
-        
-        switch (atual->tipoMovimento) {
-            case 0: // DIRETO
-                break;
-                
-            case 1: // ZIGZAG
-                atual->tempoDesvio += deltaTime * 3.0f;
-                {
-                    float desvio = sinf(atual->tempoDesvio) * 0.5f;
-                    direcaoFinal.x += -direcao.y * desvio;
-                    direcaoFinal.y += direcao.x * desvio;
-                    
-                    float mag = sqrtf(direcaoFinal.x * direcaoFinal.x + 
-                                     direcaoFinal.y * direcaoFinal.y);
-                    if (mag > 0) {
-                        direcaoFinal.x /= mag;
-                        direcaoFinal.y /= mag;
-                    }
-                }
-                break;
-                
-            case 2: // CIRCULAR
-                atual->tempoDesvio += deltaTime * 2.0f;
-                atual->anguloDesvio += deltaTime * 2.0f;
-                {
-                    float cosA = cosf(atual->anguloDesvio);
-                    float sinA = sinf(atual->anguloDesvio);
-                    direcaoFinal.x = direcao.x * 0.7f + (-direcao.y * cosA) * 0.3f;
-                    direcaoFinal.y = direcao.y * 0.7f + (direcao.x * sinA) * 0.3f;
-                    
-                    float mag = sqrtf(direcaoFinal.x * direcaoFinal.x + 
-                                     direcaoFinal.y * direcaoFinal.y);
-                    if (mag > 0) {
-                        direcaoFinal.x /= mag;
-                        direcaoFinal.y /= mag;
-                    }
-                }
-                break;
-                
-            case 3: // IMPREVISÍVEL
-                atual->tempoDesvio += deltaTime;
-                if (atual->tempoDesvio > 1.0f) {
-                    atual->tempoDesvio = 0.0f;
-                    atual->anguloDesvio = (float)GetRandomValue(-45, 45) * DEG2RAD;
-                }
-                {
-                    float cosA = cosf(atual->anguloDesvio);
-                    float sinA = sinf(atual->anguloDesvio);
-                    float tempX = direcao.x * cosA - direcao.y * sinA;
-                    float tempY = direcao.x * sinA + direcao.y * cosA;
-                    direcaoFinal.x = tempX;
-                    direcaoFinal.y = tempY;
-                }
-                break;
-        }
-        
-        // Calcular velocidade final
-        atual->velocidade.x = direcaoFinal.x * velocidadeFinal;
-        atual->velocidade.y = direcaoFinal.y * velocidadeFinal;
-
-        // Salvar posição anterior
-        Vector2 posicaoAnteriorZumbi = atual->posicao;
-
-        // Atualizar posição
-        atual->posicao.x += atual->velocidade.x * deltaTime;
-        atual->posicao.y += atual->velocidade.y * deltaTime;
-
-        // Verificar colisão com o mapa
-        if (verificarColisaoMapa(atual->posicao, atual->raio, mapaDoJogo)) {
-            atual->posicao = posicaoAnteriorZumbi;
-            
-            // Tentar contornar o obstáculo
-            Vector2 direcaoLateral1 = {-direcao.y, direcao.x};
-            Vector2 tentativa1 = {
-                posicaoAnteriorZumbi.x + direcaoLateral1.x * velocidadeFinal * deltaTime,
-                posicaoAnteriorZumbi.y + direcaoLateral1.y * velocidadeFinal * deltaTime
-            };
-            
-            if (!verificarColisaoMapa(tentativa1, atual->raio, mapaDoJogo)) {
-                atual->posicao = tentativa1;
-            } else {
-                Vector2 direcaoLateral2 = {direcao.y, -direcao.x};
-                Vector2 tentativa2 = {
-                    posicaoAnteriorZumbi.x + direcaoLateral2.x * velocidadeFinal * deltaTime,
-                    posicaoAnteriorZumbi.y + direcaoLateral2.y * velocidadeFinal * deltaTime
-                };
-                
-                if (!verificarColisaoMapa(tentativa2, atual->raio, mapaDoJogo)) {
-                    atual->posicao = tentativa2;
-                }
-            }
-        }
-
-        // Limitar dentro da tela
-        if (atual->posicao.x < atual->raio) atual->posicao.x = atual->raio;
-        if (atual->posicao.x > 800 - atual->raio) atual->posicao.x = 800 - atual->raio;
-        if (atual->posicao.y < atual->raio) atual->posicao.y = atual->raio;
-        if (atual->posicao.y > 600 - atual->raio) atual->posicao.y = 600 - atual->raio;
-
-        // Remover se morreu
-        if (atual->vida <= 0) {
-            ZumbiForte *temp = atual;
-            
-            if (anterior == NULL) {
-                *cabeca = atual->proximo;
-                atual = *cabeca;
-            } else {
-                anterior->proximo = atual->proximo;
-                atual = atual->proximo;
-            }
-            
-            free(temp);
-            printf("Zumbi Forte eliminado!\n");
-        } else {
-            anterior = atual;
-            atual = atual->proximo;
-        }
-    }
-}
-
-// Função para desenhar todos os Zumbis Fortes
-void desenharZumbisFortes(ZumbiForte *cabeca) {
-    ZumbiForte *atual = cabeca;
-    
-    while (atual != NULL) {
-        // Desenhar o corpo do zumbi forte (vermelho escuro)
-        DrawCircleV(atual->posicao, atual->raio, atual->cor);
-        
-        // Desenhar contorno grosso para destacar
-        DrawCircleLines((int)atual->posicao.x, (int)atual->posicao.y, atual->raio, (Color){255, 0, 0, 255});
-        DrawCircleLines((int)atual->posicao.x, (int)atual->posicao.y, atual->raio - 2, (Color){255, 0, 0, 255});
-        
-        // Desenhar barra de vida acima do zumbi
-        float larguraBarra = atual->raio * 2;
-        float alturaBarra = 5;
-        float vidaPercent = (float)atual->vida / 300.0f;
-        
-        // Fundo da barra (preto)
-        DrawRectangle((int)(atual->posicao.x - larguraBarra / 2), 
-                     (int)(atual->posicao.y - atual->raio - 10),
-                     (int)larguraBarra, (int)alturaBarra, BLACK);
-        
-        // Barra de vida (verde -> amarelo -> vermelho)
-        Color corVida = GREEN;
-        if (vidaPercent <= 0.3f) {
-            corVida = RED;
-        } else if (vidaPercent <= 0.6f) {
-            corVida = ORANGE;
-        }
-        
-        DrawRectangle((int)(atual->posicao.x - larguraBarra / 2), 
-                     (int)(atual->posicao.y - atual->raio - 10),
-                     (int)(larguraBarra * vidaPercent), (int)alturaBarra, corVida);
-        
-        // Texto indicando que é um zumbi forte
-        DrawText("FORTE", (int)(atual->posicao.x - 20), (int)(atual->posicao.y - 5), 10, WHITE);
-        
-        atual = atual->proximo;
-    }
-}
-
-// Função para liberar memória de todos os Zumbis Fortes
-void liberarZumbisFortes(ZumbiForte **cabeca) {
-    ZumbiForte *atual = *cabeca;
-    ZumbiForte *proximo;
-    
-    while (atual != NULL) {
-        proximo = atual->proximo;
-        free(atual);
-        atual = proximo;
-    }
-    
-    *cabeca = NULL;
-}
-
-// Função para verificar colisões entre balas e zumbis fortes
-void verificarColisoesBalaZumbiForte(Bala **balas, ZumbiForte **zumbisFortes, Player *jogador) {
-    Bala *balaAtual = *balas;
-    Bala *balaAnterior = NULL;
-
-    while (balaAtual != NULL) {
-        int balaRemovida = 0;
-        ZumbiForte *zumbiAtual = *zumbisFortes;
-        ZumbiForte *zumbiAnterior = NULL;
-
-        while (zumbiAtual != NULL && !balaRemovida) {
-            // Verificar colisão entre bala e zumbi forte
-            if (verificarColisaoCirculos(balaAtual->posicao, 5.0f, zumbiAtual->posicao, zumbiAtual->raio)) {
-                // Calcular dano com armadura
-                int danoBase = 50;
-                int danoReal = (int)(danoBase * (1.0f - zumbiAtual->armadura));
-                zumbiAtual->vida -= danoReal;
-
-                printf("Zumbi Forte atingido! Dano: %d (Base: %d, Armadura: %.0f%%). Vida restante: %d\n",
-                       danoReal, danoBase, zumbiAtual->armadura * 100, zumbiAtual->vida);
-
-                // Remover a bala
-                Bala *balaRemover = balaAtual;
-                if (balaAnterior == NULL) {
-                    *balas = balaAtual->proximo;
-                } else {
-                    balaAnterior->proximo = balaAtual->proximo;
-                }
-                balaAtual = balaAtual->proximo;
-                free(balaRemover);
-                balaRemovida = 1;
-
-                // Se zumbi forte morreu, dar mais pontos
-                if (zumbiAtual->vida <= 0) {
-                    jogador->pontos += 50;
-                    printf("Zumbi Forte eliminado! +50 pontos. Total: %d\n", jogador->pontos);
-                }
-            } else {
-                zumbiAnterior = zumbiAtual;
-                zumbiAtual = zumbiAtual->proximo;
-            }
-        }
-
-        if (!balaRemovida) {
-            balaAnterior = balaAtual;
-            balaAtual = balaAtual->proximo;
-        }
-    }
-}
-
-// Função para verificar colisões entre jogador e zumbis fortes
-void verificarColisoesJogadorZumbiForte(Player *jogador, ZumbiForte *zumbisFortes) {
-    static float cooldownDanoForte = 0.0f;
-    static float flashDanoForte = 0.0f;
-    
-    cooldownDanoForte -= GetFrameTime();
-    if (flashDanoForte > 0.0f) {
-        flashDanoForte -= GetFrameTime();
-    }
-    
-    ZumbiForte *zumbiAtual = zumbisFortes;
-
-    while (zumbiAtual != NULL) {
-        if (verificarColisaoCirculos(jogador->posicao, 15.0f, zumbiAtual->posicao, zumbiAtual->raio)) {
-            
-            if (cooldownDanoForte <= 0.0f) {
-                int dano = zumbiAtual->dano;
-                jogador->vida -= dano;
-                cooldownDanoForte = 0.5f;
-                flashDanoForte = 0.2f;
-                
-                printf("OUCH FORTE! Jogador recebeu %d de dano. Vida: %d\n", dano, jogador->vida);
-                
-                Vector2 direcaoEmpurrao = {
-                    jogador->posicao.x - zumbiAtual->posicao.x,
-                    jogador->posicao.y - zumbiAtual->posicao.y
-                };
-                
-                float magnitude = sqrtf(direcaoEmpurrao.x * direcaoEmpurrao.x + 
-                                       direcaoEmpurrao.y * direcaoEmpurrao.y);
-                
-                if (magnitude > 0) {
-                    direcaoEmpurrao.x /= magnitude;
-                    direcaoEmpurrao.y /= magnitude;
-                    
-                    float forcaEmpurrao = 60.0f;
-                    jogador->posicao.x += direcaoEmpurrao.x * forcaEmpurrao;
-                    jogador->posicao.y += direcaoEmpurrao.y * forcaEmpurrao;
-                    
-                    if (jogador->posicao.x < 20) jogador->posicao.x = 20;
-                    if (jogador->posicao.x > 780) jogador->posicao.x = 780;
-                    if (jogador->posicao.y < 20) jogador->posicao.y = 20;
-                    if (jogador->posicao.y > 580) jogador->posicao.y = 580;
-                }
-            }
-
-            if (jogador->vida < 0) {
-                jogador->vida = 0;
-            }
-        }
-
-        zumbiAtual = zumbiAtual->proximo;
-    }
-    
-    if (flashDanoForte > 0.0f) {
-        int alpha = (int)(flashDanoForte * 255.0f);
-        DrawRectangle(0, 0, 800, 600, (Color){255, 0, 0, alpha});
-    }
-}
-
-// Função para verificar colisões entre zumbis fortes
-void verificarColisoesZumbiForteZumbiForte(ZumbiForte *zumbisFortes) {
-    ZumbiForte *zumbi1 = zumbisFortes;
-
-    while (zumbi1 != NULL) {
-        ZumbiForte *zumbi2 = zumbi1->proximo;
-
-        while (zumbi2 != NULL) {
-            if (verificarColisaoCirculos(zumbi1->posicao, zumbi1->raio, zumbi2->posicao, zumbi2->raio)) {
-                float dx = zumbi2->posicao.x - zumbi1->posicao.x;
-                float dy = zumbi2->posicao.y - zumbi1->posicao.y;
-                float distancia = sqrtf(dx * dx + dy * dy);
-
-                if (distancia > 0) {
-                    float nx = dx / distancia;
-                    float ny = dy / distancia;
-                    float sobreposicao = (zumbi1->raio + zumbi2->raio) - distancia;
-                    float separacao = sobreposicao / 2.0f;
-
-                    zumbi1->posicao.x -= nx * separacao;
-                    zumbi1->posicao.y -= ny * separacao;
-                    zumbi2->posicao.x += nx * separacao;
-                    zumbi2->posicao.y += ny * separacao;
-                }
-            }
-
-            zumbi2 = zumbi2->proximo;
-        }
-
-        zumbi1 = zumbi1->proximo;
-    }
-}
-
-// ===== SISTEMA DE CHAVE =====
-
-void criarChave(Chave* chave, Vector2 posicao) {
-    chave->posicao = posicao;
-    chave->raio = 15.0f;
-    chave->ativa = true;
-    chave->coletada = false;
-}
-
-void desenharChave(Chave* chave) {
-    if (!chave->ativa || chave->coletada) return;
-    
-    // Efeito de brilho pulsante
-    static float tempo = 0;
-    tempo += 0.05f;
-    float pulso = sinf(tempo) * 3.0f;
-    
-    // Brilho externo
-    DrawCircleV(chave->posicao, chave->raio + pulso, (Color){255, 215, 0, 100});
-    
-    // Corpo da chave
-    DrawCircleV(chave->posicao, chave->raio, GOLD);
-    DrawCircleV((Vector2){chave->posicao.x, chave->posicao.y}, 8, YELLOW);
-    
-    // Detalhes da chave
-    DrawRectangle(chave->posicao.x - 2, chave->posicao.y + 8, 4, 15, GOLD);
-    DrawRectangle(chave->posicao.x - 2, chave->posicao.y + 18, 8, 3, GOLD);
-    DrawRectangle(chave->posicao.x - 2, chave->posicao.y + 23, 8, 3, GOLD);
-    
-    // Texto flutuante
-    const char* texto = "CHAVE";
-    int larguraTexto = MeasureText(texto, 15);
-    DrawText(texto, chave->posicao.x - larguraTexto/2, chave->posicao.y - 30, 15, YELLOW);
-}
-
-bool verificarColetaChave(Chave* chave, Player* jogador) {
-    if (!chave->ativa || chave->coletada) return false;
-    
-    float dx = chave->posicao.x - jogador->posicao.x;
-    float dy = chave->posicao.y - jogador->posicao.y;
-    float distancia = sqrtf(dx * dx + dy * dy);
-    
-    if (distancia < chave->raio + 15.0f) {
-        chave->coletada = true;
-        return true;
-    }
-    return false;
-}
-
-// ===== SISTEMA DE PORTA =====
-
-void criarPorta(Porta* porta, Vector2 posicao) {
-    porta->posicao = posicao;
-    porta->largura = 60;
-    porta->altura = 100;
-    porta->trancada = true;
-    porta->aberta = false;
-}
-
-void desenharPorta(Porta* porta) {
-    Color corPorta = porta->trancada ? DARKBROWN : BROWN;
-    
-    // Moldura da porta
-    DrawRectangle(porta->posicao.x - 5, porta->posicao.y - 5, 
-                  porta->largura + 10, porta->altura + 10, DARKGRAY);
-    
-    // Porta
-    DrawRectangle(porta->posicao.x, porta->posicao.y, 
-                  porta->largura, porta->altura, corPorta);
-    
-    // Detalhes da porta
-    DrawRectangle(porta->posicao.x + 5, porta->posicao.y + 5, 
-                  porta->largura - 10, porta->altura - 10, Fade(BLACK, 0.3f));
-    
-    if (porta->trancada) {
-        // Desenhar cadeado
-        DrawCircle(porta->posicao.x + porta->largura/2, 
-                   porta->posicao.y + porta->altura/2, 12, GRAY);
-        DrawCircle(porta->posicao.x + porta->largura/2, 
-                   porta->posicao.y + porta->altura/2, 10, DARKGRAY);
-        DrawRectangle(porta->posicao.x + porta->largura/2 - 6, 
-                     porta->posicao.y + porta->altura/2, 12, 15, DARKGRAY);
-        
-        // Texto
-        const char* texto = "TRANCADA";
-        int larguraTexto = MeasureText(texto, 15);
-        DrawText(texto, porta->posicao.x + porta->largura/2 - larguraTexto/2, 
-                 porta->posicao.y - 25, 15, RED);
-    } else {
-        // Texto quando pode passar
-        const char* texto = "PASSAGEM ABERTA";
-        int larguraTexto = MeasureText(texto, 15);
-        DrawText(texto, porta->posicao.x + porta->largura/2 - larguraTexto/2, 
-                 porta->posicao.y - 25, 15, GREEN);
-    }
-}
-
-bool verificarInteracaoPorta(Porta* porta, Player* jogador, bool temChave) {
-    // Calcular distância
-    float dx = (porta->posicao.x + porta->largura/2) - jogador->posicao.x;
-    float dy = (porta->posicao.y + porta->altura/2) - jogador->posicao.y;
-    float distancia = sqrtf(dx * dx + dy * dy);
-    
-    if (distancia < 50) {
-        if (porta->trancada && temChave) {
-            porta->trancada = false;
-        }
-        
-        // Passa automaticamente se a porta estiver destrancada
-        if (!porta->trancada) {
-            porta->aberta = true;
-            return true;
-        }
-    }
-    
-    return false;
-}
-
-// ===== SISTEMA DE MAPAS =====
-
-void carregarMapa(Mapa* mapa, int idMapa) {
-    mapa->id = idMapa;
-    
-    switch(idMapa) {
-        case 1: // Mapa inicial
-            mapa->corFundo = DARKGREEN;
-            mapa->spawnJogador = (Vector2){400, 300};
-            mapa->numZumbis = 5;
-            mapa->numZumbisFortes = 1;
-            mapa->temChave = true;
-            mapa->temPorta = true;
-            break;
-            
-        case 2: // Segundo mapa
-            mapa->corFundo = DARKPURPLE;
-            mapa->spawnJogador = (Vector2){100, 300};
-            mapa->numZumbis = 8;
-            mapa->numZumbisFortes = 2;
-            mapa->temChave = false;
-            mapa->temPorta = false;
-            break;
-            
-        default:
-            mapa->corFundo = BLACK;
-            mapa->spawnJogador = (Vector2){400, 300};
-            mapa->numZumbis = 3;
-            mapa->numZumbisFortes = 0;
-            mapa->temChave = false;
-            mapa->temPorta = false;
-            break;
     }
 }
