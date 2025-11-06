@@ -65,11 +65,23 @@ int main(void) {
 
     // Inicializar estruturas do jogo
     Player jogador;
-    Zumbi *listaZumbis = NULL;  // Lista encadeada de zumbis
-    Bala *listaBalas = NULL;      // Lista encadeada de balas
+    Zumbi *listaZumbis = NULL;        // Lista encadeada de zumbis normais
+    ZumbiForte *listaZumbisFortes = NULL;  // Lista encadeada de zumbis fortes
+    Bala *listaBalas = NULL;          // Lista encadeada de balas
+    
+    // Sistema de Chave e Porta
+    Chave chave;
+    Porta porta;
+    Mapa mapaAtual;
+    int idMapaAtual = 1;
+    bool jogadorTemChave = false;
+    bool chaveDropada = false;
 
     // Inicializar o mapa
     mapa(mapaDoJogo);
+
+    // Carregar mapa inicial
+    carregarMapa(&mapaAtual, idMapaAtual);
 
     // Inicializar o jogador
     iniciarJogo(&jogador);
@@ -77,17 +89,86 @@ int main(void) {
     // Inicializar o sprite do jogador (começa olhando para frente/direita)
     jogador.spriteAtual = spriteFrenteDireita;
 
-    // Adicionar zumbis iniciais
-    adicionarZumbi(&listaZumbis, (Vector2){100, 100}, spritesZumbis);
-    adicionarZumbi(&listaZumbis, (Vector2){700, 100}, spritesZumbis);
-    adicionarZumbi(&listaZumbis, (Vector2){400, 500}, spritesZumbis);
-    adicionarZumbi(&listaZumbis, (Vector2){100, 500}, spritesZumbis);
-    adicionarZumbi(&listaZumbis, (Vector2){700, 500}, spritesZumbis);
+    // Adicionar zumbis normais iniciais
+    for (int i = 0; i < mapaAtual.numZumbis; i++) {
+        float x = GetRandomValue(50, 750);
+        float y = GetRandomValue(50, 550);
+        adicionarZumbi(&listaZumbis, (Vector2){x, y}, spritesZumbis);
+    }
+
+    // Adicionar zumbi forte inicial
+    if (mapaAtual.numZumbisFortes > 0) {
+        adicionarZumbiForte(&listaZumbisFortes, (Vector2){400, 100});
+    }
+    
+    // Criar porta no mapa 1
+    if (mapaAtual.temPorta) {
+        criarPorta(&porta, (Vector2){740, 250});
+    }
 
     // Loop principal do jogo
     while (!WindowShouldClose()) {
         // Atualizar a lógica do jogo
         atualizarJogo(&jogador, &listaZumbis, &listaBalas);
+        
+        // Atualizar zumbis fortes
+        atualizarZumbisFortes(&listaZumbisFortes, jogador.posicao, GetFrameTime());
+        
+        // Verificar colisões com zumbis fortes
+        verificarColisoesBalaZumbiForte(&listaBalas, &listaZumbisFortes, &jogador);
+        verificarColisoesJogadorZumbiForte(&jogador, listaZumbisFortes);
+        verificarColisoesZumbiForteZumbiForte(listaZumbisFortes);
+        
+        // Verificar se o zumbi forte morreu e dropar chave
+        if (mapaAtual.temChave && listaZumbisFortes == NULL && !jogadorTemChave && !chaveDropada) {
+            // Criar chave na posição central
+            criarChave(&chave, (Vector2){400, 300});
+            chaveDropada = true;
+            printf("Chave dropada! Colete-a para abrir a porta.\n");
+        }
+
+        // Verificar coleta de chave
+        if (mapaAtual.temChave && !jogadorTemChave && chaveDropada) {
+            if (verificarColetaChave(&chave, &jogador)) {
+                jogadorTemChave = true;
+                printf("CHAVE COLETADA! Va ate a porta e pressione E.\n");
+            }
+        }
+
+        // Verificar interação com porta
+        if (mapaAtual.temPorta) {
+            if (verificarInteracaoPorta(&porta, &jogador, jogadorTemChave)) {
+                // Trocar para o próximo mapa
+                idMapaAtual = 2;
+                carregarMapa(&mapaAtual, idMapaAtual);
+                
+                printf("Entrando no Mapa %d!\n", idMapaAtual);
+                
+                // Resetar jogador
+                jogador.posicao = mapaAtual.spawnJogador;
+                jogadorTemChave = false;
+                chaveDropada = false;
+                
+                // Limpar inimigos antigos
+                liberarZumbis(&listaZumbis);
+                liberarZumbisFortes(&listaZumbisFortes);
+                listaZumbis = NULL;
+                listaZumbisFortes = NULL;
+                
+                // Criar novos inimigos
+                for (int i = 0; i < mapaAtual.numZumbis; i++) {
+                    float x = GetRandomValue(50, 750);
+                    float y = GetRandomValue(50, 550);
+                    adicionarZumbi(&listaZumbis, (Vector2){x, y}, spritesZumbis);
+                }
+                
+                for (int i = 0; i < mapaAtual.numZumbisFortes; i++) {
+                    float x = GetRandomValue(100, 700);
+                    float y = GetRandomValue(100, 200);
+                    adicionarZumbiForte(&listaZumbisFortes, (Vector2){x, y});
+                }
+            }
+        }
 
         // Atualizar sprite do jogador baseado na direção
         if (jogador.direcaoVertical == 0) { // Frente
@@ -106,14 +187,36 @@ int main(void) {
 
         // Desenhar tudo na tela
         BeginDrawing();
-        ClearBackground(DARKGRAY);
+        ClearBackground(mapaAtual.corFundo);
 
         desenharJogo(&jogador, listaZumbis, listaBalas, texturaMapa);
+        
+        // Desenhar porta
+        if (mapaAtual.temPorta) {
+            desenharPorta(&porta);
+        }
+
+        // Desenhar chave
+        if (mapaAtual.temChave && !jogadorTemChave && chaveDropada) {
+            desenharChave(&chave);
+        }
+        
+        // Desenhar zumbis fortes por cima
+        desenharZumbisFortes(listaZumbisFortes);
+        
+        // HUD adicional
+        if (jogadorTemChave) {
+            DrawText("CHAVE COLETADA!", 600, 10, 20, GOLD);
+        }
+        
+        DrawText(TextFormat("Mapa: %d", idMapaAtual), 10, 110, 20, WHITE);
 
         EndDrawing();
     }
 
     // Limpar recursos antes de fechar
+    liberarZumbis(&listaZumbis);           // Liberar memória dos zumbis normais
+    liberarZumbisFortes(&listaZumbisFortes); // Liberar memória dos zumbis fortes
     UnloadTexture(texturaMapa);  // Descarregar a textura do mapa
     UnloadTexture(spriteFrenteDireita);
     UnloadTexture(spriteFrenteEsquerda);
