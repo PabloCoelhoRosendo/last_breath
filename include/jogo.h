@@ -46,6 +46,8 @@ typedef struct {
     bool estaRecarregando;   // Flag se está recarregando
     float tempoRecargaAtual; // Tempo restante de recarga
     bool tempoJaSalvo;       // Flag para evitar salvar múltiplas vezes
+    float timerBoss;         // Timer de 45s para spawn do boss
+    bool bossSpawnado;       // Flag se o boss da fase já foi spawnado
 } Player;
 
 // 2. Estrutura para Zumbis (Victor - Requisito: Structs, Lista Encadeada)
@@ -80,6 +82,31 @@ typedef struct Bala {
     struct Bala *proximo;
 } Bala;
 
+// Enum para tipos de boss
+typedef enum {
+    BOSS_NENHUM = 0,
+    BOSS_PROWLER = 1,    // Fase 1: Boss lobo com ataque slam
+    BOSS_HUNTER = 2,     // Fase 2: Boss ágil de perseguição
+    BOSS_ABOMINATION = 3 // Fase 3: Boss estático com projéteis
+} TipoBoss;
+
+// 4. Estrutura para Boss (Requisito: Structs)
+typedef struct Boss {
+    TipoBoss tipo;
+    Vector2 posicao;
+    int vida;
+    int vidaMax;
+    float velocidade;
+    float raio;
+    bool ativo;              // Se o boss está vivo e ativo
+    bool atacando;           // Se está executando um ataque
+    float tempoAtaque;       // Timer para controlar ataques
+    float cooldownAtaque;    // Tempo entre ataques
+    int padraoAtaque;        // Padrão de ataque atual (para Abomination)
+    float anguloRotacao;     // Ângulo para ataques rotativos (Abomination)
+    struct Boss *proximo;    // Ponteiro para próximo boss (lista encadeada)
+} Boss;
+
 
 // Protótipos das funções do mapa
 void mapa(int mapa[TAMANHO_MAPA][TAMANHO_MAPA]);
@@ -97,6 +124,13 @@ void inicializarArma(Arma *arma, TipoArma tipo);
 void equiparArma(Player *jogador, int slot);
 void recarregarArma(Player *jogador);
 void atirarArma(Player *jogador, struct Bala **balas, Vector2 alvo);
+
+// Protótipos do Sistema de Boss
+void criarBoss(struct Boss **bosses, TipoBoss tipo, Vector2 posicao);
+void atualizarBoss(struct Boss **bosses, Player *jogador, struct Bala **balas, float deltaTime);
+void desenharBoss(struct Boss *bosses);
+void verificarColisoesBossBala(struct Boss **bosses, struct Bala **balas);
+void verificarColisoesBossJogador(struct Boss *bosses, Player *jogador);
 
 // Protótipos do Módulo de Balas ( - Pablo)
 void adicionarBala(struct Bala **cabeca, Vector2 posInicial, Vector2 alvo, int tipo, float dano);

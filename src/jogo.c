@@ -333,6 +333,10 @@ void iniciarJogo(Player *jogador) {
     jogador->tempoRecargaAtual = 0.0f;
     jogador->tempoJaSalvo = false;
     
+    // Inicializar sistema de boss
+    jogador->timerBoss = 0.0f;
+    jogador->bossSpawnado = false;
+    
     // Inicializar slots de arma
     inicializarArma(&jogador->slots[0], ARMA_PISTOL);   // Slot 1: Pistol (inicial)
     inicializarArma(&jogador->slots[1], ARMA_NENHUMA);  // Slot 2: Vazio
@@ -1048,5 +1052,339 @@ void verificarColisoesZumbiZumbi(Zumbi *zumbis) {
         }
 
         zumbi1 = zumbi1->proximo;
+    }
+}
+
+// ===== SISTEMA DE BOSS =====
+
+// Função para criar um novo boss
+void criarBoss(Boss **bosses, TipoBoss tipo, Vector2 posicao) {
+    Boss *novoBoss = (Boss *)malloc(sizeof(Boss));
+    
+    novoBoss->tipo = tipo;
+    novoBoss->posicao = posicao;
+    novoBoss->ativo = true;
+    novoBoss->atacando = false;
+    novoBoss->tempoAtaque = 0.0f;
+    novoBoss->padraoAtaque = 0;
+    novoBoss->anguloRotacao = 0.0f;
+    
+    // Configurar stats específicos por tipo de boss
+    switch (tipo) {
+        case BOSS_PROWLER:
+            novoBoss->vidaMax = 150;
+            novoBoss->vida = 150;
+            novoBoss->velocidade = 2.5f;
+            novoBoss->raio = 25.0f;
+            novoBoss->cooldownAtaque = 3.0f; // Slam a cada 3 segundos
+            break;
+            
+        case BOSS_HUNTER:
+            novoBoss->vidaMax = 80;
+            novoBoss->vida = 80;
+            novoBoss->velocidade = 6.0f;
+            novoBoss->raio = 20.0f;
+            novoBoss->cooldownAtaque = 0.0f; // Dano por contato contínuo
+            break;
+            
+        case BOSS_ABOMINATION:
+            novoBoss->vidaMax = 250;
+            novoBoss->vida = 250;
+            novoBoss->velocidade = 0.0f; // Estático
+            novoBoss->raio = 35.0f;
+            novoBoss->cooldownAtaque = 2.0f; // Ataque de projéteis a cada 2s
+            break;
+            
+        default:
+            novoBoss->vidaMax = 100;
+            novoBoss->vida = 100;
+            novoBoss->velocidade = 2.0f;
+            novoBoss->raio = 20.0f;
+            novoBoss->cooldownAtaque = 2.0f;
+            break;
+    }
+    
+    // Adicionar à lista encadeada
+    novoBoss->proximo = *bosses;
+    *bosses = novoBoss;
+}
+
+// Função para atualizar lógica dos bosses
+void atualizarBoss(Boss **bosses, Player *jogador, Bala **balas, float deltaTime) {
+    Boss *bossAtual = *bosses;
+    
+    while (bossAtual != NULL) {
+        if (!bossAtual->ativo) {
+            bossAtual = bossAtual->proximo;
+            continue;
+        }
+        
+        // Atualizar timer de ataque
+        bossAtual->tempoAtaque += deltaTime;
+        
+        // Comportamento específico por tipo
+        switch (bossAtual->tipo) {
+            case BOSS_PROWLER: {
+                // Perseguir o jogador
+                float dx = jogador->posicao.x - bossAtual->posicao.x;
+                float dy = jogador->posicao.y - bossAtual->posicao.y;
+                float distancia = sqrtf(dx * dx + dy * dy);
+                
+                if (distancia > 0) {
+                    bossAtual->posicao.x += (dx / distancia) * bossAtual->velocidade;
+                    bossAtual->posicao.y += (dy / distancia) * bossAtual->velocidade;
+                }
+                
+                // Ataque Slam (área de efeito)
+                if (bossAtual->tempoAtaque >= bossAtual->cooldownAtaque) {
+                    bossAtual->atacando = true;
+                    
+                    // Verificar se jogador está na área de efeito (raio de 80 pixels)
+                    if (distancia <= 80.0f) {
+                        jogador->vida -= 15; // Dano de área
+                    }
+                    
+                    bossAtual->tempoAtaque = 0.0f;
+                    bossAtual->atacando = false;
+                }
+                break;
+            }
+            
+            case BOSS_HUNTER: {
+                // Perseguição agressiva e rápida
+                float dx = jogador->posicao.x - bossAtual->posicao.x;
+                float dy = jogador->posicao.y - bossAtual->posicao.y;
+                float distancia = sqrtf(dx * dx + dy * dy);
+                
+                if (distancia > 0) {
+                    bossAtual->posicao.x += (dx / distancia) * bossAtual->velocidade;
+                    bossAtual->posicao.y += (dy / distancia) * bossAtual->velocidade;
+                }
+                
+                // Dano por contato (20 HP)
+                if (distancia <= (bossAtual->raio + 20.0f)) {
+                    if (bossAtual->tempoAtaque >= 1.0f) { // Cooldown de 1s entre danos
+                        jogador->vida -= 20;
+                        bossAtual->tempoAtaque = 0.0f;
+                    }
+                }
+                break;
+            }
+            
+            case BOSS_ABOMINATION: {
+                // Boss estático com ataques de projéteis
+                if (bossAtual->tempoAtaque >= bossAtual->cooldownAtaque) {
+                    // Alternar entre 3 padrões de ataque
+                    bossAtual->padraoAtaque = (bossAtual->padraoAtaque + 1) % 3;
+                    
+                    switch (bossAtual->padraoAtaque) {
+                        case 0: { // Padrão 1: Rajada direta ao jogador
+                            float dx = jogador->posicao.x - bossAtual->posicao.x;
+                            float dy = jogador->posicao.y - bossAtual->posicao.y;
+                            float distancia = sqrtf(dx * dx + dy * dy);
+                            
+                            if (distancia > 0) {
+                                Bala *novaBala = (Bala *)malloc(sizeof(Bala));
+                                novaBala->posicao = bossAtual->posicao;
+                                novaBala->velocidade.x = (dx / distancia) * 5.0f;
+                                novaBala->velocidade.y = (dy / distancia) * 5.0f;
+                                novaBala->tipo = 1; // Projétil de boss
+                                novaBala->dano = 25.0f;
+                                novaBala->raio = 8.0f;
+                                novaBala->tempoVida = 5.0f;
+                                novaBala->proximo = *balas;
+                                *balas = novaBala;
+                            }
+                            break;
+                        }
+                        
+                        case 1: { // Padrão 2: Spray circular (8 projéteis)
+                            for (int i = 0; i < 8; i++) {
+                                float angulo = (360.0f / 8.0f) * i * DEG2RAD;
+                                
+                                Bala *novaBala = (Bala *)malloc(sizeof(Bala));
+                                novaBala->posicao = bossAtual->posicao;
+                                novaBala->velocidade.x = cosf(angulo) * 4.0f;
+                                novaBala->velocidade.y = sinf(angulo) * 4.0f;
+                                novaBala->tipo = 1;
+                                novaBala->dano = 20.0f;
+                                novaBala->raio = 6.0f;
+                                novaBala->tempoVida = 5.0f;
+                                novaBala->proximo = *balas;
+                                *balas = novaBala;
+                            }
+                            break;
+                        }
+                        
+                        case 2: { // Padrão 3: Espiral rotativa (3 projéteis)
+                            for (int i = 0; i < 3; i++) {
+                                float angulo = (bossAtual->anguloRotacao + (120.0f * i)) * DEG2RAD;
+                                
+                                Bala *novaBala = (Bala *)malloc(sizeof(Bala));
+                                novaBala->posicao = bossAtual->posicao;
+                                novaBala->velocidade.x = cosf(angulo) * 3.5f;
+                                novaBala->velocidade.y = sinf(angulo) * 3.5f;
+                                novaBala->tipo = 1;
+                                novaBala->dano = 15.0f;
+                                novaBala->raio = 7.0f;
+                                novaBala->tempoVida = 5.0f;
+                                novaBala->proximo = *balas;
+                                *balas = novaBala;
+                            }
+                            
+                            bossAtual->anguloRotacao += 15.0f; // Incrementar rotação
+                            if (bossAtual->anguloRotacao >= 360.0f) {
+                                bossAtual->anguloRotacao = 0.0f;
+                            }
+                            break;
+                        }
+                    }
+                    
+                    bossAtual->tempoAtaque = 0.0f;
+                }
+                break;
+            }
+            
+            default:
+                break;
+        }
+        
+        bossAtual = bossAtual->proximo;
+    }
+}
+
+// Função para desenhar bosses
+void desenharBoss(Boss *bosses) {
+    Boss *bossAtual = bosses;
+    
+    while (bossAtual != NULL) {
+        if (!bossAtual->ativo) {
+            bossAtual = bossAtual->proximo;
+            continue;
+        }
+        
+        // Cor baseada no tipo de boss
+        Color corBoss;
+        switch (bossAtual->tipo) {
+            case BOSS_PROWLER:
+                corBoss = PURPLE; // Roxo para Prowler
+                break;
+            case BOSS_HUNTER:
+                corBoss = ORANGE; // Laranja para Hunter
+                break;
+            case BOSS_ABOMINATION:
+                corBoss = DARKGREEN; // Verde escuro para Abomination
+                break;
+            default:
+                corBoss = BLACK;
+                break;
+        }
+        
+        // Desenhar círculo do boss
+        DrawCircleV(bossAtual->posicao, bossAtual->raio, corBoss);
+        DrawCircleLines((int)bossAtual->posicao.x, (int)bossAtual->posicao.y, bossAtual->raio, DARKGRAY);
+        
+        // Desenhar barra de vida acima do boss
+        float barraLargura = 60.0f;
+        float barraAltura = 8.0f;
+        float porcentagemVida = (float)bossAtual->vida / (float)bossAtual->vidaMax;
+        
+        Vector2 barraPos = {bossAtual->posicao.x - barraLargura / 2, bossAtual->posicao.y - bossAtual->raio - 15.0f};
+        
+        // Fundo da barra (vermelho)
+        DrawRectangleV(barraPos, (Vector2){barraLargura, barraAltura}, RED);
+        // Vida atual (verde)
+        DrawRectangleV(barraPos, (Vector2){barraLargura * porcentagemVida, barraAltura}, GREEN);
+        // Contorno
+        DrawRectangleLinesEx((Rectangle){barraPos.x, barraPos.y, barraLargura, barraAltura}, 1, BLACK);
+        
+        // Indicador de ataque para Prowler
+        if (bossAtual->tipo == BOSS_PROWLER && bossAtual->atacando) {
+            DrawCircleLines((int)bossAtual->posicao.x, (int)bossAtual->posicao.y, 80.0f, RED);
+        }
+        
+        bossAtual = bossAtual->proximo;
+    }
+}
+
+// Função para verificar colisões entre boss e balas do jogador
+void verificarColisoesBossBala(Boss **bosses, Bala **balas) {
+    Boss *bossAtual = *bosses;
+    
+    while (bossAtual != NULL) {
+        if (!bossAtual->ativo) {
+            bossAtual = bossAtual->proximo;
+            continue;
+        }
+        
+        Bala *balaAtual = *balas;
+        Bala *balaAnterior = NULL;
+        
+        while (balaAtual != NULL) {
+            // Verificar apenas balas do jogador (tipo 0)
+            if (balaAtual->tipo == 0) {
+                // Verificar colisão círculo-círculo
+                float dx = bossAtual->posicao.x - balaAtual->posicao.x;
+                float dy = bossAtual->posicao.y - balaAtual->posicao.y;
+                float distancia = sqrtf(dx * dx + dy * dy);
+                
+                if (distancia <= (bossAtual->raio + balaAtual->raio)) {
+                    // Aplicar dano ao boss
+                    bossAtual->vida -= (int)balaAtual->dano;
+                    
+                    // Remover bala
+                    if (balaAnterior == NULL) {
+                        *balas = balaAtual->proximo;
+                    } else {
+                        balaAnterior->proximo = balaAtual->proximo;
+                    }
+                    Bala *balaTemp = balaAtual;
+                    balaAtual = balaAtual->proximo;
+                    free(balaTemp);
+                    continue;
+                }
+            }
+            
+            balaAnterior = balaAtual;
+            balaAtual = balaAtual->proximo;
+        }
+        
+        // Verificar se o boss morreu
+        if (bossAtual->vida <= 0) {
+            bossAtual->ativo = false;
+            
+            // TODO: Dropar item específico (Chave, Mapa, CURE)
+            // Será implementado no Sprint de Itens
+        }
+        
+        bossAtual = bossAtual->proximo;
+    }
+}
+
+// Função para verificar colisões entre boss e jogador
+void verificarColisoesBossJogador(Boss *bosses, Player *jogador) {
+    Boss *bossAtual = bosses;
+    
+    while (bossAtual != NULL) {
+        if (!bossAtual->ativo) {
+            bossAtual = bossAtual->proximo;
+            continue;
+        }
+        
+        // Verificar colisão círculo-círculo
+        float dx = jogador->posicao.x - bossAtual->posicao.x;
+        float dy = jogador->posicao.y - bossAtual->posicao.y;
+        float distancia = sqrtf(dx * dx + dy * dy);
+        
+        if (distancia <= (bossAtual->raio + 20.0f)) { // 20.0f = raio aproximado do jogador
+            // Empurrar jogador para trás
+            if (distancia > 0) {
+                float forcaEmpurrao = 3.0f;
+                jogador->posicao.x += (dx / distancia) * forcaEmpurrao;
+                jogador->posicao.y += (dy / distancia) * forcaEmpurrao;
+            }
+        }
+        
+        bossAtual = bossAtual->proximo;
     }
 }

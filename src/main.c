@@ -66,6 +66,7 @@ int main(void) {
     // Inicializar estruturas do jogo
     Player jogador;
     Zumbi *listaZumbis = NULL;        // Lista encadeada de zumbis normais
+    Boss *listaBosses = NULL;         // Lista encadeada de bosses
     // ZumbiForte *listaZumbisFortes = NULL;  // Lista encadeada de zumbis fortes (TODO: Implementar)
     Bala *listaBalas = NULL;          // Lista encadeada de balas
     
@@ -110,6 +111,50 @@ int main(void) {
     while (!WindowShouldClose()) {
         // Atualizar a lógica do jogo
         atualizarJogo(&jogador, &listaZumbis, &listaBalas);
+        
+        // Atualizar timer de boss e spawnar quando necessário
+        if (!jogador.bossSpawnado && jogador.vida > 0) {
+            jogador.timerBoss += GetFrameTime();
+            
+            // Verificar se passou 45 segundos ou se todos os zumbis foram mortos
+            int numZumbis = 0;
+            Zumbi *z = listaZumbis;
+            while (z != NULL) {
+                numZumbis++;
+                z = z->proximo;
+            }
+            
+            if (jogador.timerBoss >= 45.0f || numZumbis == 0) {
+                // Spawnar boss baseado na fase atual
+                Vector2 posicaoBoss = {400, 100}; // Spawnar no topo do mapa
+                
+                switch (jogador.fase) {
+                    case 1:
+                        criarBoss(&listaBosses, BOSS_PROWLER, posicaoBoss);
+                        printf("BOSS APARECEU: PROWLER!\n");
+                        break;
+                    case 2:
+                        // Spawnar 2 Hunters
+                        criarBoss(&listaBosses, BOSS_HUNTER, (Vector2){300, 100});
+                        criarBoss(&listaBosses, BOSS_HUNTER, (Vector2){500, 100});
+                        printf("BOSS APARECEU: 2x HUNTERS!\n");
+                        break;
+                    case 3:
+                        criarBoss(&listaBosses, BOSS_ABOMINATION, (Vector2){400, 300});
+                        printf("BOSS APARECEU: ABOMINATION!\n");
+                        break;
+                }
+                
+                jogador.bossSpawnado = true;
+            }
+        }
+        
+        // Atualizar bosses
+        atualizarBoss(&listaBosses, &jogador, &listaBalas, GetFrameTime());
+        
+        // Verificar colisões boss vs balas e boss vs jogador
+        verificarColisoesBossBala(&listaBosses, &listaBalas);
+        verificarColisoesBossJogador(listaBosses, &jogador);
         
         // TODO: Implementar sistema de zumbis fortes
         // Atualizar zumbis fortes
@@ -181,6 +226,16 @@ int main(void) {
         ClearBackground(RAYWHITE);  // Cor de fundo padrão por enquanto
 
         desenharJogo(&jogador, listaZumbis, listaBalas, texturaMapa);
+        
+        // Desenhar bosses
+        desenharBoss(listaBosses);
+        
+        // Desenhar timer de boss se ainda não spawnou
+        if (!jogador.bossSpawnado && jogador.vida > 0) {
+            int segundosRestantes = (int)(45.0f - jogador.timerBoss);
+            if (segundosRestantes < 0) segundosRestantes = 0;
+            DrawText(TextFormat("BOSS EM: %ds", segundosRestantes), 320, 10, 24, RED);
+        }
         
         // TODO: Implementar desenho de porta, chave e zumbis fortes
         // Desenhar porta
