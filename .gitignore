@@ -56,3 +56,8 @@ dkms.conf
 
 # VS Code settings
 .vscode/
+
+# Arquivos específicos do projeto
+last_breath
+scores.txt
+raylib/
