@@ -48,6 +48,9 @@ typedef struct {
     bool tempoJaSalvo;       // Flag para evitar salvar múltiplas vezes
     float timerBoss;         // Timer de 45s para spawn do boss
     bool bossSpawnado;       // Flag se o boss da fase já foi spawnado
+    bool temChave;           // Flag se possui a Chave do Portão
+    bool temMapa;            // Flag se possui o Mapa do Laboratório
+    bool temCure;            // Flag se coletou a CURE
 } Player;
 
 // 2. Estrutura para Zumbis (Victor - Requisito: Structs, Lista Encadeada)
@@ -107,6 +110,32 @@ typedef struct Boss {
     struct Boss *proximo;    // Ponteiro para próximo boss (lista encadeada)
 } Boss;
 
+// Enum para tipos de item
+typedef enum {
+    ITEM_CHAVE = 0,
+    ITEM_MAPA = 1,
+    ITEM_CURE = 2
+} TipoItem;
+
+// 5. Estrutura para Itens Coletáveis (Requisito: Structs)
+typedef struct {
+    TipoItem tipo;
+    Vector2 posicao;
+    float raio;           // Raio de coleta (distância para coletar)
+    bool ativo;           // Se o item está no mapa para ser coletado
+    bool coletado;        // Se já foi coletado
+} Item;
+
+// 6. Estrutura para Porta (Requisito: Structs)
+typedef struct {
+    Vector2 posicao;
+    float largura;
+    float altura;
+    bool ativa;           // Se a porta está no mapa
+    bool trancada;        // Se a porta requer chave
+    int faseDestino;      // Qual fase a porta leva (1->2, 2->3)
+} Porta;
+
 
 // Protótipos das funções do mapa
 void mapa(int mapa[TAMANHO_MAPA][TAMANHO_MAPA]);
@@ -129,8 +158,16 @@ void atirarArma(Player *jogador, struct Bala **balas, Vector2 alvo);
 void criarBoss(struct Boss **bosses, TipoBoss tipo, Vector2 posicao);
 void atualizarBoss(struct Boss **bosses, Player *jogador, struct Bala **balas, float deltaTime);
 void desenharBoss(struct Boss *bosses);
-void verificarColisoesBossBala(struct Boss **bosses, struct Bala **balas);
+void verificarColisoesBossBala(struct Boss **bosses, struct Bala **balas, Item *item);
 void verificarColisoesBossJogador(struct Boss *bosses, Player *jogador);
+
+// Protótipos do Sistema de Itens e Interação
+void criarItem(Item *item, TipoItem tipo, Vector2 posicao);
+void desenharItem(Item *item);
+bool verificarColetaItem(Item *item, Player *jogador);
+void criarPorta(Porta *porta, Vector2 posicao, int faseDestino);
+void desenharPorta(Porta *porta);
+bool verificarInteracaoPorta(Porta *porta, Player *jogador);
 
 // Protótipos do Módulo de Balas ( - Pablo)
 void adicionarBala(struct Bala **cabeca, Vector2 posInicial, Vector2 alvo, int tipo, float dano);

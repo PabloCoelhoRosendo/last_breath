@@ -337,6 +337,11 @@ void iniciarJogo(Player *jogador) {
     jogador->timerBoss = 0.0f;
     jogador->bossSpawnado = false;
     
+    // Inicializar sistema de itens
+    jogador->temChave = false;
+    jogador->temMapa = false;
+    jogador->temCure = false;
+    
     // Inicializar slots de arma
     inicializarArma(&jogador->slots[0], ARMA_PISTOL);   // Slot 1: Pistol (inicial)
     inicializarArma(&jogador->slots[1], ARMA_NENHUMA);  // Slot 2: Vazio
@@ -519,7 +524,9 @@ void desenharJogo(Player *jogador, Zumbi *zumbis, Bala *balas, Texture2D textura
         corMunicao = RED;
         // Piscar quando munição está baixa
         if ((int)(GetTime() * 2) % 2 == 0 && !jogador->estaRecarregando) {
-            DrawText("RECARREGUE!", 10, 85, 20, RED);
+            const char *avisoRecarga = "RECARREGUE!";
+            int larguraTexto = MeasureText(avisoRecarga, 20);
+            DrawText(avisoRecarga, 400 - larguraTexto / 2, 85, 20, RED);
         }
     }
     
@@ -1308,7 +1315,7 @@ void desenharBoss(Boss *bosses) {
 }
 
 // Função para verificar colisões entre boss e balas do jogador
-void verificarColisoesBossBala(Boss **bosses, Bala **balas) {
+void verificarColisoesBossBala(Boss **bosses, Bala **balas, Item *item) {
     Boss *bossAtual = *bosses;
     
     while (bossAtual != NULL) {
@@ -1349,12 +1356,29 @@ void verificarColisoesBossBala(Boss **bosses, Bala **balas) {
             balaAtual = balaAtual->proximo;
         }
         
-        // Verificar se o boss morreu
-        if (bossAtual->vida <= 0) {
+        // Verificar se o boss morreu e dropar item
+        if (bossAtual->vida <= 0 && bossAtual->ativo) {
             bossAtual->ativo = false;
             
-            // TODO: Dropar item específico (Chave, Mapa, CURE)
-            // Será implementado no Sprint de Itens
+            // Dropar item específico baseado no tipo de boss
+            if (item != NULL && !item->ativo) {
+                switch (bossAtual->tipo) {
+                    case BOSS_PROWLER:
+                        criarItem(item, ITEM_CHAVE, bossAtual->posicao);
+                        printf("Boss morreu! CHAVE dropada!\n");
+                        break;
+                    case BOSS_HUNTER:
+                        criarItem(item, ITEM_MAPA, bossAtual->posicao);
+                        printf("Boss morreu! MAPA dropado!\n");
+                        break;
+                    case BOSS_ABOMINATION:
+                        criarItem(item, ITEM_CURE, bossAtual->posicao);
+                        printf("Boss morreu! CURE dropada! VITORIA!\n");
+                        break;
+                    default:
+                        break;
+                }
+            }
         }
         
         bossAtual = bossAtual->proximo;
@@ -1387,4 +1411,186 @@ void verificarColisoesBossJogador(Boss *bosses, Player *jogador) {
         
         bossAtual = bossAtual->proximo;
     }
+}
+
+// ===== SISTEMA DE ITENS E INTERAÇÃO =====
+
+// Função para criar um item coletável
+void criarItem(Item *item, TipoItem tipo, Vector2 posicao) {
+    item->tipo = tipo;
+    item->posicao = posicao;
+    item->raio = 30.0f;  // Raio de coleta de 30 pixels
+    item->ativo = true;
+    item->coletado = false;
+}
+
+// Função para desenhar um item
+void desenharItem(Item *item) {
+    if (!item->ativo || item->coletado) {
+        return;
+    }
+    
+    Color corItem;
+    const char *nomeItem;
+    
+    switch (item->tipo) {
+        case ITEM_CHAVE:
+            corItem = GOLD;
+            nomeItem = "CHAVE";
+            break;
+        case ITEM_MAPA:
+            corItem = SKYBLUE;
+            nomeItem = "MAPA";
+            break;
+        case ITEM_CURE:
+            corItem = GREEN;
+            nomeItem = "CURE";
+            break;
+        default:
+            corItem = WHITE;
+            nomeItem = "???";
+            break;
+    }
+    
+    // Desenhar círculo do item (efeito de "pulsar")
+    float pulso = sinf(GetTime() * 3.0f) * 3.0f;
+    DrawCircleV(item->posicao, 15.0f + pulso, corItem);
+    DrawCircleLines((int)item->posicao.x, (int)item->posicao.y, 15.0f + pulso, BLACK);
+    
+    // Desenhar nome do item acima
+    int larguraTexto = MeasureText(nomeItem, 14);
+    DrawText(nomeItem, (int)item->posicao.x - larguraTexto / 2, (int)item->posicao.y - 30, 14, BLACK);
+    DrawText(nomeItem, (int)item->posicao.x - larguraTexto / 2 - 1, (int)item->posicao.y - 31, 14, corItem);
+}
+
+// Função para verificar coleta de item
+bool verificarColetaItem(Item *item, Player *jogador) {
+    if (!item->ativo || item->coletado) {
+        return false;
+    }
+    
+    // Calcular distância entre jogador e item
+    float dx = jogador->posicao.x - item->posicao.x;
+    float dy = jogador->posicao.y - item->posicao.y;
+    float distancia = sqrtf(dx * dx + dy * dy);
+    
+    // Verificar se está próximo e pressionou E
+    if (distancia <= item->raio && IsKeyPressed(KEY_E)) {
+        // Coletar item baseado no tipo
+        switch (item->tipo) {
+            case ITEM_CHAVE:
+                jogador->temChave = true;
+                printf("CHAVE COLETADA! Va ate a porta.\n");
+                break;
+            case ITEM_MAPA:
+                jogador->temMapa = true;
+                printf("MAPA COLETADO! Voce pode acessar o laboratorio.\n");
+                break;
+            case ITEM_CURE:
+                jogador->temCure = true;
+                printf("CURE COLETADA! VITORIA!\n");
+                break;
+        }
+        
+        item->coletado = true;
+        item->ativo = false;
+        return true;
+    }
+    
+    // Desenhar prompt "Pressione E" se estiver próximo
+    if (distancia <= item->raio) {
+        const char *prompt = "Pressione E";
+        int largura = MeasureText(prompt, 16);
+        DrawText(prompt, (int)item->posicao.x - largura / 2, (int)item->posicao.y + 25, 16, YELLOW);
+    }
+    
+    return false;
+}
+
+// Função para criar uma porta
+void criarPorta(Porta *porta, Vector2 posicao, int faseDestino) {
+    porta->posicao = posicao;
+    porta->largura = 60.0f;
+    porta->altura = 80.0f;
+    porta->ativa = true;
+    porta->trancada = true;  // Por padrão, portas são trancadas
+    porta->faseDestino = faseDestino;
+}
+
+// Função para desenhar uma porta
+void desenharPorta(Porta *porta) {
+    if (!porta->ativa) {
+        return;
+    }
+    
+    // Cor baseada no estado da porta
+    Color corPorta = porta->trancada ? DARKBROWN : BROWN;
+    
+    // Desenhar retângulo da porta
+    Rectangle rectPorta = {
+        porta->posicao.x - porta->largura / 2,
+        porta->posicao.y - porta->altura / 2,
+        porta->largura,
+        porta->altura
+    };
+    
+    DrawRectangleRec(rectPorta, corPorta);
+    DrawRectangleLinesEx(rectPorta, 3, BLACK);
+    
+    // Desenhar símbolo de cadeado se trancada
+    if (porta->trancada) {
+        DrawCircle((int)porta->posicao.x, (int)porta->posicao.y - 10, 8, GOLD);
+        DrawRectangle((int)porta->posicao.x - 6, (int)porta->posicao.y - 10, 12, 15, GOLD);
+    }
+    
+    // Desenhar texto indicando fase destino
+    const char *texto = TextFormat("Fase %d", porta->faseDestino);
+    int largura = MeasureText(texto, 12);
+    DrawText(texto, (int)porta->posicao.x - largura / 2, (int)porta->posicao.y + 45, 12, WHITE);
+}
+
+// Função para verificar interação com porta
+bool verificarInteracaoPorta(Porta *porta, Player *jogador) {
+    if (!porta->ativa) {
+        return false;
+    }
+    
+    // Calcular distância entre jogador e porta
+    float dx = jogador->posicao.x - porta->posicao.x;
+    float dy = jogador->posicao.y - porta->posicao.y;
+    float distancia = sqrtf(dx * dx + dy * dy);
+    
+    // Verificar se está próximo (50 pixels)
+    if (distancia <= 50.0f) {
+        // Verificar se a porta está trancada
+        if (porta->trancada) {
+            // Verificar se tem a chave necessária
+            if (porta->faseDestino == 2 && !jogador->temChave) {
+                DrawText("Precisa da CHAVE", (int)porta->posicao.x - 60, (int)porta->posicao.y - 50, 14, RED);
+                return false;
+            }
+            
+            if (porta->faseDestino == 3 && !jogador->temMapa) {
+                DrawText("Precisa do MAPA", (int)porta->posicao.x - 60, (int)porta->posicao.y - 50, 14, RED);
+                return false;
+            }
+        }
+        
+        // Mostrar prompt de interação
+        DrawText("Pressione E", (int)porta->posicao.x - 45, (int)porta->posicao.y - 50, 16, YELLOW);
+        
+        // Verificar se pressionou E
+        if (IsKeyPressed(KEY_E)) {
+            if (porta->trancada) {
+                // Destrancar porta
+                porta->trancada = false;
+                printf("Porta destrancada!\n");
+            }
+            
+            // Usar a porta (transição de fase)
+            return true;
+        }
+    }
+    
+    return false;
 }

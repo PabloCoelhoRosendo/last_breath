@@ -70,13 +70,11 @@ int main(void) {
     // ZumbiForte *listaZumbisFortes = NULL;  // Lista encadeada de zumbis fortes (TODO: Implementar)
     Bala *listaBalas = NULL;          // Lista encadeada de balas
     
-    // Sistema de Chave e Porta (TODO: Implementar)
-    // Chave chave;
-    // Porta porta;
-    // Mapa mapaAtual;
-    // int idMapaAtual = 1;
-    // bool jogadorTemChave = false;
-    // bool chaveDropada = false;
+    // Sistema de Itens e Porta
+    Item itemAtual;                   // Item coletável atual (um por vez)
+    itemAtual.ativo = false;          // Começa sem item no mapa
+    Porta porta;                      // Porta para transição de fase
+    criarPorta(&porta, (Vector2){740, 300}, 2); // Porta para Fase 2
 
     // Inicializar o mapa
     mapa(mapaDoJogo);
@@ -96,16 +94,6 @@ int main(void) {
         float y = GetRandomValue(50, 550);
         adicionarZumbi(&listaZumbis, (Vector2){x, y}, spritesZumbis);
     }
-
-    // Adicionar zumbi forte inicial (TODO: Implementar)
-    // if (mapaAtual.numZumbisFortes > 0) {
-    //     adicionarZumbiForte(&listaZumbisFortes, (Vector2){400, 100});
-    // }
-    
-    // Criar porta no mapa 1 (TODO: Implementar)
-    // if (mapaAtual.temPorta) {
-    //     criarPorta(&porta, (Vector2){740, 250});
-    // }
 
     // Loop principal do jogo
     while (!WindowShouldClose()) {
@@ -152,9 +140,39 @@ int main(void) {
         // Atualizar bosses
         atualizarBoss(&listaBosses, &jogador, &listaBalas, GetFrameTime());
         
-        // Verificar colisões boss vs balas e boss vs jogador
-        verificarColisoesBossBala(&listaBosses, &listaBalas);
+        // Verificar colisões boss vs balas (passa item para dropar) e boss vs jogador
+        verificarColisoesBossBala(&listaBosses, &listaBalas, &itemAtual);
         verificarColisoesBossJogador(listaBosses, &jogador);
+        
+        // Verificar coleta de item
+        if (itemAtual.ativo) {
+            verificarColetaItem(&itemAtual, &jogador);
+        }
+        
+        // Verificar interação com porta
+        if (porta.ativa && verificarInteracaoPorta(&porta, &jogador)) {
+            // Transição de fase (será implementada completamente depois)
+            printf("Usando porta! Indo para Fase %d\n", porta.faseDestino);
+            jogador.fase = porta.faseDestino;
+            jogador.timerBoss = 0.0f;
+            jogador.bossSpawnado = false;
+            
+            // Resetar posição do jogador
+            jogador.posicao = (Vector2){400, 300};
+            
+            // Aplicar upgrade de velocidade após Fase 1
+            if (jogador.fase == 2) {
+                jogador.velocidadeBase = 5.0f; // Upgrade para 5.0 m/s
+                printf("UPGRADE! Velocidade aumentada para 5.0 m/s\n");
+            }
+            
+            // Atualizar porta para próxima fase
+            if (porta.faseDestino == 2) {
+                criarPorta(&porta, (Vector2){740, 300}, 3); // Porta para Fase 3
+            } else if (porta.faseDestino == 3) {
+                porta.ativa = false; // Última fase, sem mais portas
+            }
+        }
         
         // TODO: Implementar sistema de zumbis fortes
         // Atualizar zumbis fortes
@@ -237,24 +255,31 @@ int main(void) {
             DrawText(TextFormat("BOSS EM: %ds", segundosRestantes), 320, 10, 24, RED);
         }
         
-        // TODO: Implementar desenho de porta, chave e zumbis fortes
         // Desenhar porta
-        // if (mapaAtual.temPorta) {
-        //     desenharPorta(&porta);
-        // }
-
-        // // Desenhar chave
-        // if (mapaAtual.temChave && !jogadorTemChave && chaveDropada) {
-        //     desenharChave(&chave);
-        // }
+        if (porta.ativa) {
+            desenharPorta(&porta);
+        }
         
-        // // Desenhar zumbis fortes por cima
-        // desenharZumbisFortes(listaZumbisFortes);
+        // Desenhar item coletável
+        if (itemAtual.ativo) {
+            desenharItem(&itemAtual);
+        }
         
-        // // HUD adicional
-        // if (jogadorTemChave) {
-        //     DrawText("CHAVE COLETADA!", 600, 10, 20, GOLD);
-        // }
+        // HUD adicional - Itens coletados
+        int offsetX = 600;
+        if (jogador.temChave) {
+            DrawText("CHAVE", offsetX, 10, 16, GOLD);
+            offsetX += 70;
+        }
+        if (jogador.temMapa) {
+            DrawText("MAPA", offsetX, 10, 16, SKYBLUE);
+            offsetX += 60;
+        }
+        if (jogador.temCure) {
+            DrawText("CURE", offsetX, 10, 16, GREEN);
+        }
+        
+        // TODO: Implementar desenho de zumbis fortes
         
         // DrawText(TextFormat("Mapa: %d", idMapaAtual), 10, 110, 20, WHITE);
 
