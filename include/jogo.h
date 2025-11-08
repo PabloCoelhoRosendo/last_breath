@@ -51,6 +51,7 @@ typedef struct {
     bool temChave;           // Flag se possui a Chave do Portão
     bool temMapa;            // Flag se possui o Mapa do Laboratório
     bool temCure;            // Flag se coletou a CURE
+    bool jogoVencido;        // Flag se coletou a CURE e venceu o jogo
 } Player;
 
 // 2. Estrutura para Zumbis (Victor - Requisito: Structs, Lista Encadeada)
@@ -114,7 +115,9 @@ typedef struct Boss {
 typedef enum {
     ITEM_CHAVE = 0,
     ITEM_MAPA = 1,
-    ITEM_CURE = 2
+    ITEM_CURE = 2,
+    ITEM_SHOTGUN = 3,
+    ITEM_SMG = 4
 } TipoItem;
 
 // 5. Estrutura para Itens Coletáveis (Requisito: Structs)
@@ -124,6 +127,7 @@ typedef struct {
     float raio;           // Raio de coleta (distância para coletar)
     bool ativo;           // Se o item está no mapa para ser coletado
     bool coletado;        // Se já foi coletado
+    TipoArma tipoArma;    // Tipo de arma (se o item for uma arma)
 } Item;
 
 // 6. Estrutura para Porta (Requisito: Structs)
@@ -158,7 +162,7 @@ void atirarArma(Player *jogador, struct Bala **balas, Vector2 alvo);
 void criarBoss(struct Boss **bosses, TipoBoss tipo, Vector2 posicao);
 void atualizarBoss(struct Boss **bosses, Player *jogador, struct Bala **balas, float deltaTime);
 void desenharBoss(struct Boss *bosses);
-void verificarColisoesBossBala(struct Boss **bosses, struct Bala **balas, Item *item);
+void verificarColisoesBossBala(struct Boss **bosses, struct Bala **balas, Item *itemProgresso, Item *itemArma);
 void verificarColisoesBossJogador(struct Boss *bosses, Player *jogador);
 
 // Protótipos do Sistema de Itens e Interação

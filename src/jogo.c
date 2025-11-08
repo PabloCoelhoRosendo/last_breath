@@ -341,6 +341,7 @@ void iniciarJogo(Player *jogador) {
     jogador->temChave = false;
     jogador->temMapa = false;
     jogador->temCure = false;
+    jogador->jogoVencido = false;
     
     // Inicializar slots de arma
     inicializarArma(&jogador->slots[0], ARMA_PISTOL);   // Slot 1: Pistol (inicial)
@@ -352,6 +353,12 @@ void iniciarJogo(Player *jogador) {
 // Função para atualizar a lógica do jogo
 void atualizarJogo(Player *jogador, Zumbi **zumbis, Bala **balas) {
     float deltaTime = GetFrameTime();
+    
+    // Se jogador está morto ou venceu, não atualizar nada (tempo para)
+    if (jogador->vida <= 0 || jogador->jogoVencido) {
+        return; // Parar aqui - não processar movimento, ações nem tempo
+    }
+    
     Arma *armaAtual = &jogador->slots[jogador->slotAtivo];
     
     // Atualizar cooldown da arma
@@ -588,43 +595,67 @@ void desenharJogo(Player *jogador, Zumbi *zumbis, Bala *balas, Texture2D textura
     // Instruções atualizadas
     DrawText("WASD - Mover | 1,2,3 - Armas | R - Recarregar | Click - Atirar", 130, 520, 15, LIGHTGRAY);
     
-    // Aviso de Game Over
-    if (jogador->vida <= 0) {
+    // Tela de Vitória (coletou CURE na Fase 3)
+    if (jogador->jogoVencido) {
         // Salvar tempo apenas uma vez
         if (!jogador->tempoJaSalvo) {
             checkAndSaveTime(jogador->tempoTotal);
             jogador->tempoJaSalvo = true;
         }
         
+        // Fundo escuro completo
+        DrawRectangle(0, 0, 800, 600, BLACK);
+        
+        // Título de vitória
+        DrawText("VITORIA!", 280, 50, 60, GREEN);
+        
         // Formatar o tempo final
         int minutos = (int)jogador->tempoTotal / 60;
         float segundos = fmod(jogador->tempoTotal, 60.0f);
+        DrawText(TextFormat("Seu tempo: %02d:%05.2f", minutos, segundos), 250, 130, 30, WHITE);
         
-        // Carregar os melhores tempos para comparação
+        // Carregar e mostrar o pódio dos melhores tempos
         float tempos[MAX_SCORES];
         loadTimes(tempos, MAX_SCORES);
         
-        // Verificar se o tempo entra no ranking
-        int posicao = -1;
-        for (int i = 0; i < MAX_SCORES; i++) {
-            if (jogador->tempoTotal < tempos[i]) {
-                posicao = i + 1;
-                break;
-            }
+        DrawText("=== PODIO ===", 300, 180, 30, GOLD);
+        
+        int posY = 230;
+        for (int i = 0; i < MAX_SCORES && tempos[i] < 999999.0f; i++) {
+            int min = (int)tempos[i] / 60;
+            float seg = fmod(tempos[i], 60.0f);
+            
+            // Destacar o tempo do jogador se for o mesmo
+            Color cor = (fabs(tempos[i] - jogador->tempoTotal) < 0.01f) ? YELLOW : WHITE;
+            
+            DrawText(TextFormat("%dº - %02d:%05.2f", i + 1, min, seg), 300, posY, 24, cor);
+            posY += 35;
         }
         
-        // Fundo escuro semi-transparente
-        DrawRectangle(0, 0, 800, 600, (Color){0, 0, 0, 150});
+        DrawText("Pressione R para tentar novamente", 210, 500, 22, GREEN);
+        DrawText("Pressione ESC para sair", 260, 530, 20, LIGHTGRAY);
+        return; // Não desenhar mais nada
+    }
+    
+    // Tela de Game Over (morreu)
+    if (jogador->vida <= 0) {
+        // NÃO salvar tempo quando morrer - apenas vitórias contam no ranking
         
-        // Mensagens de game over
+        // Fundo preto completo (sem jogo de fundo)
+        DrawRectangle(0, 0, 800, 600, BLACK);
+        
+        // Título Game Over
         DrawText("GAME OVER", 250, 200, 60, RED);
-        DrawText(TextFormat("Seu tempo: %02d:%05.2f", minutos, segundos), 280, 280, 30, WHITE);
         
-        if (posicao > 0) {
-            DrawText(TextFormat("NOVO RECORDE! %dº Lugar!", posicao), 250, 320, 30, GOLD);
-        }
+        // Formatar e mostrar o tempo de sobrevivência
+        int minutos = (int)jogador->tempoTotal / 60;
+        float segundos = fmod(jogador->tempoTotal, 60.0f);
+        DrawText(TextFormat("Tempo de sobrevivencia:", minutos, segundos), 220, 280, 26, WHITE);
+        DrawText(TextFormat("%02d:%05.2f", minutos, segundos), 300, 320, 40, YELLOW);
         
-        DrawText("Pressione ESC para sair", 260, 380, 20, LIGHTGRAY);
+        DrawText("Pressione R para tentar novamente", 210, 400, 22, GREEN);
+        DrawText("Pressione ESC para sair", 260, 430, 20, LIGHTGRAY);
+        return; // Não desenhar mais nada
     }
 }
 // --- Funções do Módulo de Zumbis ---
@@ -649,14 +680,14 @@ void adicionarZumbi(Zumbi **cabeca, Vector2 posInicial, Texture2D sprites[][4]) 
     // 3. Inicializar o novo zumbi com comportamento aleatório
     novoZumbi->posicao = posInicial;
     novoZumbi->velocidade = (Vector2){0, 0};
-    novoZumbi->vida = 100;
+    novoZumbi->vida = 20; // GDD: 20 HP
     novoZumbi->raio = 20.0f;
 
     // Atribuir tipo de movimento aleatório (0-3)
     novoZumbi->tipoMovimento = GetRandomValue(0, 3);
 
-    // Velocidade base varia entre zumbis
-    novoZumbi->velocidadeBase = 30.0f + GetRandomValue(0, 40); // 30-70 pixels/s
+    // Velocidade base: 3.0 m/s = 180 pixels/s (GDD)
+    novoZumbi->velocidadeBase = 180.0f; // 3.0 m/s conforme GDD
 
     // Inicializar timers e ângulos aleatórios
     novoZumbi->tempoDesvio = 0.0f;
@@ -857,7 +888,7 @@ void desenharZumbis(Zumbi *cabeca) {
 
         // Desenhar barra de vida
         float barraLargura = 40.0f;
-        float porcentagemVida = atual->vida / 100.0f;
+        float porcentagemVida = atual->vida / 20.0f; // GDD: vida máxima = 20 HP
         DrawRectangle(
             atual->posicao.x - barraLargura/2,
             atual->posicao.y - atual->raio - 10,
@@ -962,7 +993,7 @@ void verificarColisoesJogadorZumbi(Player *jogador, Zumbi *zumbis) {
             
             // Aplicar dano apenas se o cooldown acabou (a cada 0.5 segundos)
             if (cooldownDano <= 0.0f) {
-                int dano = 10; // Dano fixo de 10 HP
+                int dano = 5; // GDD: 5 HP de dano por contato
                 jogador->vida -= dano;
                 cooldownDano = 0.5f; // Esperar 0.5 segundos para próximo dano
                 flashDano = 0.15f;   // Ativar flash vermelho por 0.15 segundos
@@ -1315,7 +1346,7 @@ void desenharBoss(Boss *bosses) {
 }
 
 // Função para verificar colisões entre boss e balas do jogador
-void verificarColisoesBossBala(Boss **bosses, Bala **balas, Item *item) {
+void verificarColisoesBossBala(Boss **bosses, Bala **balas, Item *itemProgresso, Item *itemArma) {
     Boss *bossAtual = *bosses;
     
     while (bossAtual != NULL) {
@@ -1356,28 +1387,44 @@ void verificarColisoesBossBala(Boss **bosses, Bala **balas, Item *item) {
             balaAtual = balaAtual->proximo;
         }
         
-        // Verificar se o boss morreu e dropar item
+        // Verificar se o boss morreu e dropar itens
         if (bossAtual->vida <= 0 && bossAtual->ativo) {
             bossAtual->ativo = false;
             
-            // Dropar item específico baseado no tipo de boss
-            if (item != NULL && !item->ativo) {
-                switch (bossAtual->tipo) {
-                    case BOSS_PROWLER:
-                        criarItem(item, ITEM_CHAVE, bossAtual->posicao);
+            // Calcular posições para os drops (separados)
+            Vector2 posicaoItem1 = {bossAtual->posicao.x - 30, bossAtual->posicao.y};
+            Vector2 posicaoItem2 = {bossAtual->posicao.x + 30, bossAtual->posicao.y};
+            
+            // Dropar item de progressão e arma baseado no tipo de boss
+            switch (bossAtual->tipo) {
+                case BOSS_PROWLER:
+                    if (itemProgresso != NULL && !itemProgresso->ativo) {
+                        criarItem(itemProgresso, ITEM_CHAVE, posicaoItem1);
                         printf("Boss morreu! CHAVE dropada!\n");
-                        break;
-                    case BOSS_HUNTER:
-                        criarItem(item, ITEM_MAPA, bossAtual->posicao);
+                    }
+                    if (itemArma != NULL && !itemArma->ativo) {
+                        criarItem(itemArma, ITEM_SHOTGUN, posicaoItem2);
+                        printf("Boss morreu! SHOTGUN dropada!\n");
+                    }
+                    break;
+                case BOSS_HUNTER:
+                    if (itemProgresso != NULL && !itemProgresso->ativo) {
+                        criarItem(itemProgresso, ITEM_MAPA, posicaoItem1);
                         printf("Boss morreu! MAPA dropado!\n");
-                        break;
-                    case BOSS_ABOMINATION:
-                        criarItem(item, ITEM_CURE, bossAtual->posicao);
+                    }
+                    if (itemArma != NULL && !itemArma->ativo) {
+                        criarItem(itemArma, ITEM_SMG, posicaoItem2);
+                        printf("Boss morreu! SMG dropada!\n");
+                    }
+                    break;
+                case BOSS_ABOMINATION:
+                    if (itemProgresso != NULL && !itemProgresso->ativo) {
+                        criarItem(itemProgresso, ITEM_CURE, bossAtual->posicao);
                         printf("Boss morreu! CURE dropada! VITORIA!\n");
-                        break;
-                    default:
-                        break;
-                }
+                    }
+                    break;
+                default:
+                    break;
             }
         }
         
@@ -1422,6 +1469,14 @@ void criarItem(Item *item, TipoItem tipo, Vector2 posicao) {
     item->raio = 30.0f;  // Raio de coleta de 30 pixels
     item->ativo = true;
     item->coletado = false;
+    item->tipoArma = ARMA_NENHUMA; // Padrão para itens não-arma
+    
+    // Se for item de arma, definir o tipo de arma correspondente
+    if (tipo == ITEM_SHOTGUN) {
+        item->tipoArma = ARMA_SHOTGUN;
+    } else if (tipo == ITEM_SMG) {
+        item->tipoArma = ARMA_SMG;
+    }
 }
 
 // Função para desenhar um item
@@ -1445,6 +1500,14 @@ void desenharItem(Item *item) {
         case ITEM_CURE:
             corItem = GREEN;
             nomeItem = "CURE";
+            break;
+        case ITEM_SHOTGUN:
+            corItem = ORANGE;
+            nomeItem = "SHOTGUN";
+            break;
+        case ITEM_SMG:
+            corItem = PURPLE;
+            nomeItem = "SMG";
             break;
         default:
             corItem = WHITE;
@@ -1488,8 +1551,38 @@ bool verificarColetaItem(Item *item, Player *jogador) {
                 break;
             case ITEM_CURE:
                 jogador->temCure = true;
+                // Se coletou CURE na Fase 3, jogo está vencido
+                if (jogador->fase == 3) {
+                    jogador->jogoVencido = true;
+                }
                 printf("CURE COLETADA! VITORIA!\n");
                 break;
+            case ITEM_SHOTGUN:
+            case ITEM_SMG: {
+                // Encontrar primeiro slot vazio para equipar a arma
+                int slotVazio = -1;
+                for (int i = 0; i < 3; i++) {
+                    if (jogador->slots[i].tipo == ARMA_NENHUMA) {
+                        slotVazio = i;
+                        break;
+                    }
+                }
+                
+                if (slotVazio != -1) {
+                    // Equipar arma no slot vazio
+                    inicializarArma(&jogador->slots[slotVazio], item->tipoArma);
+                    printf("ARMA COLETADA: %s equipada no Slot %d!\n", 
+                           item->tipo == ITEM_SHOTGUN ? "SHOTGUN" : "SMG", 
+                           slotVazio + 1);
+                    
+                    // Trocar automaticamente para a nova arma
+                    equiparArma(jogador, slotVazio);
+                } else {
+                    printf("Todos os slots estao ocupados! Nao foi possivel coletar a arma.\n");
+                    return false; // Não coletar se não houver espaço
+                }
+                break;
+            }
         }
         
         item->coletado = true;
@@ -1582,9 +1675,16 @@ bool verificarInteracaoPorta(Porta *porta, Player *jogador) {
         // Verificar se pressionou E
         if (IsKeyPressed(KEY_E)) {
             if (porta->trancada) {
-                // Destrancar porta
+                // Destrancar porta e consumir o item necessário
+                if (porta->faseDestino == 2) {
+                    jogador->temChave = false;  // Remover chave do inventário
+                    printf("Chave usada! Porta destrancada!\n");
+                } else if (porta->faseDestino == 3) {
+                    jogador->temMapa = false;   // Remover mapa do inventário
+                    printf("Mapa usado! Porta destrancada!\n");
+                }
+                
                 porta->trancada = false;
-                printf("Porta destrancada!\n");
             }
             
             // Usar a porta (transição de fase)

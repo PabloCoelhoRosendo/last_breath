@@ -1,6 +1,7 @@
 // src/main.c
 // Arquivo principal do jogo Last Breath
 
+#include <stdlib.h>
 #include "raylib.h"
 #include "jogo.h"
 #include "arquivo.h"
@@ -71,8 +72,10 @@ int main(void) {
     Bala *listaBalas = NULL;          // Lista encadeada de balas
     
     // Sistema de Itens e Porta
-    Item itemAtual;                   // Item coletável atual (um por vez)
-    itemAtual.ativo = false;          // Começa sem item no mapa
+    Item itemProgresso;               // Item de progressão (Chave, Mapa, CURE)
+    itemProgresso.ativo = false;      // Começa sem item no mapa
+    Item itemArma;                    // Item de arma (Shotgun, SMG)
+    itemArma.ativo = false;           // Começa sem arma no mapa
     Porta porta;                      // Porta para transição de fase
     criarPorta(&porta, (Vector2){740, 300}, 2); // Porta para Fase 2
 
@@ -97,6 +100,45 @@ int main(void) {
 
     // Loop principal do jogo
     while (!WindowShouldClose()) {
+        // Verificar se pressionou R para reiniciar (quando morreu ou venceu)
+        if ((jogador.vida <= 0 || jogador.jogoVencido) && IsKeyPressed(KEY_R)) {
+            // Limpar todos os recursos do jogo atual
+            liberarZumbis(&listaZumbis);
+            listaZumbis = NULL;
+            
+            // Limpar bosses
+            while (listaBosses != NULL) {
+                Boss *temp = listaBosses;
+                listaBosses = listaBosses->proximo;
+                free(temp);
+            }
+            
+            // Limpar balas
+            while (listaBalas != NULL) {
+                Bala *temp = listaBalas;
+                listaBalas = listaBalas->proximo;
+                free(temp);
+            }
+            
+            // Reiniciar jogador
+            iniciarJogo(&jogador);
+            jogador.spriteAtual = spriteFrenteDireita;
+            
+            // Resetar itens e porta
+            itemProgresso.ativo = false;
+            itemArma.ativo = false;
+            criarPorta(&porta, (Vector2){740, 300}, 2);
+            
+            // Adicionar zumbis iniciais novamente
+            for (int i = 0; i < 5; i++) {
+                float x = GetRandomValue(50, 750);
+                float y = GetRandomValue(50, 550);
+                adicionarZumbi(&listaZumbis, (Vector2){x, y}, spritesZumbis);
+            }
+            
+            printf("Jogo reiniciado!\n");
+        }
+        
         // Atualizar a lógica do jogo
         atualizarJogo(&jogador, &listaZumbis, &listaBalas);
         
@@ -140,13 +182,16 @@ int main(void) {
         // Atualizar bosses
         atualizarBoss(&listaBosses, &jogador, &listaBalas, GetFrameTime());
         
-        // Verificar colisões boss vs balas (passa item para dropar) e boss vs jogador
-        verificarColisoesBossBala(&listaBosses, &listaBalas, &itemAtual);
+        // Verificar colisões boss vs balas (passa os 2 itens para dropar) e boss vs jogador
+        verificarColisoesBossBala(&listaBosses, &listaBalas, &itemProgresso, &itemArma);
         verificarColisoesBossJogador(listaBosses, &jogador);
         
-        // Verificar coleta de item
-        if (itemAtual.ativo) {
-            verificarColetaItem(&itemAtual, &jogador);
+        // Verificar coleta de itens
+        if (itemProgresso.ativo) {
+            verificarColetaItem(&itemProgresso, &jogador);
+        }
+        if (itemArma.ativo) {
+            verificarColetaItem(&itemArma, &jogador);
         }
         
         // Verificar interação com porta
@@ -243,40 +288,47 @@ int main(void) {
         BeginDrawing();
         ClearBackground(RAYWHITE);  // Cor de fundo padrão por enquanto
 
+        // Se jogador morreu ou venceu, desenharJogo já cuida de tudo
         desenharJogo(&jogador, listaZumbis, listaBalas, texturaMapa);
         
-        // Desenhar bosses
-        desenharBoss(listaBosses);
-        
-        // Desenhar timer de boss se ainda não spawnou
-        if (!jogador.bossSpawnado && jogador.vida > 0) {
-            int segundosRestantes = (int)(45.0f - jogador.timerBoss);
-            if (segundosRestantes < 0) segundosRestantes = 0;
-            DrawText(TextFormat("BOSS EM: %ds", segundosRestantes), 320, 10, 24, RED);
-        }
-        
-        // Desenhar porta
-        if (porta.ativa) {
-            desenharPorta(&porta);
-        }
-        
-        // Desenhar item coletável
-        if (itemAtual.ativo) {
-            desenharItem(&itemAtual);
-        }
-        
-        // HUD adicional - Itens coletados
-        int offsetX = 600;
-        if (jogador.temChave) {
-            DrawText("CHAVE", offsetX, 10, 16, GOLD);
-            offsetX += 70;
-        }
-        if (jogador.temMapa) {
-            DrawText("MAPA", offsetX, 10, 16, SKYBLUE);
-            offsetX += 60;
-        }
-        if (jogador.temCure) {
-            DrawText("CURE", offsetX, 10, 16, GREEN);
+        // Só desenhar elementos do jogo se estiver vivo e não tiver vencido
+        if (jogador.vida > 0 && !jogador.jogoVencido) {
+            // Desenhar bosses
+            desenharBoss(listaBosses);
+            
+            // Desenhar timer de boss se ainda não spawnou
+            if (!jogador.bossSpawnado) {
+                int segundosRestantes = (int)(45.0f - jogador.timerBoss);
+                if (segundosRestantes < 0) segundosRestantes = 0;
+                DrawText(TextFormat("BOSS EM: %ds", segundosRestantes), 320, 10, 24, RED);
+            }
+            
+            // Desenhar porta
+            if (porta.ativa) {
+                desenharPorta(&porta);
+            }
+            
+            // Desenhar itens coletáveis
+            if (itemProgresso.ativo) {
+                desenharItem(&itemProgresso);
+            }
+            if (itemArma.ativo) {
+                desenharItem(&itemArma);
+            }
+            
+            // HUD adicional - Itens coletados
+            int offsetX = 600;
+            if (jogador.temChave) {
+                DrawText("CHAVE", offsetX, 10, 16, GOLD);
+                offsetX += 70;
+            }
+            if (jogador.temMapa) {
+                DrawText("MAPA", offsetX, 10, 16, SKYBLUE);
+                offsetX += 60;
+            }
+            if (jogador.temCure) {
+                DrawText("CURE", offsetX, 10, 16, GREEN);
+            }
         }
         
         // TODO: Implementar desenho de zumbis fortes
