@@ -1096,9 +1096,9 @@ void verificarColisoesZumbiZumbi(Zumbi *zumbis) {
 // ===== SISTEMA DE BOSS =====
 
 // Função para criar um novo boss
-void criarBoss(Boss **bosses, TipoBoss tipo, Vector2 posicao) {
+void criarBoss(Boss **bosses, TipoBoss tipo, Vector2 posicao, Texture2D spriteFrente, Texture2D spriteCostas, Texture2D spriteDireita, Texture2D spriteEsquerda) {
     Boss *novoBoss = (Boss *)malloc(sizeof(Boss));
-    
+
     novoBoss->tipo = tipo;
     novoBoss->posicao = posicao;
     novoBoss->ativo = true;
@@ -1106,7 +1106,16 @@ void criarBoss(Boss **bosses, TipoBoss tipo, Vector2 posicao) {
     novoBoss->tempoAtaque = 0.0f;
     novoBoss->padraoAtaque = 0;
     novoBoss->anguloRotacao = 0.0f;
-    
+    novoBoss->direcaoVertical = 0;    // Começa olhando para frente
+    novoBoss->direcaoHorizontal = 1;  // Começa olhando para direita
+
+    // Configurar sprites
+    novoBoss->spriteFrente = spriteFrente;
+    novoBoss->spriteCostas = spriteCostas;
+    novoBoss->spriteDireita = spriteDireita;
+    novoBoss->spriteEsquerda = spriteEsquerda;
+    novoBoss->spriteAtual = spriteFrente;  // Começa com sprite de frente
+
     // Configurar stats específicos por tipo de boss
     switch (tipo) {
         case BOSS_PROWLER:
@@ -1120,7 +1129,7 @@ void criarBoss(Boss **bosses, TipoBoss tipo, Vector2 posicao) {
         case BOSS_HUNTER:
             novoBoss->vidaMax = 80;
             novoBoss->vida = 80;
-            novoBoss->velocidade = 6.0f;
+            novoBoss->velocidade = 3.0f;
             novoBoss->raio = 20.0f;
             novoBoss->cooldownAtaque = 0.0f; // Dano por contato contínuo
             break;
@@ -1193,12 +1202,33 @@ void atualizarBoss(Boss **bosses, Player *jogador, Bala **balas, float deltaTime
                 float dx = jogador->posicao.x - bossAtual->posicao.x;
                 float dy = jogador->posicao.y - bossAtual->posicao.y;
                 float distancia = sqrtf(dx * dx + dy * dy);
-                
+
                 if (distancia > 0) {
                     bossAtual->posicao.x += (dx / distancia) * bossAtual->velocidade;
                     bossAtual->posicao.y += (dy / distancia) * bossAtual->velocidade;
+
+                    // Atualizar direção do sprite baseado no movimento
+                    // Prioridade: direção mais forte define o sprite
+                    float absDx = fabsf(dx);
+                    float absDy = fabsf(dy);
+
+                    if (absDx > absDy) {
+                        // Movimento horizontal é mais forte
+                        if (dx > 0) {
+                            bossAtual->spriteAtual = bossAtual->spriteDireita;
+                        } else {
+                            bossAtual->spriteAtual = bossAtual->spriteEsquerda;
+                        }
+                    } else {
+                        // Movimento vertical é mais forte
+                        if (dy > 0) {
+                            bossAtual->spriteAtual = bossAtual->spriteFrente;
+                        } else {
+                            bossAtual->spriteAtual = bossAtual->spriteCostas;
+                        }
+                    }
                 }
-                
+
                 // Dano por contato (20 HP)
                 if (distancia <= (bossAtual->raio + 20.0f)) {
                     if (bossAtual->tempoAtaque >= 1.0f) { // Cooldown de 1s entre danos
@@ -1301,33 +1331,56 @@ void desenharBoss(Boss *bosses) {
             continue;
         }
         
-        // Cor baseada no tipo de boss
-        Color corBoss;
-        switch (bossAtual->tipo) {
-            case BOSS_PROWLER:
-                corBoss = PURPLE; // Roxo para Prowler
-                break;
-            case BOSS_HUNTER:
-                corBoss = ORANGE; // Laranja para Hunter
-                break;
-            case BOSS_ABOMINATION:
-                corBoss = DARKGREEN; // Verde escuro para Abomination
-                break;
-            default:
-                corBoss = BLACK;
-                break;
+        // Desenhar boss (sprite se disponível, círculo caso contrário)
+        if (bossAtual->spriteAtual.id > 0) {
+            // Desenhar sprite (escala maior para bosses)
+            float escala = 0.15f; // Bosses são maiores que jogador/zumbis
+            float largura = bossAtual->spriteAtual.width * escala;
+            float altura = bossAtual->spriteAtual.height * escala;
+
+            Rectangle destino = {
+                bossAtual->posicao.x - largura / 2,
+                bossAtual->posicao.y - altura / 2,
+                largura,
+                altura
+            };
+
+            Rectangle origem = {0, 0, (float)bossAtual->spriteAtual.width, (float)bossAtual->spriteAtual.height};
+
+            DrawTexturePro(bossAtual->spriteAtual, origem, destino, (Vector2){0, 0}, 0.0f, WHITE);
+        } else {
+            // Fallback: desenhar círculo colorido se sprite não foi carregado
+            Color corBoss;
+            switch (bossAtual->tipo) {
+                case BOSS_PROWLER:
+                    corBoss = PURPLE; // Roxo para Prowler
+                    break;
+                case BOSS_HUNTER:
+                    corBoss = ORANGE; // Laranja para Hunter
+                    break;
+                case BOSS_ABOMINATION:
+                    corBoss = DARKGREEN; // Verde escuro para Abomination
+                    break;
+                default:
+                    corBoss = BLACK;
+                    break;
+            }
+
+            DrawCircleV(bossAtual->posicao, bossAtual->raio, corBoss);
+            DrawCircleLines((int)bossAtual->posicao.x, (int)bossAtual->posicao.y, bossAtual->raio, DARKGRAY);
         }
-        
-        // Desenhar círculo do boss
-        DrawCircleV(bossAtual->posicao, bossAtual->raio, corBoss);
-        DrawCircleLines((int)bossAtual->posicao.x, (int)bossAtual->posicao.y, bossAtual->raio, DARKGRAY);
         
         // Desenhar barra de vida acima do boss
         float barraLargura = 60.0f;
         float barraAltura = 8.0f;
         float porcentagemVida = (float)bossAtual->vida / (float)bossAtual->vidaMax;
-        
-        Vector2 barraPos = {bossAtual->posicao.x - barraLargura / 2, bossAtual->posicao.y - bossAtual->raio - 15.0f};
+
+        // Ajustar posição da barra baseado se tem sprite ou não
+        float offsetY = (bossAtual->spriteAtual.id > 0) ?
+                        (bossAtual->spriteAtual.height * 0.15f / 2 + 10.0f) :
+                        (bossAtual->raio + 15.0f);
+
+        Vector2 barraPos = {bossAtual->posicao.x - barraLargura / 2, bossAtual->posicao.y - offsetY};
         
         // Fundo da barra (vermelho)
         DrawRectangleV(barraPos, (Vector2){barraLargura, barraAltura}, RED);

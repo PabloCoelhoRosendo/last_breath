@@ -64,6 +64,18 @@ int main(void) {
     spritesZumbis[4][2] = LoadTexture("zumbis/zumbi 5/zumbi5 costas direita.png");
     spritesZumbis[4][3] = LoadTexture("zumbis/zumbi 5/zumbi5 costas esquerda.png");
 
+    // Carregar sprites dos bosses
+    Texture2D hunterFrente = LoadTexture("bosses/hunter/frente.png");
+    Texture2D hunterCostas = LoadTexture("bosses/hunter/costas.png");
+    Texture2D hunterDireita = LoadTexture("bosses/hunter/direita.png");
+    Texture2D hunterEsquerda = LoadTexture("bosses/hunter/esquerda.png");
+
+    // Verificar se os sprites do Hunter foram carregados
+    if (hunterFrente.id == 0 || hunterCostas.id == 0 ||
+        hunterDireita.id == 0 || hunterEsquerda.id == 0) {
+        printf("Aviso: Alguns sprites do Hunter nao foram carregados. Usando circulo.\n");
+    }
+
     // Inicializar estruturas do jogo
     Player jogador;
     Zumbi *listaZumbis = NULL;        // Lista encadeada de zumbis normais
@@ -160,17 +172,17 @@ int main(void) {
                 
                 switch (jogador.fase) {
                     case 1:
-                        criarBoss(&listaBosses, BOSS_PROWLER, posicaoBoss);
+                        criarBoss(&listaBosses, BOSS_PROWLER, posicaoBoss, (Texture2D){0}, (Texture2D){0}, (Texture2D){0}, (Texture2D){0});
                         printf("BOSS APARECEU: PROWLER!\n");
                         break;
                     case 2:
-                        // Spawnar 2 Hunters
-                        criarBoss(&listaBosses, BOSS_HUNTER, (Vector2){300, 100});
-                        criarBoss(&listaBosses, BOSS_HUNTER, (Vector2){500, 100});
+                        // Spawnar 2 Hunters com sprites
+                        criarBoss(&listaBosses, BOSS_HUNTER, (Vector2){300, 100}, hunterFrente, hunterCostas, hunterDireita, hunterEsquerda);
+                        criarBoss(&listaBosses, BOSS_HUNTER, (Vector2){500, 100}, hunterFrente, hunterCostas, hunterDireita, hunterEsquerda);
                         printf("BOSS APARECEU: 2x HUNTERS!\n");
                         break;
                     case 3:
-                        criarBoss(&listaBosses, BOSS_ABOMINATION, (Vector2){400, 300});
+                        criarBoss(&listaBosses, BOSS_ABOMINATION, (Vector2){400, 300}, (Texture2D){0}, (Texture2D){0}, (Texture2D){0}, (Texture2D){0});
                         printf("BOSS APARECEU: ABOMINATION!\n");
                         break;
                 }
@@ -353,6 +365,12 @@ int main(void) {
             UnloadTexture(spritesZumbis[i][j]);
         }
     }
+
+    // Descarregar sprites dos bosses
+    UnloadTexture(hunterFrente);
+    UnloadTexture(hunterCostas);
+    UnloadTexture(hunterDireita);
+    UnloadTexture(hunterEsquerda);
 
     CloseWindow();
 

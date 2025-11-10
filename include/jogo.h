@@ -108,6 +108,13 @@ typedef struct Boss {
     float cooldownAtaque;    // Tempo entre ataques
     int padraoAtaque;        // Padrão de ataque atual (para Abomination)
     float anguloRotacao;     // Ângulo para ataques rotativos (Abomination)
+    int direcaoVertical;     // 0 = frente, 1 = costas
+    int direcaoHorizontal;   // 0 = esquerda, 1 = direita
+    Texture2D spriteFrente;
+    Texture2D spriteCostas;
+    Texture2D spriteDireita;
+    Texture2D spriteEsquerda;
+    Texture2D spriteAtual;   // Sprite atual sendo renderizado
     struct Boss *proximo;    // Ponteiro para próximo boss (lista encadeada)
 } Boss;
 
@@ -159,7 +166,7 @@ void recarregarArma(Player *jogador);
 void atirarArma(Player *jogador, struct Bala **balas, Vector2 alvo);
 
 // Protótipos do Sistema de Boss
-void criarBoss(struct Boss **bosses, TipoBoss tipo, Vector2 posicao);
+void criarBoss(struct Boss **bosses, TipoBoss tipo, Vector2 posicao, Texture2D spriteFrente, Texture2D spriteCostas, Texture2D spriteDireita, Texture2D spriteEsquerda);
 void atualizarBoss(struct Boss **bosses, Player *jogador, struct Bala **balas, float deltaTime);
 void desenharBoss(struct Boss *bosses);
 void verificarColisoesBossBala(struct Boss **bosses, struct Bala **balas, Item *itemProgresso, Item *itemArma);
