@@ -65,6 +65,19 @@ int main(void) {
     spritesZumbis[4][3] = LoadTexture("zumbis/zumbi 5/zumbi5 costas esquerda.png");
 
     // Carregar sprites dos bosses
+    // Prowler (Fase 1)
+    Texture2D prowlerFrente = LoadTexture("bosses/prowler/frente.PNG");
+    Texture2D prowlerCostas = LoadTexture("bosses/prowler/costas.PNG");
+    Texture2D prowlerDireita = LoadTexture("bosses/prowler/direita.PNG");
+    Texture2D prowlerEsquerda = LoadTexture("bosses/prowler/esquerda.PNG");
+
+    // Verificar se os sprites do Prowler foram carregados
+    if (prowlerFrente.id == 0 || prowlerCostas.id == 0 ||
+        prowlerDireita.id == 0 || prowlerEsquerda.id == 0) {
+        printf("Aviso: Alguns sprites do Prowler nao foram carregados. Usando circulo.\n");
+    }
+
+    // Hunter (Fase 2)
     Texture2D hunterFrente = LoadTexture("bosses/hunter/frente.png");
     Texture2D hunterCostas = LoadTexture("bosses/hunter/costas.png");
     Texture2D hunterDireita = LoadTexture("bosses/hunter/direita.png");
@@ -172,7 +185,7 @@ int main(void) {
                 
                 switch (jogador.fase) {
                     case 1:
-                        criarBoss(&listaBosses, BOSS_PROWLER, posicaoBoss, (Texture2D){0}, (Texture2D){0}, (Texture2D){0}, (Texture2D){0});
+                        criarBoss(&listaBosses, BOSS_PROWLER, posicaoBoss, prowlerFrente, prowlerCostas, prowlerDireita, prowlerEsquerda);
                         printf("BOSS APARECEU: PROWLER!\n");
                         break;
                     case 2:
@@ -367,6 +380,10 @@ int main(void) {
     }
 
     // Descarregar sprites dos bosses
+    UnloadTexture(prowlerFrente);
+    UnloadTexture(prowlerCostas);
+    UnloadTexture(prowlerDireita);
+    UnloadTexture(prowlerEsquerda);
     UnloadTexture(hunterFrente);
     UnloadTexture(hunterCostas);
     UnloadTexture(hunterDireita);

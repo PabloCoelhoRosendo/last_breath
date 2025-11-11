@@ -1176,21 +1176,42 @@ void atualizarBoss(Boss **bosses, Player *jogador, Bala **balas, float deltaTime
                 float dx = jogador->posicao.x - bossAtual->posicao.x;
                 float dy = jogador->posicao.y - bossAtual->posicao.y;
                 float distancia = sqrtf(dx * dx + dy * dy);
-                
+
                 if (distancia > 0) {
                     bossAtual->posicao.x += (dx / distancia) * bossAtual->velocidade;
                     bossAtual->posicao.y += (dy / distancia) * bossAtual->velocidade;
+
+                    // Atualizar direção do sprite baseado no movimento
+                    // Prioridade: direção mais forte define o sprite
+                    float absDx = fabsf(dx);
+                    float absDy = fabsf(dy);
+
+                    if (absDx > absDy) {
+                        // Movimento horizontal é mais forte
+                        if (dx > 0) {
+                            bossAtual->spriteAtual = bossAtual->spriteDireita;
+                        } else {
+                            bossAtual->spriteAtual = bossAtual->spriteEsquerda;
+                        }
+                    } else {
+                        // Movimento vertical é mais forte
+                        if (dy > 0) {
+                            bossAtual->spriteAtual = bossAtual->spriteFrente;
+                        } else {
+                            bossAtual->spriteAtual = bossAtual->spriteCostas;
+                        }
+                    }
                 }
-                
+
                 // Ataque Slam (área de efeito)
                 if (bossAtual->tempoAtaque >= bossAtual->cooldownAtaque) {
                     bossAtual->atacando = true;
-                    
+
                     // Verificar se jogador está na área de efeito (raio de 80 pixels)
                     if (distancia <= 80.0f) {
                         jogador->vida -= 15; // Dano de área
                     }
-                    
+
                     bossAtual->tempoAtaque = 0.0f;
                     bossAtual->atacando = false;
                 }
