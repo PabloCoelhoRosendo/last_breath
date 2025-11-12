@@ -2,28 +2,40 @@
 // Arquivo principal do jogo Last Breath
 
 #include <stdlib.h>
+#include <stdio.h>
+#include <math.h>
 #include "raylib.h"
 #include "jogo.h"
 #include "arquivo.h"
+#include "mapa.h"
+#include "recursos.h"
 
 int main(void) {
-    // Configurações da janela
-    const int larguraTela = 800;
-    const int alturaTela = 600;
+    // Configurações da janela (nova resolução para tiles 32x32)
+    const int larguraTela = 1024;
+    const int alturaTela = 768;
 
     InitWindow(larguraTela, alturaTela, "Last Breath - Zumbi Survival Game");
     SetTargetFPS(60);
 
-    // Carregar a textura do mapa
-    Texture2D texturaMapa = LoadTexture("Novo Projeto.png");
+    // ===== NOVO SISTEMA DE RECURSOS =====
+    // Criar e carregar recursos centralizados
+    Recursos* recursos = criarRecursos();
+    carregarRecursos(recursos);
 
-    // Verificar se a textura foi carregada corretamente
-    if (texturaMapa.id == 0) {
-        // Se não carregou, o jogo continuará funcionando com os retângulos
-        printf("Aviso: Nao foi possivel carregar 'Novo Projeto.png'. Usando mapa padrao.\n");
+    // ===== NOVO SISTEMA DE MAPA =====
+    // Criar mapa e carregar Fase 1
+    Mapa* mapaAtual = criarMapa();
+    if (!carregarMapaDeArquivo(mapaAtual, "assets/maps/fase1.txt")) {
+        printf("Aviso: Nao foi possivel carregar fase1.txt. Usando mapa padrao.\n");
+        inicializarMapaPadrao(mapaAtual);
     }
 
-    // Carregar os sprites do jogador
+    // NOTA: As texturas antigas foram substituídas pelo sistema de recursos
+    // Agora acessamos via recursos->jogadorFrente, recursos->zumbis[tipo][dir], etc.
+
+    // Referências de compatibilidade (mantidas temporariamente)
+    Texture2D texturaMapa = recursos->fundoMapa;
     Texture2D spriteFrenteDireita = LoadTexture("avatar/direita frente.png");
     Texture2D spriteFrenteEsquerda = LoadTexture("avatar/esquerda frente.png");
     Texture2D spriteCostasDireita = LoadTexture("avatar/costas direita.png");
@@ -102,25 +114,22 @@ int main(void) {
     Item itemArma;                    // Item de arma (Shotgun, SMG)
     itemArma.ativo = false;           // Começa sem arma no mapa
     Porta porta;                      // Porta para transição de fase
-    criarPorta(&porta, (Vector2){740, 300}, 2); // Porta para Fase 2
-
-    // Inicializar o mapa
-    mapa(mapaDoJogo);
-
-    // Carregar mapa inicial (TODO: Implementar carregarMapa)
-    // carregarMapa(&mapaAtual, idMapaAtual);
+    criarPorta(&porta, (Vector2){960, 384}, 2); // Porta para Fase 2 (ajustada para 1024x768)
 
     // Inicializar o jogador
     iniciarJogo(&jogador);
+
+    // Garantir que o jogador spawne em posição válida (fora de tiles sólidos)
+    jogador.posicao = gerarPosicaoValidaSpawn(mapaAtual, 15.0f);
 
     // Inicializar o sprite do jogador (começa olhando para frente/direita)
     jogador.spriteAtual = spriteFrenteDireita;
 
     // Adicionar zumbis normais iniciais (número fixo por enquanto)
     for (int i = 0; i < 5; i++) {
-        float x = GetRandomValue(50, 750);
-        float y = GetRandomValue(50, 550);
-        adicionarZumbi(&listaZumbis, (Vector2){x, y}, spritesZumbis);
+        // Usar nova função de spawn que respeita o mapa
+        Vector2 posSpawn = gerarPosicaoValidaSpawn(mapaAtual, 20.0f);
+        adicionarZumbi(&listaZumbis, posSpawn, spritesZumbis);
     }
 
     // Loop principal do jogo
@@ -147,26 +156,77 @@ int main(void) {
             
             // Reiniciar jogador
             iniciarJogo(&jogador);
+
+            // Recarregar mapa da Fase 1
+            if (!carregarMapaDeArquivo(mapaAtual, "assets/maps/fase1.txt")) {
+                inicializarMapaPadrao(mapaAtual);
+            }
+
+            // Garantir spawn válido do jogador
+            jogador.posicao = gerarPosicaoValidaSpawn(mapaAtual, 15.0f);
             jogador.spriteAtual = spriteFrenteDireita;
-            
+
             // Resetar itens e porta
             itemProgresso.ativo = false;
             itemArma.ativo = false;
-            criarPorta(&porta, (Vector2){740, 300}, 2);
-            
+            criarPorta(&porta, (Vector2){960, 384}, 2);
+
             // Adicionar zumbis iniciais novamente
             for (int i = 0; i < 5; i++) {
-                float x = GetRandomValue(50, 750);
-                float y = GetRandomValue(50, 550);
-                adicionarZumbi(&listaZumbis, (Vector2){x, y}, spritesZumbis);
+                Vector2 posSpawn = gerarPosicaoValidaSpawn(mapaAtual, 20.0f);
+                adicionarZumbi(&listaZumbis, posSpawn, spritesZumbis);
             }
             
             printf("Jogo reiniciado!\n");
         }
         
+        // Salvar posição anterior do jogador e zumbis para colisão
+        Vector2 posicaoAnteriorJogador = jogador.posicao;
+
+        // Salvar posições anteriores dos zumbis
+        typedef struct PosicaoZumbi {
+            Zumbi *zumbi;
+            Vector2 posicaoAnterior;
+            struct PosicaoZumbi *proximo;
+        } PosicaoZumbi;
+
+        PosicaoZumbi *listaPosicoesAnteriores = NULL;
+        Zumbi *zTemp = listaZumbis;
+        while (zTemp != NULL) {
+            PosicaoZumbi *novaPosicao = (PosicaoZumbi*)malloc(sizeof(PosicaoZumbi));
+            novaPosicao->zumbi = zTemp;
+            novaPosicao->posicaoAnterior = zTemp->posicao;
+            novaPosicao->proximo = listaPosicoesAnteriores;
+            listaPosicoesAnteriores = novaPosicao;
+            zTemp = zTemp->proximo;
+        }
+
         // Atualizar a lógica do jogo
         atualizarJogo(&jogador, &listaZumbis, &listaBalas);
-        
+
+        // Verificar colisão do jogador com o mapa (novo sistema)
+        if (verificarColisaoMapa(mapaAtual, jogador.posicao, 15.0f)) {
+            // Se colidiu, reverter para posição anterior
+            jogador.posicao = posicaoAnteriorJogador;
+        }
+
+        // Verificar colisão dos zumbis com o mapa e reverter se necessário
+        PosicaoZumbi *posAtual = listaPosicoesAnteriores;
+        while (posAtual != NULL) {
+            if (verificarColisaoMapa(mapaAtual, posAtual->zumbi->posicao, 20.0f)) {
+                // Reverter para posição anterior
+                posAtual->zumbi->posicao = posAtual->posicaoAnterior;
+            }
+            posAtual = posAtual->proximo;
+        }
+
+        // Liberar lista de posições anteriores
+        while (listaPosicoesAnteriores != NULL) {
+            PosicaoZumbi *temp = listaPosicoesAnteriores;
+            listaPosicoesAnteriores = listaPosicoesAnteriores->proximo;
+            free(temp);
+        }
+
         // Atualizar timer de boss e spawnar quando necessário
         if (!jogador.bossSpawnado && jogador.vida > 0) {
             jogador.timerBoss += GetFrameTime();
@@ -221,24 +281,31 @@ int main(void) {
         
         // Verificar interação com porta
         if (porta.ativa && verificarInteracaoPorta(&porta, &jogador)) {
-            // Transição de fase (será implementada completamente depois)
             printf("Usando porta! Indo para Fase %d\n", porta.faseDestino);
             jogador.fase = porta.faseDestino;
             jogador.timerBoss = 0.0f;
             jogador.bossSpawnado = false;
-            
-            // Resetar posição do jogador
-            jogador.posicao = (Vector2){400, 300};
-            
+
+            // Carregar o mapa da nova fase
+            char caminhoMapa[64];
+            snprintf(caminhoMapa, sizeof(caminhoMapa), "assets/maps/fase%d.txt", jogador.fase);
+            if (!carregarMapaDeArquivo(mapaAtual, caminhoMapa)) {
+                printf("Aviso: Nao foi possivel carregar %s. Usando mapa padrao.\n", caminhoMapa);
+                inicializarMapaPadrao(mapaAtual);
+            }
+
+            // Garantir spawn válido do jogador na nova fase
+            jogador.posicao = gerarPosicaoValidaSpawn(mapaAtual, 15.0f);
+
             // Aplicar upgrade de velocidade após Fase 1
             if (jogador.fase == 2) {
-                jogador.velocidadeBase = 5.0f; // Upgrade para 5.0 m/s
+                jogador.velocidadeBase = 5.0f;
                 printf("UPGRADE! Velocidade aumentada para 5.0 m/s\n");
             }
-            
+
             // Atualizar porta para próxima fase
             if (porta.faseDestino == 2) {
-                criarPorta(&porta, (Vector2){740, 300}, 3); // Porta para Fase 3
+                criarPorta(&porta, (Vector2){960, 384}, 3); // Porta para Fase 3
             } else if (porta.faseDestino == 3) {
                 porta.ativa = false; // Última fase, sem mais portas
             }
@@ -311,9 +378,13 @@ int main(void) {
 
         // Desenhar tudo na tela
         BeginDrawing();
-        ClearBackground(RAYWHITE);  // Cor de fundo padrão por enquanto
+        ClearBackground(RAYWHITE);
 
-        // Se jogador morreu ou venceu, desenharJogo já cuida de tudo
+        // Desenhar o novo sistema de mapa com tiles
+        desenharMapaTiles(mapaAtual, recursos->texturasTiles);
+
+        // Desenhar elementos do jogo (jogador, zumbis, balas)
+        // A função antiga desenharJogo() também desenha o mapa antigo, mas vamos sobrescrever
         desenharJogo(&jogador, listaZumbis, listaBalas, texturaMapa);
         
         // Só desenhar elementos do jogo se estiver vivo e não tiver vencido
@@ -364,22 +435,41 @@ int main(void) {
     }
 
     // Limpar recursos antes de fechar
-    liberarZumbis(&listaZumbis);           // Liberar memória dos zumbis normais
-    // liberarZumbisFortes(&listaZumbisFortes); // TODO: Implementar
-    UnloadTexture(texturaMapa);  // Descarregar a textura do mapa
+    liberarZumbis(&listaZumbis);
+
+    // Limpar bosses e balas
+    while (listaBosses != NULL) {
+        Boss *temp = listaBosses;
+        listaBosses = listaBosses->proximo;
+        free(temp);
+    }
+    while (listaBalas != NULL) {
+        Bala *temp = listaBalas;
+        listaBalas = listaBalas->proximo;
+        free(temp);
+    }
+
+    // Descarregar o novo sistema de recursos
+    descarregarRecursos(recursos);
+    destruirRecursos(recursos);
+
+    // Destruir o mapa
+    destruirMapa(mapaAtual);
+
+    // Descarregar texturas de compatibilidade temporária
     UnloadTexture(spriteFrenteDireita);
     UnloadTexture(spriteFrenteEsquerda);
     UnloadTexture(spriteCostasDireita);
     UnloadTexture(spriteCostasEsquerda);
 
-    // Descarregar sprites dos zumbis
+    // Descarregar sprites dos zumbis (compatibilidade)
     for (int i = 0; i < 5; i++) {
         for (int j = 0; j < 4; j++) {
             UnloadTexture(spritesZumbis[i][j]);
         }
     }
 
-    // Descarregar sprites dos bosses
+    // Descarregar sprites dos bosses (compatibilidade)
     UnloadTexture(prowlerFrente);
     UnloadTexture(prowlerCostas);
     UnloadTexture(prowlerDireita);

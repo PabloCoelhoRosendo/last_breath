@@ -8,125 +8,6 @@
 #include <stdio.h>
 #include <math.h>   // Para sqrtf
 
-// Definição da matriz global do mapa
-int mapaDoJogo[TAMANHO_MAPA][TAMANHO_MAPA];
-
-// ===== SISTEMA DE MAPA DA CIDADE =====
-// 0 = área livre (branco)
-// 1 = prédio (vermelho) - jogador não pode atravessar
-
-void mapa(int mapa[TAMANHO_MAPA][TAMANHO_MAPA]){
-    int i, j;
-
-    // Passo 1: Inicializar tudo como área livre (0)
-    for (i = 0; i < TAMANHO_MAPA; i++){
-        for(j = 0; j < TAMANHO_MAPA; j++){
-            mapa[i][j] = 0;
-        }
-    }
-
-    // Passo 2: Criar os prédios (colocar 1 nas posições desejadas)
-    // Nota: A tela tem 800x600 pixels = 20x15 células (cada célula = 40 pixels)
-
-    // Prédio 1: Canto superior esquerdo
-    for (i = 1; i < 4; i++) {
-        for (j = 1; j < 5; j++) {
-            mapa[i][j] = 1;
-        }
-    }
-
-    // Prédio 2: Canto superior direito
-    for (i = 1; i < 4; i++) {
-        for (j = 15; j < 19; j++) {
-            mapa[i][j] = 1;
-        }
-    }
-
-    // Prédio 3: Centro do mapa - REMOVIDO
-
-    // Prédio 4: Canto inferior esquerdo
-    for (i = 11; i < 14; i++) {
-        for (j = 1; j < 6; j++) {
-            mapa[i][j] = 1;
-        }
-    }
-
-    // Prédio 5: Canto inferior direito
-    for (i = 11; i < 14; i++) {
-        for (j = 14; j < 19; j++) {
-            mapa[i][j] = 1;
-        }
-    }
-}
-
-// Função para desenhar o mapa
-void desenharMapa(int mapa[TAMANHO_MAPA][TAMANHO_MAPA], Texture2D texturaMapa) {
-    // Passo 1: Desenhar os retângulos de colisão (base)
-    for (int i = 0; i < TAMANHO_MAPA; i++) {
-        for (int j = 0; j < TAMANHO_MAPA; j++) {
-            int x = j * TAMANHO_CELULA;
-            int y = i * TAMANHO_CELULA;
-
-            if (mapa[i][j] == 1) {
-                // Prédios em vermelho
-                DrawRectangle(x, y, TAMANHO_CELULA, TAMANHO_CELULA, RED);
-                DrawRectangleLines(x, y, TAMANHO_CELULA, TAMANHO_CELULA, DARKGRAY);
-            } else {
-                // Áreas livres em branco
-                DrawRectangle(x, y, TAMANHO_CELULA, TAMANHO_CELULA, WHITE);
-                DrawRectangleLines(x, y, TAMANHO_CELULA, TAMANHO_CELULA, LIGHTGRAY);
-            }
-        }
-    }
-
-    // Passo 2: Desenhar a imagem por cima (se foi carregada)
-    if (texturaMapa.id > 0) {
-        DrawTexture(texturaMapa, 0, 0, WHITE);
-    }
-}
-
-// Função para verificar colisão com o mapa
-// Retorna 1 se colidiu com prédio, 0 se está livre
-int verificarColisaoMapa(Vector2 novaPosicao, float raio, int mapa[TAMANHO_MAPA][TAMANHO_MAPA]) {
-    // Passo 1: Converter posição do jogador (em pixels) para posição na matriz
-    int linha = (int)(novaPosicao.y / TAMANHO_CELULA);
-    int coluna = (int)(novaPosicao.x / TAMANHO_CELULA);
-
-    // Passo 2: Verificar se a célula onde o jogador está é um prédio (valor 1)
-    if (linha >= 0 && linha < TAMANHO_MAPA && coluna >= 0 && coluna < TAMANHO_MAPA) {
-        if (mapa[linha][coluna] == 1) {
-            return 1; // Colidiu com prédio
-        }
-    }
-
-    return 0; // Não colidiu
-}
-
-// Função para gerar uma posição válida de spawn (não dentro de prédios)
-Vector2 gerarPosicaoValidaSpawn(int mapa[TAMANHO_MAPA][TAMANHO_MAPA], float raio) {
-    Vector2 posicao;
-    int tentativas = 0;
-    int maxTentativas = 100; // Limite de tentativas para evitar loop infinito
-
-    do {
-        // Gerar posição aleatória dentro da tela
-        posicao.x = (float)GetRandomValue((int)raio, 800 - (int)raio);
-        posicao.y = (float)GetRandomValue((int)raio, 600 - (int)raio);
-
-        tentativas++;
-
-        // Se tentar muitas vezes sem sucesso, usar posição padrão segura
-        if (tentativas >= maxTentativas) {
-            posicao.x = 400;
-            posicao.y = 300;
-            break;
-        }
-
-    } while (verificarColisaoMapa(posicao, raio, mapa)); // Repetir se colidiu com prédio
-
-    return posicao;
-}
-
 // --- Funções Auxiliares de Colisão ---
 
 // Função para verificar colisão entre dois círculos
@@ -194,9 +75,9 @@ void atualizarBalas(Bala **cabeca) {
         // Tempo máximo de vida: 2 segundos para balas normais, 3 para boss
         float tempoMaximo = (atual->tipo == 0) ? 2.0f : 3.0f;
         
-        // Verificar se a bala saiu da tela ou expirou
-        if (atual->posicao.x < 0 || atual->posicao.x > 800 ||
-            atual->posicao.y < 0 || atual->posicao.y > 600 ||
+        // Verificar se a bala saiu da tela ou expirou - Ajustado para 1024x768
+        if (atual->posicao.x < 0 || atual->posicao.x > 1024 ||
+            atual->posicao.y < 0 || atual->posicao.y > 768 ||
             atual->tempoVida >= tempoMaximo) {
             
             // Remover a bala da lista
@@ -313,16 +194,8 @@ void atirarArma(Player *jogador, Bala **balas, Vector2 alvo) {
 
 // Função para inicializar o jogador
 void iniciarJogo(Player *jogador) {
-    // Gerar uma posição válida (não dentro de prédios) para o jogador spawnar
-    Vector2 posicaoInicial = {400, 300}; // Posição padrão no centro
-
-    // Verificar se a posição padrão colide com prédio
-    if (verificarColisaoMapa(posicaoInicial, 15.0f, mapaDoJogo)) {
-        // Se colidir, gerar uma posição válida aleatória
-        posicaoInicial = gerarPosicaoValidaSpawn(mapaDoJogo, 15.0f);
-    }
-
-    jogador->posicao = posicaoInicial;
+    // Posição inicial do jogador (centro do mapa 1024x768)
+    jogador->posicao = (Vector2){512, 384};
     jogador->vida = 100;
     jogador->tempoTotal = 0.0f;
     jogador->fase = 1;
@@ -432,17 +305,13 @@ void atualizarJogo(Player *jogador, Zumbi **zumbis, Bala **balas) {
         jogador->direcaoHorizontal = 1; // Direita
     }
 
-    // Verificar colisão com o mapa
-    if (verificarColisaoMapa(jogador->posicao, 15.0f, mapaDoJogo)) {
-        // Se houve colisão, voltar para a posição anterior
-        jogador->posicao = posicaoAnterior;
-    }
+    // NOTA: Colisão com mapa agora é tratada no main.c com o novo sistema
 
-    // Limitar o jogador dentro da tela
+    // Limitar o jogador dentro da tela (1024x768)
     if (jogador->posicao.x < 20) jogador->posicao.x = 20;
-    if (jogador->posicao.x > 780) jogador->posicao.x = 780;
+    if (jogador->posicao.x > 1004) jogador->posicao.x = 1004;
     if (jogador->posicao.y < 20) jogador->posicao.y = 20;
-    if (jogador->posicao.y > 580) jogador->posicao.y = 580;
+    if (jogador->posicao.y > 748) jogador->posicao.y = 748;
     
     // Atirar com o botão esquerdo do mouse
     if (IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) {
@@ -469,8 +338,7 @@ void atualizarJogo(Player *jogador, Zumbi **zumbis, Bala **balas) {
 
 // Função para desenhar todos os elementos do jogo
 void desenharJogo(Player *jogador, Zumbi *zumbis, Bala *balas, Texture2D texturaMapa) {
-    // Desenhar o mapa primeiro (fundo)
-    desenharMapa(mapaDoJogo, texturaMapa);
+    // NOTA: O mapa é desenhado no main.c com o novo sistema de tiles
 
     // Desenhar os zumbis
     desenharZumbis(zumbis);
@@ -533,7 +401,7 @@ void desenharJogo(Player *jogador, Zumbi *zumbis, Bala *balas, Texture2D textura
         if ((int)(GetTime() * 2) % 2 == 0 && !jogador->estaRecarregando) {
             const char *avisoRecarga = "RECARREGUE!";
             int larguraTexto = MeasureText(avisoRecarga, 20);
-            DrawText(avisoRecarga, 400 - larguraTexto / 2, 85, 20, RED);
+            DrawText(avisoRecarga, 512 - larguraTexto / 2, 85, 20, RED);  // Centralizado em 1024px
         }
     }
     
@@ -555,9 +423,9 @@ void desenharJogo(Player *jogador, Zumbi *zumbis, Bala *balas, Texture2D textura
     DrawText(TextFormat("Tempo: %02d:%05.2f", minutos, segundos), 10, 90, 20, GOLD);
     DrawText(TextFormat("Fase: %d/3", jogador->fase), 10, 115, 20, WHITE);
     
-    // HUD de Slots de Arma (Inferior Central)
-    int hudX = 300;  // Centro horizontal
-    int hudY = 550;  // Parte inferior
+    // HUD de Slots de Arma (Inferior Central) - Ajustado para 1024x768
+    int hudX = 390;  // Centro horizontal (1024/2 - 120)
+    int hudY = 690;  // Parte inferior (768 - 78)
     int slotWidth = 60;
     int slotHeight = 60;
     int slotSpacing = 10;
@@ -592,8 +460,8 @@ void desenharJogo(Player *jogador, Zumbi *zumbis, Bala *balas, Texture2D textura
         }
     }
     
-    // Instruções atualizadas
-    DrawText("WASD - Mover | 1,2,3 - Armas | R - Recarregar | Click - Atirar", 130, 520, 15, LIGHTGRAY);
+    // Instruções atualizadas - Ajustado para 1024x768
+    DrawText("WASD - Mover | 1,2,3 - Armas | R - Recarregar | Click - Atirar", 230, 660, 15, LIGHTGRAY);
     
     // Tela de Vitória (coletou CURE na Fase 3)
     if (jogador->jogoVencido) {
@@ -603,57 +471,57 @@ void desenharJogo(Player *jogador, Zumbi *zumbis, Bala *balas, Texture2D textura
             jogador->tempoJaSalvo = true;
         }
         
-        // Fundo escuro completo
-        DrawRectangle(0, 0, 800, 600, BLACK);
-        
+        // Fundo escuro completo - Ajustado para 1024x768
+        DrawRectangle(0, 0, 1024, 768, BLACK);
+
         // Título de vitória
-        DrawText("VITORIA!", 280, 50, 60, GREEN);
+        DrawText("VITORIA!", 380, 80, 60, GREEN);
         
         // Formatar o tempo final
         int minutos = (int)jogador->tempoTotal / 60;
         float segundos = fmod(jogador->tempoTotal, 60.0f);
-        DrawText(TextFormat("Seu tempo: %02d:%05.2f", minutos, segundos), 250, 130, 30, WHITE);
-        
+        DrawText(TextFormat("Seu tempo: %02d:%05.2f", minutos, segundos), 350, 170, 30, WHITE);
+
         // Carregar e mostrar o pódio dos melhores tempos
         float tempos[MAX_SCORES];
         loadTimes(tempos, MAX_SCORES);
+
+        DrawText("=== PODIO ===", 400, 230, 30, GOLD);
         
-        DrawText("=== PODIO ===", 300, 180, 30, GOLD);
-        
-        int posY = 230;
+        int posY = 290;
         for (int i = 0; i < MAX_SCORES && tempos[i] < 999999.0f; i++) {
             int min = (int)tempos[i] / 60;
             float seg = fmod(tempos[i], 60.0f);
-            
+
             // Destacar o tempo do jogador se for o mesmo
             Color cor = (fabs(tempos[i] - jogador->tempoTotal) < 0.01f) ? YELLOW : WHITE;
-            
-            DrawText(TextFormat("%dº - %02d:%05.2f", i + 1, min, seg), 300, posY, 24, cor);
+
+            DrawText(TextFormat("%dº - %02d:%05.2f", i + 1, min, seg), 400, posY, 24, cor);
             posY += 35;
         }
-        
-        DrawText("Pressione R para tentar novamente", 210, 500, 22, GREEN);
-        DrawText("Pressione ESC para sair", 260, 530, 20, LIGHTGRAY);
+
+        DrawText("Pressione R para tentar novamente", 320, 630, 22, GREEN);
+        DrawText("Pressione ESC para sair", 380, 670, 20, LIGHTGRAY);
         return; // Não desenhar mais nada
     }
     
     // Tela de Game Over (morreu)
     if (jogador->vida <= 0) {
         // NÃO salvar tempo quando morrer - apenas vitórias contam no ranking
-        
-        // Fundo preto completo (sem jogo de fundo)
-        DrawRectangle(0, 0, 800, 600, BLACK);
-        
+
+        // Fundo preto completo (sem jogo de fundo) - Ajustado para 1024x768
+        DrawRectangle(0, 0, 1024, 768, BLACK);
+
         // Título Game Over
-        DrawText("GAME OVER", 250, 200, 60, RED);
-        
+        DrawText("GAME OVER", 330, 250, 60, RED);
+
         // Formatar e mostrar o tempo de sobrevivência
         int minutos = (int)jogador->tempoTotal / 60;
         float segundos = fmod(jogador->tempoTotal, 60.0f);
-        DrawText(TextFormat("Tempo de sobrevivencia:", minutos, segundos), 220, 280, 26, WHITE);
-        DrawText(TextFormat("%02d:%05.2f", minutos, segundos), 300, 320, 40, YELLOW);
-        
-        DrawText("Pressione R para tentar novamente", 210, 400, 22, GREEN);
+        DrawText(TextFormat("Tempo de sobrevivencia:", minutos, segundos), 300, 350, 26, WHITE);
+        DrawText(TextFormat("%02d:%05.2f", minutos, segundos), 400, 390, 40, YELLOW);
+
+        DrawText("Pressione R para tentar novamente", 320, 500, 22, GREEN);
         DrawText("Pressione ESC para sair", 260, 430, 20, LIGHTGRAY);
         return; // Não desenhar mais nada
     }
@@ -671,11 +539,7 @@ void adicionarZumbi(Zumbi **cabeca, Vector2 posInicial, Texture2D sprites[][4]) 
         return;
     }
 
-    // 2. Verificar se a posição inicial é válida (não está em um prédio)
-    // Se estiver em um prédio, gerar uma posição válida
-    if (verificarColisaoMapa(posInicial, 20.0f, mapaDoJogo)) {
-        posInicial = gerarPosicaoValidaSpawn(mapaDoJogo, 20.0f);
-    }
+    // NOTA: Validação de spawn agora é feita no main.c com o novo sistema
 
     // 3. Inicializar o novo zumbi com comportamento aleatório
     novoZumbi->posicao = posInicial;
@@ -836,11 +700,7 @@ void atualizarZumbis(Zumbi **cabeca, Vector2 posicaoJogador, float deltaTime) {
         atual->posicao.x += atual->velocidade.x * deltaTime;
         atual->posicao.y += atual->velocidade.y * deltaTime;
 
-        // Verificar colisão com o mapa
-        if (verificarColisaoMapa(atual->posicao, atual->raio, mapaDoJogo)) {
-            // Se colidiu com prédio, voltar para posição anterior
-            atual->posicao = posicaoAnteriorZumbi;
-        }
+        // NOTA: Colisão de zumbis com mapa agora tratada no main.c
 
         // Verificar se o zumbi morreu
         if (atual->vida <= 0) {
@@ -1021,17 +881,13 @@ void verificarColisoesJogadorZumbi(Player *jogador, Zumbi *zumbis) {
                     jogador->posicao.x += direcaoEmpurrao.x * forcaEmpurrao;
                     jogador->posicao.y += direcaoEmpurrao.y * forcaEmpurrao;
 
-                    // Verificar se colidiu com prédio após knockback
-                    if (verificarColisaoMapa(jogador->posicao, 15.0f, mapaDoJogo)) {
-                        // Se colidiu, voltar para posição anterior
-                        jogador->posicao = posicaoAnteriorKnockback;
-                    }
+                    // NOTA: Colisão com mapa após knockback tratada no main.c
 
-                    // Garantir que o jogador não saia da tela após o knockback
+                    // Garantir que o jogador não saia da tela após o knockback (1024x768)
                     if (jogador->posicao.x < 20) jogador->posicao.x = 20;
-                    if (jogador->posicao.x > 780) jogador->posicao.x = 780;
+                    if (jogador->posicao.x > 1004) jogador->posicao.x = 1004;
                     if (jogador->posicao.y < 20) jogador->posicao.y = 20;
-                    if (jogador->posicao.y > 580) jogador->posicao.y = 580;
+                    if (jogador->posicao.y > 748) jogador->posicao.y = 748;
                 }
             }
 

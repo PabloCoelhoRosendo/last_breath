@@ -4,12 +4,13 @@
 #define JOGO_H
 
 #include "raylib.h"
+#include "mapa.h"
+#include "recursos.h"
 
-#define TAMANHO_MAPA 20
-#define TAMANHO_CELULA 40 // Tamanho de cada célula do mapa em pixels
-
-// Declaração externa da matriz global do mapa
-extern int mapaDoJogo[TAMANHO_MAPA][TAMANHO_MAPA];
+// NOTA: As constantes de mapa agora estão definidas em mapa.h:
+// - LARGURA_MAPA 32
+// - ALTURA_MAPA 24
+// - TAMANHO_TILE 32
 
 // Enum para tipos de arma
 typedef enum {
@@ -146,13 +147,6 @@ typedef struct {
     bool trancada;        // Se a porta requer chave
     int faseDestino;      // Qual fase a porta leva (1->2, 2->3)
 } Porta;
-
-
-// Protótipos das funções do mapa
-void mapa(int mapa[TAMANHO_MAPA][TAMANHO_MAPA]);
-void desenharMapa(int mapa[TAMANHO_MAPA][TAMANHO_MAPA], Texture2D texturaMapa);
-int verificarColisaoMapa(Vector2 novaPosicao, float raio, int mapa[TAMANHO_MAPA][TAMANHO_MAPA]);
-Vector2 gerarPosicaoValidaSpawn(int mapa[TAMANHO_MAPA][TAMANHO_MAPA], float raio);
 
 // Protótipos das funções principais (a serem implementadas em src/jogo.c)
 void iniciarJogo(Player *jogador);
