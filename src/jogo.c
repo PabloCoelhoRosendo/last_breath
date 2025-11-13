@@ -332,7 +332,7 @@ void atualizarJogo(Player *jogador, Zumbi **zumbis, Bala **balas) {
     verificarColisoesBalaJogador(balas, jogador); // Verificar balas do boss atingindo o jogador
     if (zumbis != NULL && *zumbis != NULL) {
         verificarColisoesJogadorZumbi(jogador, *zumbis);
-        verificarColisoesZumbiZumbi(*zumbis);
+        // verificarColisoesZumbiZumbi(*zumbis); // DESABILITADO - Otimização de performance (O(n²) custoso)
     }
     
     // Atualizar o tempo total se o jogador estiver vivo
