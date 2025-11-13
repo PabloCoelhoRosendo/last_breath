@@ -60,6 +60,8 @@ void adicionarBala(Bala **cabeca, Vector2 posInicial, Vector2 alvo, int tipo, fl
 
 // Função para atualizar todas as balas e remover as que saíram da tela
 void atualizarBalas(Bala **cabeca) {
+    if (cabeca == NULL || *cabeca == NULL) return;
+    
     Bala *atual = *cabeca;
     Bala *anterior = NULL;
     float deltaTime = GetFrameTime();
@@ -327,6 +329,7 @@ void atualizarJogo(Player *jogador, Zumbi **zumbis, Bala **balas) {
 
     // Verificar colisões
     verificarColisoesBalaZumbi(balas, zumbis, jogador);
+    verificarColisoesBalaJogador(balas, jogador); // Verificar balas do boss atingindo o jogador
     verificarColisoesJogadorZumbi(jogador, *zumbis);
     verificarColisoesZumbiZumbi(*zumbis);
     
@@ -777,11 +780,20 @@ void liberarZumbis(Zumbi **cabeca) {
 
 // Função para verificar colisões entre balas e zumbis
 void verificarColisoesBalaZumbi(Bala **balas, Zumbi **zumbis, Player *jogador) {
+    if (balas == NULL || *balas == NULL || zumbis == NULL) return;
+    
     Bala *balaAtual = *balas;
     Bala *balaAnterior = NULL;
 
     // Iterar sobre todas as balas
     while (balaAtual != NULL) {
+        // Verificar apenas balas do jogador (tipo 0), ignorar balas do boss (tipo 1)
+        if (balaAtual->tipo != 0) {
+            balaAnterior = balaAtual;
+            balaAtual = balaAtual->proximo;
+            continue;
+        }
+        
         Zumbi *zumbiAtual = *zumbis;
         Zumbi *zumbiAnterior = NULL;
         int balaRemovida = 0;
@@ -831,6 +843,55 @@ void verificarColisoesBalaZumbi(Bala **balas, Zumbi **zumbis, Player *jogador) {
             balaAnterior = balaAtual;
             balaAtual = balaAtual->proximo;
         }
+    }
+}
+
+// Função para verificar colisões entre balas do boss e o jogador
+void verificarColisoesBalaJogador(Bala **balas, Player *jogador) {
+    if (balas == NULL || *balas == NULL || jogador == NULL) return;
+    
+    static float cooldownDano = 0.0f; // Cooldown para dano de projéteis
+    
+    // Atualizar cooldown
+    cooldownDano -= GetFrameTime();
+    
+    Bala *balaAtual = *balas;
+    Bala *balaAnterior = NULL;
+    
+    while (balaAtual != NULL) {
+        // Verificar apenas balas do boss (tipo 1)
+        if (balaAtual->tipo == 1) {
+            // Verificar colisão com o jogador (raio do jogador = 15.0f)
+            if (verificarColisaoCirculos(balaAtual->posicao, balaAtual->raio, jogador->posicao, 15.0f)) {
+                // Aplicar dano apenas se o cooldown acabou (evitar múltiplos hits)
+                if (cooldownDano <= 0.0f) {
+                    int dano = (int)balaAtual->dano;
+                    jogador->vida -= dano;
+                    cooldownDano = 0.2f; // Cooldown de 0.2 segundos
+                    
+                    printf("OUCH! Jogador recebeu %d de dano de projetil do boss. Vida: %d\n", dano, jogador->vida);
+                    
+                    // Garantir que a vida não fique negativa
+                    if (jogador->vida < 0) {
+                        jogador->vida = 0;
+                    }
+                }
+                
+                // Remover a bala após atingir o jogador
+                Bala *balaRemover = balaAtual;
+                if (balaAnterior == NULL) {
+                    *balas = balaAtual->proximo;
+                } else {
+                    balaAnterior->proximo = balaAtual->proximo;
+                }
+                balaAtual = balaAtual->proximo;
+                free(balaRemover);
+                continue;
+            }
+        }
+        
+        balaAnterior = balaAtual;
+        balaAtual = balaAtual->proximo;
     }
 }
 
@@ -1130,15 +1191,17 @@ void atualizarBoss(Boss **bosses, Player *jogador, Bala **balas, float deltaTime
                             
                             if (distancia > 0) {
                                 Bala *novaBala = (Bala *)malloc(sizeof(Bala));
-                                novaBala->posicao = bossAtual->posicao;
-                                novaBala->velocidade.x = (dx / distancia) * 5.0f;
-                                novaBala->velocidade.y = (dy / distancia) * 5.0f;
-                                novaBala->tipo = 1; // Projétil de boss
-                                novaBala->dano = 25.0f;
-                                novaBala->raio = 8.0f;
-                                novaBala->tempoVida = 5.0f;
-                                novaBala->proximo = *balas;
-                                *balas = novaBala;
+                                if (novaBala != NULL) {
+                                    novaBala->posicao = bossAtual->posicao;
+                                    novaBala->velocidade.x = (dx / distancia) * 200.0f;
+                                    novaBala->velocidade.y = (dy / distancia) * 200.0f;
+                                    novaBala->tipo = 1; // Projétil de boss
+                                    novaBala->dano = 25.0f;
+                                    novaBala->raio = 8.0f;
+                                    novaBala->tempoVida = 0.0f;
+                                    novaBala->proximo = *balas;
+                                    *balas = novaBala;
+                                }
                             }
                             break;
                         }
@@ -1148,15 +1211,17 @@ void atualizarBoss(Boss **bosses, Player *jogador, Bala **balas, float deltaTime
                                 float angulo = (360.0f / 8.0f) * i * DEG2RAD;
                                 
                                 Bala *novaBala = (Bala *)malloc(sizeof(Bala));
-                                novaBala->posicao = bossAtual->posicao;
-                                novaBala->velocidade.x = cosf(angulo) * 4.0f;
-                                novaBala->velocidade.y = sinf(angulo) * 4.0f;
-                                novaBala->tipo = 1;
-                                novaBala->dano = 20.0f;
-                                novaBala->raio = 6.0f;
-                                novaBala->tempoVida = 5.0f;
-                                novaBala->proximo = *balas;
-                                *balas = novaBala;
+                                if (novaBala != NULL) {
+                                    novaBala->posicao = bossAtual->posicao;
+                                    novaBala->velocidade.x = cosf(angulo) * 180.0f;
+                                    novaBala->velocidade.y = sinf(angulo) * 180.0f;
+                                    novaBala->tipo = 1;
+                                    novaBala->dano = 20.0f;
+                                    novaBala->raio = 6.0f;
+                                    novaBala->tempoVida = 0.0f;
+                                    novaBala->proximo = *balas;
+                                    *balas = novaBala;
+                                }
                             }
                             break;
                         }
@@ -1166,15 +1231,17 @@ void atualizarBoss(Boss **bosses, Player *jogador, Bala **balas, float deltaTime
                                 float angulo = (bossAtual->anguloRotacao + (120.0f * i)) * DEG2RAD;
                                 
                                 Bala *novaBala = (Bala *)malloc(sizeof(Bala));
-                                novaBala->posicao = bossAtual->posicao;
-                                novaBala->velocidade.x = cosf(angulo) * 3.5f;
-                                novaBala->velocidade.y = sinf(angulo) * 3.5f;
-                                novaBala->tipo = 1;
-                                novaBala->dano = 15.0f;
-                                novaBala->raio = 7.0f;
-                                novaBala->tempoVida = 5.0f;
-                                novaBala->proximo = *balas;
-                                *balas = novaBala;
+                                if (novaBala != NULL) {
+                                    novaBala->posicao = bossAtual->posicao;
+                                    novaBala->velocidade.x = cosf(angulo) * 150.0f;
+                                    novaBala->velocidade.y = sinf(angulo) * 150.0f;
+                                    novaBala->tipo = 1;
+                                    novaBala->dano = 15.0f;
+                                    novaBala->raio = 7.0f;
+                                    novaBala->tempoVida = 0.0f;
+                                    novaBala->proximo = *balas;
+                                    *balas = novaBala;
+                                }
                             }
                             
                             bossAtual->anguloRotacao += 15.0f; // Incrementar rotação
@@ -1277,6 +1344,8 @@ void desenharBoss(Boss *bosses) {
 
 // Função para verificar colisões entre boss e balas do jogador
 void verificarColisoesBossBala(Boss **bosses, Bala **balas, Item *itemProgresso, Item *itemArma) {
+    if (bosses == NULL || balas == NULL || *balas == NULL) return;
+    
     Boss *bossAtual = *bosses;
     
     while (bossAtual != NULL) {
