@@ -280,7 +280,8 @@ int main(void) {
                         break;
                     }
                     case 3: {
-                        Vector2 posicaoBoss = gerarPosicaoValidaSpawn(mapaAtual, 35.0f);
+                        // Boss ABOMINATION centralizado no mapa (32x24 tiles * 32px = centro em 512, 384)
+                        Vector2 posicaoBoss = {512.0f, 384.0f};
                         criarBoss(&listaBosses, BOSS_ABOMINATION, posicaoBoss, (Texture2D){0}, (Texture2D){0}, (Texture2D){0}, (Texture2D){0});
                         printf("BOSS APARECEU: ABOMINATION!\n");
                         break;
