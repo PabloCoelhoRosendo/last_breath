@@ -59,7 +59,7 @@ void adicionarBala(Bala **cabeca, Vector2 posInicial, Vector2 alvo, int tipo, fl
 }
 
 // Função para atualizar todas as balas e remover as que saíram da tela
-void atualizarBalas(Bala **cabeca) {
+void atualizarBalas(Bala **cabeca, Mapa *mapa) {
     if (cabeca == NULL || *cabeca == NULL) return;
     
     Bala *atual = *cabeca;
@@ -77,23 +77,26 @@ void atualizarBalas(Bala **cabeca) {
         // Tempo máximo de vida: 2 segundos para balas normais, 3 para boss
         float tempoMaximo = (atual->tipo == 0) ? 2.0f : 3.0f;
         
-        // Verificar se a bala saiu da tela ou expirou - Ajustado para 1024x768
+        // Verificar se a bala colidiu com o mapa
+        int colidiuMapa = (mapa != NULL) ? verificarColisaoMapa(mapa, atual->posicao, atual->raio) : 0;
+        
+        // Verificar se a bala saiu da tela, expirou ou colidiu com parede - Ajustado para 1024x768
         if (atual->posicao.x < 0 || atual->posicao.x > 1024 ||
             atual->posicao.y < 0 || atual->posicao.y > 768 ||
-            atual->tempoVida >= tempoMaximo) {
+            atual->tempoVida >= tempoMaximo || colidiuMapa) {
             
             // Remover a bala da lista
             Bala *temp = atual;
+            Bala *proximaBala = atual->proximo;
             
             if (anterior == NULL) {
-                *cabeca = atual->proximo;
-                atual = *cabeca;
+                *cabeca = proximaBala;
             } else {
-                anterior->proximo = atual->proximo;
-                atual = atual->proximo;
+                anterior->proximo = proximaBala;
             }
             
             free(temp); // Liberar memória
+            atual = proximaBala;
         } else {
             anterior = atual;
             atual = atual->proximo;
@@ -321,8 +324,8 @@ void atualizarJogo(Player *jogador, Zumbi **zumbis, Bala **balas) {
         atirarArma(jogador, balas, mousePos);
     }
     
-    // Atualizar balas
-    atualizarBalas(balas);
+    // Atualizar balas (sem mapa por enquanto, será passado do main.c)
+    // atualizarBalas(balas, NULL);
 
     // Atualizar zumbis
     atualizarZumbis(zumbis, jogador->posicao, deltaTime);
@@ -330,8 +333,10 @@ void atualizarJogo(Player *jogador, Zumbi **zumbis, Bala **balas) {
     // Verificar colisões
     verificarColisoesBalaZumbi(balas, zumbis, jogador);
     verificarColisoesBalaJogador(balas, jogador); // Verificar balas do boss atingindo o jogador
-    verificarColisoesJogadorZumbi(jogador, *zumbis);
-    verificarColisoesZumbiZumbi(*zumbis);
+    if (zumbis != NULL && *zumbis != NULL) {
+        verificarColisoesJogadorZumbi(jogador, *zumbis);
+        verificarColisoesZumbiZumbi(*zumbis);
+    }
     
     // Atualizar o tempo total se o jogador estiver vivo
     if (jogador->vida > 0) {
@@ -807,30 +812,34 @@ void verificarColisoesBalaZumbi(Bala **balas, Zumbi **zumbis, Player *jogador) {
 
                 // Se o zumbi morreu
                 if (zumbiAtual->vida <= 0) {
-                    // Remover zumbi da lista (não precisa mais de pontos)
-
                     // Remover zumbi da lista
                     Zumbi *zumbiRemover = zumbiAtual;
+                    Zumbi *proximoZumbi = zumbiAtual->proximo;
+                    
                     if (zumbiAnterior == NULL) {
-                        *zumbis = zumbiAtual->proximo;
+                        *zumbis = proximoZumbi;
                     } else {
-                        zumbiAnterior->proximo = zumbiAtual->proximo;
+                        zumbiAnterior->proximo = proximoZumbi;
                     }
-                    zumbiAtual = zumbiAtual->proximo;
+                    
                     free(zumbiRemover);
+                    zumbiAtual = proximoZumbi;
                 } else {
                     zumbiAtual = zumbiAtual->proximo;
                 }
 
                 // Remover a bala da lista
                 Bala *balaRemover = balaAtual;
+                Bala *proximaBala = balaAtual->proximo;
+                
                 if (balaAnterior == NULL) {
-                    *balas = balaAtual->proximo;
+                    *balas = proximaBala;
                 } else {
-                    balaAnterior->proximo = balaAtual->proximo;
+                    balaAnterior->proximo = proximaBala;
                 }
-                balaAtual = balaAtual->proximo;
+                
                 free(balaRemover);
+                balaAtual = proximaBala;
                 balaRemovida = 1;
             } else {
                 zumbiAnterior = zumbiAtual;
@@ -879,13 +888,16 @@ void verificarColisoesBalaJogador(Bala **balas, Player *jogador) {
                 
                 // Remover a bala após atingir o jogador
                 Bala *balaRemover = balaAtual;
+                Bala *proximaBala = balaAtual->proximo;
+                
                 if (balaAnterior == NULL) {
-                    *balas = balaAtual->proximo;
+                    *balas = proximaBala;
                 } else {
-                    balaAnterior->proximo = balaAtual->proximo;
+                    balaAnterior->proximo = proximaBala;
                 }
-                balaAtual = balaAtual->proximo;
+                
                 free(balaRemover);
+                balaAtual = proximaBala;
                 continue;
             }
         }
@@ -897,6 +909,8 @@ void verificarColisoesBalaJogador(Bala **balas, Player *jogador) {
 
 // Função para verificar colisões entre jogador e zumbis
 void verificarColisoesJogadorZumbi(Player *jogador, Zumbi *zumbis) {
+    if (jogador == NULL || zumbis == NULL) return;
+    
     static float cooldownDano = 0.0f;
     static float flashDano = 0.0f; // Para piscar a tela em vermelho
     
@@ -920,36 +934,6 @@ void verificarColisoesJogadorZumbi(Player *jogador, Zumbi *zumbis) {
                 flashDano = 0.15f;   // Ativar flash vermelho por 0.15 segundos
                 
                 printf("OUCH! Jogador recebeu %d de dano. Vida: %d\n", dano, jogador->vida);
-                
-                // KNOCKBACK: Empurrar jogador para trás
-                Vector2 posicaoAnteriorKnockback = jogador->posicao; // Salvar posição antes do knockback
-
-                Vector2 direcaoEmpurrao = {
-                    jogador->posicao.x - zumbiAtual->posicao.x,
-                    jogador->posicao.y - zumbiAtual->posicao.y
-                };
-
-                // Normalizar direção
-                float magnitude = sqrtf(direcaoEmpurrao.x * direcaoEmpurrao.x +
-                                       direcaoEmpurrao.y * direcaoEmpurrao.y);
-
-                if (magnitude > 0) {
-                    direcaoEmpurrao.x /= magnitude;
-                    direcaoEmpurrao.y /= magnitude;
-
-                    // Aplicar força de empurrão
-                    float forcaEmpurrao = 40.0f;
-                    jogador->posicao.x += direcaoEmpurrao.x * forcaEmpurrao;
-                    jogador->posicao.y += direcaoEmpurrao.y * forcaEmpurrao;
-
-                    // NOTA: Colisão com mapa após knockback tratada no main.c
-
-                    // Garantir que o jogador não saia da tela após o knockback (1024x768)
-                    if (jogador->posicao.x < 20) jogador->posicao.x = 20;
-                    if (jogador->posicao.x > 1004) jogador->posicao.x = 1004;
-                    if (jogador->posicao.y < 20) jogador->posicao.y = 20;
-                    if (jogador->posicao.y > 748) jogador->posicao.y = 748;
-                }
             }
 
             // Garantir que a vida não fique negativa
@@ -971,6 +955,8 @@ void verificarColisoesJogadorZumbi(Player *jogador, Zumbi *zumbis) {
 
 // Função para verificar e resolver colisões entre zumbis
 void verificarColisoesZumbiZumbi(Zumbi *zumbis) {
+    if (zumbis == NULL) return;
+    
     Zumbi *zumbi1 = zumbis;
 
     while (zumbi1 != NULL) {
@@ -1433,30 +1419,10 @@ void verificarColisoesBossBala(Boss **bosses, Bala **balas, Item *itemProgresso,
 
 // Função para verificar colisões entre boss e jogador
 void verificarColisoesBossJogador(Boss *bosses, Player *jogador) {
-    Boss *bossAtual = bosses;
-    
-    while (bossAtual != NULL) {
-        if (!bossAtual->ativo) {
-            bossAtual = bossAtual->proximo;
-            continue;
-        }
-        
-        // Verificar colisão círculo-círculo
-        float dx = jogador->posicao.x - bossAtual->posicao.x;
-        float dy = jogador->posicao.y - bossAtual->posicao.y;
-        float distancia = sqrtf(dx * dx + dy * dy);
-        
-        if (distancia <= (bossAtual->raio + 20.0f)) { // 20.0f = raio aproximado do jogador
-            // Empurrar jogador para trás
-            if (distancia > 0) {
-                float forcaEmpurrao = 3.0f;
-                jogador->posicao.x += (dx / distancia) * forcaEmpurrao;
-                jogador->posicao.y += (dy / distancia) * forcaEmpurrao;
-            }
-        }
-        
-        bossAtual = bossAtual->proximo;
-    }
+    // Função mantida por compatibilidade, mas knockback removido
+    // O boss já causa dano através de seus ataques específicos e projéteis
+    (void)bosses;
+    (void)jogador;
 }
 
 // ===== SISTEMA DE ITENS E INTERAÇÃO =====

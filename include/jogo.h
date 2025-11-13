@@ -176,7 +176,7 @@ bool verificarInteracaoPorta(Porta *porta, Player *jogador);
 
 // Protótipos do Módulo de Balas ( - Pablo)
 void adicionarBala(struct Bala **cabeca, Vector2 posInicial, Vector2 alvo, int tipo, float dano);
-void atualizarBalas(struct Bala **cabeca);
+void atualizarBalas(struct Bala **cabeca, Mapa *mapa);
 
 // Protótipos do Módulo de Zumbis ( - Victor)
 void adicionarZumbi(struct Zumbi **cabeca, Vector2 posInicial, Texture2D sprites[][4]);

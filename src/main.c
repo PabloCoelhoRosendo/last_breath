@@ -201,8 +201,29 @@ int main(void) {
             zTemp = zTemp->proximo;
         }
 
+        // Salvar posições anteriores dos bosses
+        typedef struct PosicaoBoss {
+            Boss *boss;
+            Vector2 posicaoAnterior;
+            struct PosicaoBoss *proximo;
+        } PosicaoBoss;
+
+        PosicaoBoss *listaPosicoesBosses = NULL;
+        Boss *bTemp = listaBosses;
+        while (bTemp != NULL) {
+            PosicaoBoss *novaPosicao = (PosicaoBoss*)malloc(sizeof(PosicaoBoss));
+            novaPosicao->boss = bTemp;
+            novaPosicao->posicaoAnterior = bTemp->posicao;
+            novaPosicao->proximo = listaPosicoesBosses;
+            listaPosicoesBosses = novaPosicao;
+            bTemp = bTemp->proximo;
+        }
+
         // Atualizar a lógica do jogo
         atualizarJogo(&jogador, &listaZumbis, &listaBalas);
+        
+        // Atualizar balas com verificação de colisão no mapa
+        atualizarBalas(&listaBalas, mapaAtual);
 
         // Verificar colisão do jogador com o mapa (novo sistema)
         if (verificarColisaoMapa(mapaAtual, jogador.posicao, 15.0f)) {
@@ -220,7 +241,7 @@ int main(void) {
             posAtual = posAtual->proximo;
         }
 
-        // Liberar lista de posições anteriores
+        // Liberar lista de posições anteriores dos zumbis
         while (listaPosicoesAnteriores != NULL) {
             PosicaoZumbi *temp = listaPosicoesAnteriores;
             listaPosicoesAnteriores = listaPosicoesAnteriores->proximo;
@@ -240,24 +261,30 @@ int main(void) {
             }
             
             if (jogador.timerBoss >= 45.0f || numZumbis == 0) {
-                // Spawnar boss baseado na fase atual
-                Vector2 posicaoBoss = {400, 100}; // Spawnar no topo do mapa
+                // Spawnar boss baseado na fase atual em posição válida
                 
                 switch (jogador.fase) {
-                    case 1:
+                    case 1: {
+                        Vector2 posicaoBoss = gerarPosicaoValidaSpawn(mapaAtual, 30.0f);
                         criarBoss(&listaBosses, BOSS_PROWLER, posicaoBoss, prowlerFrente, prowlerCostas, prowlerDireita, prowlerEsquerda);
                         printf("BOSS APARECEU: PROWLER!\n");
                         break;
-                    case 2:
-                        // Spawnar 2 Hunters com sprites
-                        criarBoss(&listaBosses, BOSS_HUNTER, (Vector2){300, 100}, hunterFrente, hunterCostas, hunterDireita, hunterEsquerda);
-                        criarBoss(&listaBosses, BOSS_HUNTER, (Vector2){500, 100}, hunterFrente, hunterCostas, hunterDireita, hunterEsquerda);
+                    }
+                    case 2: {
+                        // Spawnar 2 Hunters em posições válidas
+                        Vector2 posicaoBoss1 = gerarPosicaoValidaSpawn(mapaAtual, 25.0f);
+                        Vector2 posicaoBoss2 = gerarPosicaoValidaSpawn(mapaAtual, 25.0f);
+                        criarBoss(&listaBosses, BOSS_HUNTER, posicaoBoss1, hunterFrente, hunterCostas, hunterDireita, hunterEsquerda);
+                        criarBoss(&listaBosses, BOSS_HUNTER, posicaoBoss2, hunterFrente, hunterCostas, hunterDireita, hunterEsquerda);
                         printf("BOSS APARECEU: 2x HUNTERS!\n");
                         break;
-                    case 3:
-                        criarBoss(&listaBosses, BOSS_ABOMINATION, (Vector2){400, 300}, (Texture2D){0}, (Texture2D){0}, (Texture2D){0}, (Texture2D){0});
+                    }
+                    case 3: {
+                        Vector2 posicaoBoss = gerarPosicaoValidaSpawn(mapaAtual, 35.0f);
+                        criarBoss(&listaBosses, BOSS_ABOMINATION, posicaoBoss, (Texture2D){0}, (Texture2D){0}, (Texture2D){0}, (Texture2D){0});
                         printf("BOSS APARECEU: ABOMINATION!\n");
                         break;
+                    }
                 }
                 
                 jogador.bossSpawnado = true;
@@ -266,6 +293,23 @@ int main(void) {
         
         // Atualizar bosses
         atualizarBoss(&listaBosses, &jogador, &listaBalas, GetFrameTime());
+        
+        // Verificar colisão dos bosses com o mapa e reverter se necessário
+        PosicaoBoss *posAtualBoss = listaPosicoesBosses;
+        while (posAtualBoss != NULL) {
+            if (verificarColisaoMapa(mapaAtual, posAtualBoss->boss->posicao, posAtualBoss->boss->raio)) {
+                // Reverter para posição anterior
+                posAtualBoss->boss->posicao = posAtualBoss->posicaoAnterior;
+            }
+            posAtualBoss = posAtualBoss->proximo;
+        }
+
+        // Liberar lista de posições anteriores dos bosses
+        while (listaPosicoesBosses != NULL) {
+            PosicaoBoss *temp = listaPosicoesBosses;
+            listaPosicoesBosses = listaPosicoesBosses->proximo;
+            free(temp);
+        }
         
         // Verificar colisões boss vs balas (passa os 2 itens para dropar) e boss vs jogador
         verificarColisoesBossBala(&listaBosses, &listaBalas, &itemProgresso, &itemArma);
