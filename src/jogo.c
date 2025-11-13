@@ -283,9 +283,6 @@ void atualizarJogo(Player *jogador, Zumbi **zumbis, Bala **balas) {
     
     // Converter m/s para pixels/frame (assumindo 60 FPS e 1 pixel = 1 metro)
     float velocidade = velocidadeAtual * 60.0f * deltaTime;
-    
-    // Salvar posição anterior
-    Vector2 posicaoAnterior = jogador->posicao;
 
     // Atualizar direção vertical baseado no movimento
     if (IsKeyDown(KEY_W)) {
@@ -696,9 +693,6 @@ void atualizarZumbis(Zumbi **cabeca, Vector2 posicaoJogador, float deltaTime) {
             }
         }
 
-        // Salvar posição anterior do zumbi
-        Vector2 posicaoAnteriorZumbi = atual->posicao;
-
         // Atualizar posição
         atual->posicao.x += atual->velocidade.x * deltaTime;
         atual->posicao.y += atual->velocidade.y * deltaTime;
@@ -922,8 +916,6 @@ void verificarColisoesJogadorZumbi(Player *jogador, Zumbi *zumbis) {
                 printf("OUCH! Jogador recebeu %d de dano. Vida: %d\n", dano, jogador->vida);
                 
                 // KNOCKBACK: Empurrar jogador para trás
-                Vector2 posicaoAnteriorKnockback = jogador->posicao; // Salvar posição antes do knockback
-
                 Vector2 direcaoEmpurrao = {
                     jogador->posicao.x - zumbiAtual->posicao.x,
                     jogador->posicao.y - zumbiAtual->posicao.y
