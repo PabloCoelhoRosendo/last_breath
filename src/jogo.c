@@ -286,9 +286,6 @@ void atualizarJogo(Player *jogador, Zumbi **zumbis, Bala **balas) {
     
     // Converter m/s para pixels/frame (assumindo 60 FPS e 1 pixel = 1 metro)
     float velocidade = velocidadeAtual * 60.0f * deltaTime;
-    
-    // Salvar posição anterior
-    Vector2 posicaoAnterior = jogador->posicao;
 
     // Atualizar direção vertical baseado no movimento
     if (IsKeyDown(KEY_W)) {
@@ -701,9 +698,6 @@ void atualizarZumbis(Zumbi **cabeca, Vector2 posicaoJogador, float deltaTime) {
             }
         }
 
-        // Salvar posição anterior do zumbi
-        Vector2 posicaoAnteriorZumbi = atual->posicao;
-
         // Atualizar posição
         atual->posicao.x += atual->velocidade.x * deltaTime;
         atual->posicao.y += atual->velocidade.y * deltaTime;
@@ -934,6 +928,37 @@ void verificarColisoesJogadorZumbi(Player *jogador, Zumbi *zumbis) {
                 flashDano = 0.15f;   // Ativar flash vermelho por 0.15 segundos
                 
                 printf("OUCH! Jogador recebeu %d de dano. Vida: %d\n", dano, jogador->vida);
+<<<<<<< HEAD
+=======
+                
+                // KNOCKBACK: Empurrar jogador para trás
+                Vector2 direcaoEmpurrao = {
+                    jogador->posicao.x - zumbiAtual->posicao.x,
+                    jogador->posicao.y - zumbiAtual->posicao.y
+                };
+
+                // Normalizar direção
+                float magnitude = sqrtf(direcaoEmpurrao.x * direcaoEmpurrao.x +
+                                       direcaoEmpurrao.y * direcaoEmpurrao.y);
+
+                if (magnitude > 0) {
+                    direcaoEmpurrao.x /= magnitude;
+                    direcaoEmpurrao.y /= magnitude;
+
+                    // Aplicar força de empurrão
+                    float forcaEmpurrao = 40.0f;
+                    jogador->posicao.x += direcaoEmpurrao.x * forcaEmpurrao;
+                    jogador->posicao.y += direcaoEmpurrao.y * forcaEmpurrao;
+
+                    // NOTA: Colisão com mapa após knockback tratada no main.c
+
+                    // Garantir que o jogador não saia da tela após o knockback (1024x768)
+                    if (jogador->posicao.x < 20) jogador->posicao.x = 20;
+                    if (jogador->posicao.x > 1004) jogador->posicao.x = 1004;
+                    if (jogador->posicao.y < 20) jogador->posicao.y = 20;
+                    if (jogador->posicao.y > 748) jogador->posicao.y = 748;
+                }
+>>>>>>> 5fe4e33f565502638574a4a011a3b830f4e371b7
             }
 
             // Garantir que a vida não fique negativa
