@@ -12,6 +12,14 @@
 // - ALTURA_MAPA 24
 // - TAMANHO_TILE 32
 
+// Enum para estados de horda
+typedef enum {
+    HORDA_NAO_INICIADA = 0,
+    HORDA_EM_PROGRESSO = 1,
+    HORDA_COMPLETA = 2,
+    HORDA_INTERVALO = 3  // Período entre hordas
+} EstadoHorda;
+
 // Enum para tipos de arma
 typedef enum {
     ARMA_NENHUMA = 0,
@@ -53,6 +61,15 @@ typedef struct {
     bool temMapa;            // Flag se possui o Mapa do Laboratório
     bool temCure;            // Flag se coletou a CURE
     bool jogoVencido;        // Flag se coletou a CURE e venceu o jogo
+    
+    // Sistema de Hordas
+    int hordaAtual;          // Número da horda atual (1-3 na fase 1)
+    EstadoHorda estadoHorda; // Estado atual da horda
+    int zumbisRestantes;     // Zumbis vivos da horda atual
+    int zumbisTotaisHorda;   // Total de zumbis que devem spawnar na horda
+    int zumbisSpawnados;     // Quantos zumbis já foram spawnados
+    float tempoIntervalo;    // Tempo restante do intervalo entre hordas
+    float tempoSpawn;        // Timer para controlar spawn gradual de zumbis
 } Player;
 
 // 2. Estrutura para Zumbis (Victor - Requisito: Structs, Lista Encadeada)
@@ -183,6 +200,10 @@ void adicionarZumbi(struct Zumbi **cabeca, Vector2 posInicial, Texture2D sprites
 void atualizarZumbis(struct Zumbi **cabeca, Vector2 posicaoJogador, float deltaTime);
 void desenharZumbis(struct Zumbi *cabeca);
 void liberarZumbis(struct Zumbi **cabeca);
+
+// Protótipos do Sistema de Hordas
+void iniciarHorda(Player *jogador, int numeroHorda);
+void atualizarHorda(Player *jogador, struct Zumbi **zumbis, float deltaTime);
 
 // Protótipos das Funções de Colisão
 int verificarColisaoCirculos(Vector2 pos1, float raio1, Vector2 pos2, float raio2);

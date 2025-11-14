@@ -221,6 +221,15 @@ void iniciarJogo(Player *jogador) {
     jogador->temCure = false;
     jogador->jogoVencido = false;
     
+    // Inicializar sistema de hordas
+    jogador->hordaAtual = 0;
+    jogador->estadoHorda = HORDA_NAO_INICIADA;
+    jogador->zumbisRestantes = 0;
+    jogador->zumbisTotaisHorda = 0;
+    jogador->zumbisSpawnados = 0;
+    jogador->tempoIntervalo = 0.0f;
+    jogador->tempoSpawn = 0.0f;
+    
     // Inicializar slots de arma
     inicializarArma(&jogador->slots[0], ARMA_PISTOL);   // Slot 1: Pistol (inicial)
     inicializarArma(&jogador->slots[1], ARMA_NENHUMA);  // Slot 2: Vazio
@@ -1652,4 +1661,96 @@ bool verificarInteracaoPorta(Porta *porta, Player *jogador) {
     }
     
     return false;
+}
+
+// ===== SISTEMA DE HORDAS =====
+
+// Função para iniciar uma horda específica
+void iniciarHorda(Player *jogador, int numeroHorda) {
+    jogador->hordaAtual = numeroHorda;
+    jogador->estadoHorda = HORDA_EM_PROGRESSO;
+    jogador->zumbisSpawnados = 0;
+    jogador->tempoSpawn = 0.0f;  // Resetar timer de spawn
+    
+    // Definir quantidade de zumbis por horda na Fase 1
+    if (jogador->fase == 1) {
+        switch (numeroHorda) {
+            case 1:
+                jogador->zumbisTotaisHorda = 5;  // Primeira horda: 5 zumbis
+                break;
+            case 2:
+                jogador->zumbisTotaisHorda = 7;  // Segunda horda: 7 zumbis
+                break;
+            case 3:
+                jogador->zumbisTotaisHorda = 2;  // Terceira horda: 2 zumbis + boss (boss spawnado separadamente)
+                break;
+            default:
+                jogador->zumbisTotaisHorda = 5;
+                break;
+        }
+    } else {
+        // Outras fases podem ter suas próprias configurações
+        jogador->zumbisTotaisHorda = 5;
+    }
+    
+    jogador->zumbisRestantes = jogador->zumbisTotaisHorda;
+    
+    printf("=== HORDA %d INICIADA ===\n", numeroHorda);
+    printf("Zumbis a spawnar: %d\n", jogador->zumbisTotaisHorda);
+}
+
+// Função para atualizar o sistema de hordas
+void atualizarHorda(Player *jogador, Zumbi **zumbis, float deltaTime) {
+    // Não atualizar se jogador morreu ou venceu
+    if (jogador->vida <= 0 || jogador->jogoVencido) {
+        return;
+    }
+    
+    // Contar quantos zumbis estão vivos
+    int zumbisVivos = 0;
+    Zumbi *z = *zumbis;
+    while (z != NULL) {
+        zumbisVivos++;
+        z = z->proximo;
+    }
+    jogador->zumbisRestantes = zumbisVivos;
+    
+    switch (jogador->estadoHorda) {
+        case HORDA_NAO_INICIADA:
+            // Iniciar primeira horda automaticamente
+            if (jogador->fase == 1 && jogador->hordaAtual == 0) {
+                iniciarHorda(jogador, 1);
+            }
+            break;
+            
+        case HORDA_EM_PROGRESSO:
+            // Verificar se todos os zumbis foram mortos
+            if (zumbisVivos == 0 && jogador->zumbisSpawnados >= jogador->zumbisTotaisHorda) {
+                jogador->estadoHorda = HORDA_COMPLETA;
+                printf("=== HORDA %d COMPLETA! ===\n", jogador->hordaAtual);
+                
+                // Verificar se há mais hordas
+                if (jogador->fase == 1 && jogador->hordaAtual < 3) {
+                    jogador->estadoHorda = HORDA_INTERVALO;
+                    jogador->tempoIntervalo = 5.0f;  // 5 segundos de intervalo
+                    printf("Próxima horda em 5 segundos...\n");
+                }
+            }
+            break;
+            
+        case HORDA_COMPLETA:
+            // Estado final - todas as hordas foram completadas
+            // Pode-se usar para mostrar mensagem ou spawnar boss final
+            break;
+            
+        case HORDA_INTERVALO:
+            // Contar o tempo do intervalo
+            jogador->tempoIntervalo -= deltaTime;
+            
+            if (jogador->tempoIntervalo <= 0.0f) {
+                // Iniciar próxima horda
+                iniciarHorda(jogador, jogador->hordaAtual + 1);
+            }
+            break;
+    }
 }
