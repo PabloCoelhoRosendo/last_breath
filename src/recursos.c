@@ -64,10 +64,17 @@ void carregarRecursos(Recursos* recursos) {
         printf("    * Rua.png não encontrado\n");
     }
 
-    // Carregar chao.png para laboratório se existir
-    if (FileExists("assets/tiles/chao.png")) {
-        recursos->chaoLab = LoadTexture("assets/tiles/chao.png");
-        printf("    * chao.png carregado (Fase 3)\n");
+    // Tile 9: Chão do Laboratório (Fase 3)
+    if (FileExists("assets/tiles/chao laboratorio.png")) {
+        recursos->texturasTiles[TILE_CHAO_LAB] = LoadTexture("assets/tiles/chao laboratorio.png");
+        recursos->chaoLab = recursos->texturasTiles[TILE_CHAO_LAB]; // Referência
+        printf("    * chao laboratorio.png carregado (Tile 9 - Fase 3)\n");
+    } else if (FileExists("assets/tiles/chao.png")) {
+        recursos->texturasTiles[TILE_CHAO_LAB] = LoadTexture("assets/tiles/chao.png");
+        recursos->chaoLab = recursos->texturasTiles[TILE_CHAO_LAB]; // Referência
+        printf("    * chao.png carregado (Tile 9 - Fase 3, fallback)\n");
+    } else {
+        printf("    * chao laboratorio.png não encontrado (usando placeholder)\n");
     }
 
     // Tile 1: Parede (bordas) - não usado na fase 1, mas mantido
@@ -246,49 +253,62 @@ void descarregarRecursos(Recursos* recursos) {
 
     printf("Descarregando recursos...\n");
 
-    // Descarrega texturas de tiles
+    // Descarrega texturas de tiles e zera IDs para prevenir double-free
     for (int i = 0; i < MAX_TIPOS_TILE; i++) {
         if (texturaValida(recursos->texturasTiles[i])) {
             UnloadTexture(recursos->texturasTiles[i]);
+            recursos->texturasTiles[i].id = 0;
         }
     }
 
-    // Descarrega texturas do jogador
-    if (texturaValida(recursos->jogadorFrente)) UnloadTexture(recursos->jogadorFrente);
-    if (texturaValida(recursos->jogadorTras)) UnloadTexture(recursos->jogadorTras);
-    if (texturaValida(recursos->jogadorEsquerda)) UnloadTexture(recursos->jogadorEsquerda);
-    if (texturaValida(recursos->jogadorDireita)) UnloadTexture(recursos->jogadorDireita);
+    // Descarrega texturas do jogador e zera IDs
+    if (texturaValida(recursos->jogadorFrente)) {
+        UnloadTexture(recursos->jogadorFrente);
+        recursos->jogadorFrente.id = 0;
+    }
+    if (texturaValida(recursos->jogadorTras)) {
+        UnloadTexture(recursos->jogadorTras);
+        recursos->jogadorTras.id = 0;
+    }
+    if (texturaValida(recursos->jogadorEsquerda)) {
+        UnloadTexture(recursos->jogadorEsquerda);
+        recursos->jogadorEsquerda.id = 0;
+    }
+    if (texturaValida(recursos->jogadorDireita)) {
+        UnloadTexture(recursos->jogadorDireita);
+        recursos->jogadorDireita.id = 0;
+    }
 
-    // Descarrega texturas de zumbis
+    // Descarrega texturas de zumbis e zera IDs
     for (int i = 0; i < 5; i++) {
         for (int j = 0; j < 4; j++) {
             if (texturaValida(recursos->zumbis[i][j])) {
                 UnloadTexture(recursos->zumbis[i][j]);
+                recursos->zumbis[i][j].id = 0;
             }
         }
     }
 
-    // Descarrega texturas de bosses
+    // Descarrega texturas de bosses e zera IDs
     for (int i = 0; i < 3; i++) {
         for (int j = 0; j < 4; j++) {
             if (texturaValida(recursos->bosses[i][j])) {
                 UnloadTexture(recursos->bosses[i][j]);
+                recursos->bosses[i][j].id = 0;
             }
         }
     }
 
-    // Descarrega textura de fundo
+    // Descarrega textura de fundo e zera ID
     if (texturaValida(recursos->fundoMapa)) {
         UnloadTexture(recursos->fundoMapa);
+        recursos->fundoMapa.id = 0;
     }
 
-    // Descarrega chaoLab (carregado independentemente)
-    if (texturaValida(recursos->chaoLab)) {
-        UnloadTexture(recursos->chaoLab);
-    }
-
-    // Texturas de chão são descarregadas via texturasTiles[]
-    // (chaoMercado e chaoRua são apenas referências)
+    // Zera IDs das referências de chão (já descarregadas via texturasTiles[])
+    recursos->chaoMercado.id = 0;
+    recursos->chaoRua.id = 0;
+    recursos->chaoLab.id = 0;
 
     printf("Recursos descarregados!\n");
 }

@@ -131,9 +131,9 @@ void inicializarMapaPadrao(Mapa* mapa) {
 static void detectarPredio(const Mapa* mapa, int linha, int coluna, Predio* predio) {
     int tipo = mapa->tiles[linha][coluna];
 
-    // Tiles que NÃO são prédios: chão (0 e 6), parede (1), obstáculos (7 e 8)
+    // Tiles que NÃO são prédios: chão (0, 6, 9), parede (1), obstáculos (7 e 8)
     if (tipo == TILE_CHAO || tipo == TILE_PAREDE || tipo == TILE_CHAO_MERCADO ||
-        tipo == TILE_PRATELEIRA_MERCADO || tipo == TILE_CAIXA_MERCADO) {
+        tipo == TILE_PRATELEIRA_MERCADO || tipo == TILE_CAIXA_MERCADO || tipo == TILE_CHAO_LAB) {
         predio->tipo = 0;
         return;
     }
@@ -175,12 +175,16 @@ void desenharMapaTiles(const Mapa* mapa, Texture2D texturasTiles[]) {
     int larguraTelaPx = mapa->largura * mapa->tamanhoTile;  // 1024px
     int alturaTelaPx = mapa->altura * mapa->tamanhoTile;    // 768px
 
-    // Verificar se existe TILE_CHAO_MERCADO no mapa
+    // Verificar qual tipo de chão existe no mapa
     bool temChaoMercado = false;
-    for (int i = 0; i < mapa->altura && !temChaoMercado; i++) {
-        for (int j = 0; j < mapa->largura && !temChaoMercado; j++) {
+    bool temChaoLab = false;
+    for (int i = 0; i < mapa->altura; i++) {
+        for (int j = 0; j < mapa->largura; j++) {
             if (mapa->tiles[i][j] == TILE_CHAO_MERCADO) {
                 temChaoMercado = true;
+            }
+            if (mapa->tiles[i][j] == TILE_CHAO_LAB) {
+                temChaoLab = true;
             }
         }
     }
@@ -188,10 +192,13 @@ void desenharMapaTiles(const Mapa* mapa, Texture2D texturasTiles[]) {
     // Escolher qual textura de chão usar baseado no que foi detectado
     Texture2D texturaChao;
     if (temChaoMercado && texturasTiles != NULL && texturasTiles[TILE_CHAO_MERCADO].id != 0) {
-        // Se existe tile 6 no mapa, usar Chão mercado
+        // Se existe tile 6 no mapa, usar Chão mercado (Fase 1)
         texturaChao = texturasTiles[TILE_CHAO_MERCADO];
+    } else if (temChaoLab && texturasTiles != NULL && texturasTiles[TILE_CHAO_LAB].id != 0) {
+        // Se existe tile 9 no mapa, usar Chão laboratório (Fase 3)
+        texturaChao = texturasTiles[TILE_CHAO_LAB];
     } else if (texturasTiles != NULL && texturasTiles[TILE_CHAO].id != 0) {
-        // Caso contrário, usar Rua
+        // Caso contrário, usar Rua (Fase 2)
         texturaChao = texturasTiles[TILE_CHAO];
     } else {
         // Placeholder cinza
@@ -324,9 +331,9 @@ bool isTileSolido(const Mapa* mapa, int linhaGrid, int colunaGrid) {
     }
 
     int tipoTile = mapa->tiles[linhaGrid][colunaGrid];
-    // Tiles walkable: apenas TILE_CHAO (0) e TILE_CHAO_MERCADO (6)
+    // Tiles walkable: TILE_CHAO (0), TILE_CHAO_MERCADO (6) e TILE_CHAO_LAB (9)
     // Todos os outros são sólidos (paredes, prédios, obstáculos)
-    return (tipoTile != TILE_CHAO && tipoTile != TILE_CHAO_MERCADO);
+    return (tipoTile != TILE_CHAO && tipoTile != TILE_CHAO_MERCADO && tipoTile != TILE_CHAO_LAB);
 }
 
 bool verificarColisaoMapa(const Mapa* mapa, Vector2 posicao, float raio) {

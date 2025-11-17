@@ -21,6 +21,7 @@ typedef enum {
     TILE_CHAO_MERCADO = 6,      // Chão do mercado (Fase 1)
     TILE_PRATELEIRA_MERCADO = 7,  // Prateleira do mercado (obstáculo)
     TILE_CAIXA_MERCADO = 8,       // Caixa do mercado (obstáculo)
+    TILE_CHAO_LAB = 9,            // Chão do laboratório (Fase 3)
     // Adicione mais tipos conforme necessário
 } TipoTile;
 
