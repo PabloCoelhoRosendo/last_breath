@@ -12,6 +12,13 @@
 // - ALTURA_MAPA 24
 // - TAMANHO_TILE 32
 
+// Enum para estados do jogo
+typedef enum {
+    ESTADO_MENU = 0,
+    ESTADO_JOGANDO = 1,
+    ESTADO_PAUSADO = 2
+} EstadoJogo;
+
 // Enum para estados de horda
 typedef enum {
     HORDA_NAO_INICIADA = 0,
@@ -61,6 +68,7 @@ typedef struct {
     bool temMapa;            // Flag se possui o Mapa do Laboratório
     bool temCure;            // Flag se coletou a CURE
     bool jogoVencido;        // Flag se coletou a CURE e venceu o jogo
+    EstadoJogo estadoJogo;   // Estado atual do jogo (menu/jogando/pausado)
     
     // Sistema de Hordas
     int hordaAtual;          // Número da horda atual (1-3 na fase 1)

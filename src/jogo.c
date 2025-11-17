@@ -210,6 +210,7 @@ void iniciarJogo(Player *jogador) {
     jogador->estaRecarregando = false;
     jogador->tempoRecargaAtual = 0.0f;
     jogador->tempoJaSalvo = false;
+    jogador->estadoJogo = ESTADO_JOGANDO;
     
     // Inicializar sistema de boss
     jogador->timerBoss = 0.0f;

@@ -18,6 +18,12 @@ int main(void) {
     InitWindow(larguraTela, alturaTela, "Last Breath - Zumbi Survival Game");
     SetTargetFPS(60);
 
+    // Carregar logo do menu
+    Texture2D logoTexture = LoadTexture("assets/logo/imagem.png");
+    if (logoTexture.id == 0) {
+        printf("Aviso: Logo nao foi carregada de assets/logo/imagem.png\n");
+    }
+
     // ===== NOVO SISTEMA DE RECURSOS =====
     // Criar e carregar recursos centralizados
     Recursos* recursos = criarRecursos();
@@ -120,7 +126,7 @@ int main(void) {
     Boss *listaBosses = NULL;         // Lista encadeada de bosses
     // ZumbiForte *listaZumbisFortes = NULL;  // Lista encadeada de zumbis fortes (TODO: Implementar)
     Bala *listaBalas = NULL;          // Lista encadeada de balas
-    
+
     // Sistema de Itens e Porta
     Item itemProgresso;               // Item de progressão (Chave, Mapa, CURE)
     itemProgresso.ativo = false;      // Começa sem item no mapa
@@ -129,8 +135,9 @@ int main(void) {
     Porta porta;                      // Porta para transição de fase
     criarPorta(&porta, (Vector2){960, 384}, 2); // Porta para Fase 2 (ajustada para 1024x768)
 
-    // Inicializar o jogador
-    iniciarJogo(&jogador);
+    // Inicializar o jogador no estado de menu
+    jogador.estadoJogo = ESTADO_MENU;
+    bool jogoIniciado = false;  // Flag para controlar se o jogo já foi iniciado
 
     // Garantir que o jogador spawne em posição válida (fora de tiles sólidos)
     jogador.posicao = gerarPosicaoValidaSpawn(mapaAtual, 15.0f);
@@ -143,46 +150,111 @@ int main(void) {
 
     // Loop principal do jogo
     while (!WindowShouldClose()) {
-        // Verificar se pressionou R para reiniciar (quando morreu ou venceu)
+        // ===== TELA DE MENU =====
+        if (jogador.estadoJogo == ESTADO_MENU) {
+            // Definir retângulo do botão "Jogar" (centralizado)
+            Rectangle botaoJogar = {
+                larguraTela / 2 - 100,  // x (centralizado)
+                alturaTela / 2 + 150,   // y (abaixo da logo)
+                200,                     // largura
+                60                       // altura
+            };
+
+            // Verificar se o mouse está sobre o botão
+            Vector2 mousePos = GetMousePosition();
+            bool mouseNoBot = CheckCollisionPointRec(mousePos, botaoJogar);
+
+            // Verificar clique no botão
+            if (mouseNoBot && IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) {
+                // Iniciar o jogo
+                if (!jogoIniciado) {
+                    iniciarJogo(&jogador);
+                    jogador.posicao = gerarPosicaoValidaSpawn(mapaAtual, 15.0f);
+                    jogador.spriteAtual = spriteFrenteDireita;
+                    jogoIniciado = true;
+                }
+                jogador.estadoJogo = ESTADO_JOGANDO;
+                printf("Jogo iniciado!\n");
+            }
+
+            // Desenhar tela de menu
+            BeginDrawing();
+            ClearBackground(BLACK);
+
+            // Desenhar logo (centralizada)
+            if (logoTexture.id > 0) {
+                float escalaLogo = 0.8f;  // Ajuste conforme necessário
+                float larguraLogo = logoTexture.width * escalaLogo;
+                float alturaLogo = logoTexture.height * escalaLogo;
+
+                DrawTexturePro(
+                    logoTexture,
+                    (Rectangle){0, 0, (float)logoTexture.width, (float)logoTexture.height},
+                    (Rectangle){larguraTela / 2 - larguraLogo / 2, 100, larguraLogo, alturaLogo},
+                    (Vector2){0, 0},
+                    0.0f,
+                    WHITE
+                );
+            } else {
+                // Fallback: texto se logo não carregou
+                DrawText("LAST BREATH", larguraTela / 2 - 200, 150, 60, RED);
+            }
+
+            // Desenhar botão "Jogar"
+            Color corBotao = mouseNoBot ? GREEN : DARKGREEN;
+            DrawRectangleRec(botaoJogar, corBotao);
+            DrawRectangleLinesEx(botaoJogar, 3, LIME);
+
+            // Texto do botão centralizado
+            const char* textoBotao = "JOGAR";
+            int larguraTexto = MeasureText(textoBotao, 30);
+            DrawText(
+                textoBotao,
+                botaoJogar.x + botaoJogar.width / 2 - larguraTexto / 2,
+                botaoJogar.y + 15,
+                30,
+                WHITE
+            );
+
+            EndDrawing();
+            continue;  // Pular o resto do loop e voltar para o início
+        }
+
+        // Verificar se pressionou R para voltar ao menu (quando morreu ou venceu)
         if ((jogador.vida <= 0 || jogador.jogoVencido) && IsKeyPressed(KEY_R)) {
             // Limpar todos os recursos do jogo atual
             liberarZumbis(&listaZumbis);
             listaZumbis = NULL;
-            
+
             // Limpar bosses
             while (listaBosses != NULL) {
                 Boss *temp = listaBosses;
                 listaBosses = listaBosses->proximo;
                 free(temp);
             }
-            
+
             // Limpar balas
             while (listaBalas != NULL) {
                 Bala *temp = listaBalas;
                 listaBalas = listaBalas->proximo;
                 free(temp);
             }
-            
-            // Reiniciar jogador
-            iniciarJogo(&jogador);
 
             // Recarregar mapa da Fase 1
             if (!carregarMapaDeArquivo(mapaAtual, "assets/maps/fase1.txt")) {
                 inicializarMapaPadrao(mapaAtual);
             }
 
-            // Garantir spawn válido do jogador
-            jogador.posicao = gerarPosicaoValidaSpawn(mapaAtual, 15.0f);
-            jogador.spriteAtual = spriteFrenteDireita;
-
             // Resetar itens e porta
             itemProgresso.ativo = false;
             itemArma.ativo = false;
             criarPorta(&porta, (Vector2){960, 384}, 2);
 
-            // NÃO adicionar zumbis manualmente - o sistema de hordas irá gerenciar
-            
-            printf("Jogo reiniciado!\n");
+            // Voltar ao menu
+            jogador.estadoJogo = ESTADO_MENU;
+            jogoIniciado = false;
+
+            printf("Voltando ao menu principal...\n");
         }
         
         // Salvar posição anterior do jogador e zumbis para colisão
@@ -576,6 +648,9 @@ int main(void) {
     UnloadTexture(hunterEsquerda);
     // Abomination usa apenas um sprite (frente), os outros são referências
     UnloadTexture(abominationFrente);
+
+    // Descarregar logo do menu
+    UnloadTexture(logoTexture);
 
     CloseWindow();
 
