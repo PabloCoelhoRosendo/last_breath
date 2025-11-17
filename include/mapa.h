@@ -12,12 +12,15 @@
 
 // Tipos de tiles
 typedef enum {
-    TILE_CHAO = 0,
+    TILE_CHAO = 0,              // Chão genérico / Rua (Fase 2)
     TILE_PAREDE = 1,
     TILE_PREDIO_VERMELHO = 2,
     TILE_PREDIO_AZUL = 3,
     TILE_PREDIO_VERDE = 4,
     TILE_PREDIO_AMARELO = 5,
+    TILE_CHAO_MERCADO = 6,      // Chão do mercado (Fase 1)
+    TILE_PRATELEIRA_MERCADO = 7,  // Prateleira do mercado (obstáculo)
+    TILE_CAIXA_MERCADO = 8,       // Caixa do mercado (obstáculo)
     // Adicione mais tipos conforme necessário
 } TipoTile;
 

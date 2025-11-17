@@ -9,6 +9,11 @@ typedef struct {
     // Texturas de tiles
     Texture2D texturasTiles[MAX_TIPOS_TILE];
 
+    // Texturas de chão por fase
+    Texture2D chaoMercado;  // Fase 1
+    Texture2D chaoRua;      // Fase 2
+    Texture2D chaoLab;      // Fase 3 (opcional)
+
     // Texturas do jogador (4 direções)
     Texture2D jogadorFrente;
     Texture2D jogadorTras;

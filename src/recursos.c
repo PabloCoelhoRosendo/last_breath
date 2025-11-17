@@ -36,6 +36,9 @@ Recursos* criarRecursos(void) {
     }
 
     recursos->fundoMapa.id = 0;
+    recursos->chaoMercado.id = 0;
+    recursos->chaoRua.id = 0;
+    recursos->chaoLab.id = 0;
 
     return recursos;
 }
@@ -52,15 +55,19 @@ void carregarRecursos(Recursos* recursos) {
     // =====================================================================
     printf("  - Carregando texturas de tiles...\n");
 
-    // Tile 0: Chão (Rua)
+    // Tile 0: Chão genérico / Rua (Fase 2)
     if (FileExists("assets/tiles/Rua.png")) {
         recursos->texturasTiles[TILE_CHAO] = LoadTexture("assets/tiles/Rua.png");
-        printf("    * Rua.png carregado\n");
-    } else if (FileExists("assets/tiles/chao.png")) {
-        recursos->texturasTiles[TILE_CHAO] = LoadTexture("assets/tiles/chao.png");
-        printf("    * chao.png carregado (fallback)\n");
+        recursos->chaoRua = recursos->texturasTiles[TILE_CHAO]; // Referência
+        printf("    * Rua.png carregado (Tile 0 - Fase 2)\n");
     } else {
-        printf("    * Rua.png não encontrado (usando placeholder)\n");
+        printf("    * Rua.png não encontrado\n");
+    }
+
+    // Carregar chao.png para laboratório se existir
+    if (FileExists("assets/tiles/chao.png")) {
+        recursos->chaoLab = LoadTexture("assets/tiles/chao.png");
+        printf("    * chao.png carregado (Fase 3)\n");
     }
 
     // Tile 1: Parede (bordas) - não usado na fase 1, mas mantido
@@ -110,6 +117,31 @@ void carregarRecursos(Recursos* recursos) {
         printf("    * predio_amarelo.png carregado\n");
     } else {
         printf("    * predio_amarelo.png não encontrado (usando placeholder)\n");
+    }
+
+    // Tile 6: Chão do Mercado (Fase 1)
+    if (FileExists("assets/tiles/chao mercado.png")) {
+        recursos->texturasTiles[TILE_CHAO_MERCADO] = LoadTexture("assets/tiles/chao mercado.png");
+        recursos->chaoMercado = recursos->texturasTiles[TILE_CHAO_MERCADO]; // Referência
+        printf("    * chao mercado.png carregado (Tile 6)\n");
+    } else {
+        printf("    * chao mercado.png não encontrado (usando placeholder)\n");
+    }
+
+    // Tile 7: Prateleira do Mercado (obstáculo)
+    if (FileExists("assets/tiles/prateleira mercado.png")) {
+        recursos->texturasTiles[TILE_PRATELEIRA_MERCADO] = LoadTexture("assets/tiles/prateleira mercado.png");
+        printf("    * prateleira mercado.png carregado (Tile 7)\n");
+    } else {
+        printf("    * prateleira mercado.png não encontrado (usando placeholder)\n");
+    }
+
+    // Tile 8: Caixa do Mercado (obstáculo)
+    if (FileExists("assets/tiles/caixa mercado.png")) {
+        recursos->texturasTiles[TILE_CAIXA_MERCADO] = LoadTexture("assets/tiles/caixa mercado.png");
+        printf("    * caixa mercado.png carregado (Tile 8)\n");
+    } else {
+        printf("    * caixa mercado.png não encontrado (usando placeholder)\n");
     }
 
     // =====================================================================
@@ -249,6 +281,14 @@ void descarregarRecursos(Recursos* recursos) {
     if (texturaValida(recursos->fundoMapa)) {
         UnloadTexture(recursos->fundoMapa);
     }
+
+    // Descarrega chaoLab (carregado independentemente)
+    if (texturaValida(recursos->chaoLab)) {
+        UnloadTexture(recursos->chaoLab);
+    }
+
+    // Texturas de chão são descarregadas via texturasTiles[]
+    // (chaoMercado e chaoRua são apenas referências)
 
     printf("Recursos descarregados!\n");
 }
