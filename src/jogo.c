@@ -1028,7 +1028,7 @@ void criarBoss(Boss **bosses, TipoBoss tipo, Vector2 posicao, Texture2D spriteFr
             novoBoss->vidaMax = 250;
             novoBoss->vida = 250;
             novoBoss->velocidade = 0.0f; // Estático
-            novoBoss->raio = 35.0f;
+            novoBoss->raio = 60.0f;
             novoBoss->cooldownAtaque = 2.0f; // Ataque de projéteis a cada 2s
             break;
             
@@ -1252,6 +1252,12 @@ void desenharBoss(Boss *bosses) {
         if (bossAtual->spriteAtual.id > 0) {
             // Desenhar sprite (escala maior para bosses)
             float escala = 0.15f; // Bosses são maiores que jogador/zumbis
+
+            // Abomination é muito maior que os outros bosses
+            if (bossAtual->tipo == BOSS_ABOMINATION) {
+                escala = 0.30f; // Dobro do tamanho dos outros bosses
+            }
+
             float largura = bossAtual->spriteAtual.width * escala;
             float altura = bossAtual->spriteAtual.height * escala;
 
@@ -1293,9 +1299,14 @@ void desenharBoss(Boss *bosses) {
         float porcentagemVida = (float)bossAtual->vida / (float)bossAtual->vidaMax;
 
         // Ajustar posição da barra baseado se tem sprite ou não
-        float offsetY = (bossAtual->spriteAtual.id > 0) ?
-                        (bossAtual->spriteAtual.height * 0.15f / 2 + 10.0f) :
-                        (bossAtual->raio + 15.0f);
+        float offsetY;
+        if (bossAtual->spriteAtual.id > 0) {
+            // Calcular escala correta baseado no tipo de boss
+            float escala = (bossAtual->tipo == BOSS_ABOMINATION) ? 0.30f : 0.15f;
+            offsetY = bossAtual->spriteAtual.height * escala / 2 + 15.0f;
+        } else {
+            offsetY = bossAtual->raio + 15.0f;
+        }
 
         Vector2 barraPos = {bossAtual->posicao.x - barraLargura / 2, bossAtual->posicao.y - offsetY};
         

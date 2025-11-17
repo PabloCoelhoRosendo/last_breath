@@ -101,6 +101,18 @@ int main(void) {
         printf("Aviso: Alguns sprites do Hunter nao foram carregados. Usando circulo.\n");
     }
 
+    // Abomination (Fase 3)
+    Texture2D abominationFrente = LoadTexture("bosses/abomination/frente.png");
+    Texture2D abominationCostas = LoadTexture("bosses/abomination/tras.png");
+    Texture2D abominationDireita = LoadTexture("bosses/abomination/direita.png");
+    Texture2D abominationEsquerda = LoadTexture("bosses/abomination/esquerda.png");
+
+    // Verificar se os sprites do Abomination foram carregados
+    if (abominationFrente.id == 0 || abominationCostas.id == 0 ||
+        abominationDireita.id == 0 || abominationEsquerda.id == 0) {
+        printf("Aviso: Alguns sprites do Abomination nao foram carregados. Usando circulo.\n");
+    }
+
     // Inicializar estruturas do jogo
     Player jogador;
     Zumbi *listaZumbis = NULL;        // Lista encadeada de zumbis normais
@@ -304,7 +316,7 @@ int main(void) {
                         case 3: {
                             // Boss ABOMINATION centralizado no mapa (32x24 tiles * 32px = centro em 512, 384)
                             Vector2 posicaoBoss = {512.0f, 384.0f};
-                            criarBoss(&listaBosses, BOSS_ABOMINATION, posicaoBoss, (Texture2D){0}, (Texture2D){0}, (Texture2D){0}, (Texture2D){0});
+                            criarBoss(&listaBosses, BOSS_ABOMINATION, posicaoBoss, abominationFrente, abominationCostas, abominationDireita, abominationEsquerda);
                             printf("BOSS APARECEU: ABOMINATION!\n");
                             break;
                         }
@@ -561,6 +573,10 @@ int main(void) {
     UnloadTexture(hunterCostas);
     UnloadTexture(hunterDireita);
     UnloadTexture(hunterEsquerda);
+    UnloadTexture(abominationFrente);
+    UnloadTexture(abominationCostas);
+    UnloadTexture(abominationDireita);
+    UnloadTexture(abominationEsquerda);
 
     CloseWindow();
 
