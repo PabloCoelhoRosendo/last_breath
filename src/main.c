@@ -101,17 +101,18 @@ int main(void) {
         printf("Aviso: Alguns sprites do Hunter nao foram carregados. Usando circulo.\n");
     }
 
-    // Abomination (Fase 3)
+    // Abomination (Fase 3) - Apenas sprite frontal (boss estático)
     Texture2D abominationFrente = LoadTexture("bosses/abomination/frente.png");
-    Texture2D abominationCostas = LoadTexture("bosses/abomination/tras.png");
-    Texture2D abominationDireita = LoadTexture("bosses/abomination/direita.png");
-    Texture2D abominationEsquerda = LoadTexture("bosses/abomination/esquerda.png");
 
-    // Verificar se os sprites do Abomination foram carregados
-    if (abominationFrente.id == 0 || abominationCostas.id == 0 ||
-        abominationDireita.id == 0 || abominationEsquerda.id == 0) {
-        printf("Aviso: Alguns sprites do Abomination nao foram carregados. Usando circulo.\n");
+    // Verificar se o sprite do Abomination foi carregado
+    if (abominationFrente.id == 0) {
+        printf("Aviso: Sprite do Abomination nao foi carregado. Usando circulo.\n");
     }
+
+    // Abomination não usa sprites direcionais - usar o mesmo sprite para todas direções
+    Texture2D abominationCostas = abominationFrente;
+    Texture2D abominationDireita = abominationFrente;
+    Texture2D abominationEsquerda = abominationFrente;
 
     // Inicializar estruturas do jogo
     Player jogador;
@@ -573,10 +574,8 @@ int main(void) {
     UnloadTexture(hunterCostas);
     UnloadTexture(hunterDireita);
     UnloadTexture(hunterEsquerda);
+    // Abomination usa apenas um sprite (frente), os outros são referências
     UnloadTexture(abominationFrente);
-    UnloadTexture(abominationCostas);
-    UnloadTexture(abominationDireita);
-    UnloadTexture(abominationEsquerda);
 
     CloseWindow();
 
