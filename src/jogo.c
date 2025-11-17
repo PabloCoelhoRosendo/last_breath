@@ -788,7 +788,7 @@ void liberarZumbis(Zumbi **cabeca) {
 
 // Função para verificar colisões entre balas e zumbis
 void verificarColisoesBalaZumbi(Bala **balas, Zumbi **zumbis, Player *jogador) {
-    if (balas == NULL || *balas == NULL || zumbis == NULL) return;
+    if (balas == NULL || *balas == NULL || zumbis == NULL || *zumbis == NULL) return;
     
     Bala *balaAtual = *balas;
     Bala *balaAnterior = NULL;
@@ -803,7 +803,6 @@ void verificarColisoesBalaZumbi(Bala **balas, Zumbi **zumbis, Player *jogador) {
         }
         
         Zumbi *zumbiAtual = *zumbis;
-        Zumbi *zumbiAnterior = NULL;
         int balaRemovida = 0;
 
         // Iterar sobre todos os zumbis
@@ -813,23 +812,9 @@ void verificarColisoesBalaZumbi(Bala **balas, Zumbi **zumbis, Player *jogador) {
                 // Aplicar dano ao zumbi usando o dano específico da bala
                 zumbiAtual->vida -= (int)balaAtual->dano;
 
-                // Se o zumbi morreu
-                if (zumbiAtual->vida <= 0) {
-                    // Remover zumbi da lista
-                    Zumbi *zumbiRemover = zumbiAtual;
-                    Zumbi *proximoZumbi = zumbiAtual->proximo;
-                    
-                    if (zumbiAnterior == NULL) {
-                        *zumbis = proximoZumbi;
-                    } else {
-                        zumbiAnterior->proximo = proximoZumbi;
-                    }
-                    
-                    free(zumbiRemover);
-                    zumbiAtual = proximoZumbi;
-                } else {
-                    zumbiAtual = zumbiAtual->proximo;
-                }
+                // IMPORTANTE: NÃO remover o zumbi aqui mesmo se ele morreu (vida <= 0)
+                // A função atualizarZumbis() é responsável por remover zumbis mortos
+                // Isso evita double-free quando o zumbi é freed em dois lugares diferentes
 
                 // Remover a bala da lista
                 Bala *balaRemover = balaAtual;
@@ -845,7 +830,6 @@ void verificarColisoesBalaZumbi(Bala **balas, Zumbi **zumbis, Player *jogador) {
                 balaAtual = proximaBala;
                 balaRemovida = 1;
             } else {
-                zumbiAnterior = zumbiAtual;
                 zumbiAtual = zumbiAtual->proximo;
             }
         }
