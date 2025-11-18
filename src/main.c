@@ -37,88 +37,36 @@ int main(void) {
         inicializarMapaPadrao(mapaAtual);
     }
 
-    // NOTA: As texturas antigas foram substituídas pelo sistema de recursos
-    // Agora acessamos via recursos->jogadorFrente, recursos->zumbis[tipo][dir], etc.
+    // NOTA: Todas as texturas agora são gerenciadas pelo sistema de recursos
+    // Acessamos via recursos->jogadorFrente, recursos->jogadorDireita, recursos->zumbis[tipo][dir], etc.
 
-    // Referências de compatibilidade (mantidas temporariamente)
+    // Referências de compatibilidade (mantidas temporariamente para o código legado)
     Texture2D texturaMapa = recursos->fundoMapa;
-    Texture2D spriteFrenteDireita = LoadTexture("avatar/direita frente.png");
-    Texture2D spriteFrenteEsquerda = LoadTexture("avatar/esquerda frente.png");
-    Texture2D spriteCostasDireita = LoadTexture("avatar/costas direita.png");
-    Texture2D spriteCostasEsquerda = LoadTexture("avatar/costas esquerda.png");
+    Texture2D spriteFrenteDireita = recursos->jogadorDireita;
+    Texture2D spriteFrenteEsquerda = recursos->jogadorEsquerda;
+    Texture2D spriteCostasDireita = recursos->jogadorTras;
+    Texture2D spriteCostasEsquerda = recursos->jogadorTras;  // Mesmo sprite para ambos os lados
 
-    // Verificar se os sprites foram carregados
-    if (spriteFrenteDireita.id == 0 || spriteFrenteEsquerda.id == 0 ||
-        spriteCostasDireita.id == 0 || spriteCostasEsquerda.id == 0) {
-        printf("Aviso: Alguns sprites do jogador nao foram carregados. Usando circulo.\n");
-    }
+    // NOTA: Sprites dos bosses agora são gerenciados pelo sistema de recursos
+    // Acessamos via recursos->bosses[tipo][direcao]
+    // Índices: [0]=Prowler, [1]=Hunter, [2]=Abomination
+    // Direções: [0]=frente, [1]=costas, [2]=esquerda, [3]=direita
 
-    // Carregar sprites dos zumbis (5 tipos × 4 direções = 20 sprites)
-    // Array: [tipo][direção] onde direção: 0=frenteDireita, 1=frenteEsquerda, 2=costasDireita, 3=costasEsquerda
-    Texture2D spritesZumbis[5][4];
+    // Referências de compatibilidade para o código legado
+    Texture2D prowlerFrente = recursos->bosses[0][0];
+    Texture2D prowlerCostas = recursos->bosses[0][1];
+    Texture2D prowlerDireita = recursos->bosses[0][3];
+    Texture2D prowlerEsquerda = recursos->bosses[0][2];
 
-    spritesZumbis[0][0] = LoadTexture("zumbis/zumbi 1/zumbi1 frente direita.png");
-    spritesZumbis[0][1] = LoadTexture("zumbis/zumbi 1/zumbi1 frente esquerda.png");
-    spritesZumbis[0][2] = LoadTexture("zumbis/zumbi 1/zumbi1 costas direita.png");
-    spritesZumbis[0][3] = LoadTexture("zumbis/zumbi 1/zumbi1 costas esquerda.png");
+    Texture2D hunterFrente = recursos->bosses[1][0];
+    Texture2D hunterCostas = recursos->bosses[1][1];
+    Texture2D hunterDireita = recursos->bosses[1][3];
+    Texture2D hunterEsquerda = recursos->bosses[1][2];
 
-    spritesZumbis[1][0] = LoadTexture("zumbis/zumbi 2/zumbi2 frente direita.png");
-    spritesZumbis[1][1] = LoadTexture("zumbis/zumbi 2/zumbi2 frente esquerda.png");
-    spritesZumbis[1][2] = LoadTexture("zumbis/zumbi 2/zumbi2 costas direita.png");
-    spritesZumbis[1][3] = LoadTexture("zumbis/zumbi 2/zumbi2 costas esquerda.png");
-
-    spritesZumbis[2][0] = LoadTexture("zumbis/zumbi 3/zumbi3 frente direita.png");
-    spritesZumbis[2][1] = LoadTexture("zumbis/zumbi 3/zumbi3 frente esquerda.png");
-    spritesZumbis[2][2] = LoadTexture("zumbis/zumbi 3/zumbi3 costas direita.png");
-    spritesZumbis[2][3] = LoadTexture("zumbis/zumbi 3/zumbi3 costas esquerda.png");
-
-    spritesZumbis[3][0] = LoadTexture("zumbis/zumbi 4/zumbi4 frente direita.png");
-    spritesZumbis[3][1] = LoadTexture("zumbis/zumbi 4/zumbi4 frente esquerda.png");
-    spritesZumbis[3][2] = LoadTexture("zumbis/zumbi 4/zumbi4 costas direita.png");
-    spritesZumbis[3][3] = LoadTexture("zumbis/zumbi 4/zumbi4 costas esquerda.png");
-
-    spritesZumbis[4][0] = LoadTexture("zumbis/zumbi 5/zumbi5 frente direita.png");
-    spritesZumbis[4][1] = LoadTexture("zumbis/zumbi 5/zumbi5 frente esquerda.png");
-    spritesZumbis[4][2] = LoadTexture("zumbis/zumbi 5/zumbi5 costas direita.png");
-    spritesZumbis[4][3] = LoadTexture("zumbis/zumbi 5/zumbi5 costas esquerda.png");
-
-    // Carregar sprites dos bosses
-    // Prowler (Fase 1)
-    Texture2D prowlerFrente = LoadTexture("bosses/prowler/frente.PNG");
-    Texture2D prowlerCostas = LoadTexture("bosses/prowler/costas.PNG");
-    Texture2D prowlerDireita = LoadTexture("bosses/prowler/direita.PNG");
-    Texture2D prowlerEsquerda = LoadTexture("bosses/prowler/esquerda.PNG");
-
-    // Verificar se os sprites do Prowler foram carregados
-    if (prowlerFrente.id == 0 || prowlerCostas.id == 0 ||
-        prowlerDireita.id == 0 || prowlerEsquerda.id == 0) {
-        printf("Aviso: Alguns sprites do Prowler nao foram carregados. Usando circulo.\n");
-    }
-
-    // Hunter (Fase 2)
-    Texture2D hunterFrente = LoadTexture("bosses/hunter/frente.png");
-    Texture2D hunterCostas = LoadTexture("bosses/hunter/costas.png");
-    Texture2D hunterDireita = LoadTexture("bosses/hunter/direita.png");
-    Texture2D hunterEsquerda = LoadTexture("bosses/hunter/esquerda.png");
-
-    // Verificar se os sprites do Hunter foram carregados
-    if (hunterFrente.id == 0 || hunterCostas.id == 0 ||
-        hunterDireita.id == 0 || hunterEsquerda.id == 0) {
-        printf("Aviso: Alguns sprites do Hunter nao foram carregados. Usando circulo.\n");
-    }
-
-    // Abomination (Fase 3) - Apenas sprite frontal (boss estático)
-    Texture2D abominationFrente = LoadTexture("bosses/abomination/frente.png");
-
-    // Verificar se o sprite do Abomination foi carregado
-    if (abominationFrente.id == 0) {
-        printf("Aviso: Sprite do Abomination nao foi carregado. Usando circulo.\n");
-    }
-
-    // Abomination não usa sprites direcionais - usar o mesmo sprite para todas direções
-    Texture2D abominationCostas = abominationFrente;
-    Texture2D abominationDireita = abominationFrente;
-    Texture2D abominationEsquerda = abominationFrente;
+    Texture2D abominationFrente = recursos->bosses[2][0];
+    Texture2D abominationCostas = recursos->bosses[2][1];
+    Texture2D abominationDireita = recursos->bosses[2][3];
+    Texture2D abominationEsquerda = recursos->bosses[2][2];
 
     // Inicializar estruturas do jogo
     Player jogador;
@@ -313,7 +261,7 @@ int main(void) {
                 // Spawnar um zumbi a cada 1 segundo
                 if (jogador.tempoSpawn >= 1.0f) {
                     Vector2 posSpawn = gerarPosicaoValidaSpawn(mapaAtual, 20.0f);
-                    adicionarZumbi(&listaZumbis, posSpawn, spritesZumbis);
+                    adicionarZumbi(&listaZumbis, posSpawn, recursos->zumbis);
                     jogador.zumbisSpawnados++;
                     jogador.tempoSpawn = 0.0f;  // Resetar timer
                     printf("Zumbi spawnado! (%d/%d)\n", jogador.zumbisSpawnados, jogador.zumbisTotaisHorda);
@@ -504,7 +452,7 @@ int main(void) {
         //         for (int i = 0; i < mapaAtual.numZumbis; i++) {
         //             float x = GetRandomValue(50, 750);
         //             float y = GetRandomValue(50, 550);
-        //             adicionarZumbi(&listaZumbis, (Vector2){x, y}, spritesZumbis);
+        //             adicionarZumbi(&listaZumbis, (Vector2){x, y}, recursos->zumbis);
         //         }
         //         for (int i = 0; i < mapaAtual.numZumbisFortes; i++) {
         //             float x = GetRandomValue(100, 700);
@@ -624,30 +572,8 @@ int main(void) {
     // Destruir o mapa
     destruirMapa(mapaAtual);
 
-    // Descarregar texturas de compatibilidade temporária
-    UnloadTexture(spriteFrenteDireita);
-    UnloadTexture(spriteFrenteEsquerda);
-    UnloadTexture(spriteCostasDireita);
-    UnloadTexture(spriteCostasEsquerda);
-
-    // Descarregar sprites dos zumbis (compatibilidade)
-    for (int i = 0; i < 5; i++) {
-        for (int j = 0; j < 4; j++) {
-            UnloadTexture(spritesZumbis[i][j]);
-        }
-    }
-
-    // Descarregar sprites dos bosses (compatibilidade)
-    UnloadTexture(prowlerFrente);
-    UnloadTexture(prowlerCostas);
-    UnloadTexture(prowlerDireita);
-    UnloadTexture(prowlerEsquerda);
-    UnloadTexture(hunterFrente);
-    UnloadTexture(hunterCostas);
-    UnloadTexture(hunterDireita);
-    UnloadTexture(hunterEsquerda);
-    // Abomination usa apenas um sprite (frente), os outros são referências
-    UnloadTexture(abominationFrente);
+    // NOTA: Sprites do jogador, zumbis e bosses são descarregados pelo sistema de recursos
+    // em descarregarRecursos(recursos) - não precisamos descarregar as referências
 
     // Descarregar logo do menu
     UnloadTexture(logoTexture);

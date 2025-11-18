@@ -156,29 +156,21 @@ void carregarRecursos(Recursos* recursos) {
     // =====================================================================
     printf("  - Carregando texturas do jogador...\n");
 
-    // Tenta carregar das novas pastas primeiro, senão tenta das antigas
-    if (FileExists("assets/sprites/player/avatar_frente.png")) {
-        recursos->jogadorFrente = LoadTexture("assets/sprites/player/avatar_frente.png");
-    } else if (FileExists("avatar/avatar_frente.png")) {
-        recursos->jogadorFrente = LoadTexture("avatar/avatar_frente.png");
-    }
+    // Carregar sprites do jogador: [arquivo, ponteiro para textura, nome para log]
+    struct { const char* arquivo; Texture2D* textura; const char* nome; } spritesJogador[] = {
+        {"assets/avatar/direita frente.png", &recursos->jogadorDireita, "Direita/Frente"},
+        {"assets/avatar/esquerda frente.png", &recursos->jogadorEsquerda, "Esquerda/Frente"},
+        {"assets/avatar/costas direita.png", &recursos->jogadorTras, "Costas"},
+        {"assets/avatar/direita frente.png", &recursos->jogadorFrente, "Frente"}
+    };
 
-    if (FileExists("assets/sprites/player/avatar_tras.png")) {
-        recursos->jogadorTras = LoadTexture("assets/sprites/player/avatar_tras.png");
-    } else if (FileExists("avatar/avatar_tras.png")) {
-        recursos->jogadorTras = LoadTexture("avatar/avatar_tras.png");
-    }
-
-    if (FileExists("assets/sprites/player/avatar_esquerda.png")) {
-        recursos->jogadorEsquerda = LoadTexture("assets/sprites/player/avatar_esquerda.png");
-    } else if (FileExists("avatar/avatar_esquerda.png")) {
-        recursos->jogadorEsquerda = LoadTexture("avatar/avatar_esquerda.png");
-    }
-
-    if (FileExists("assets/sprites/player/avatar_direita.png")) {
-        recursos->jogadorDireita = LoadTexture("assets/sprites/player/avatar_direita.png");
-    } else if (FileExists("avatar/avatar_direita.png")) {
-        recursos->jogadorDireita = LoadTexture("avatar/avatar_direita.png");
+    for (int i = 0; i < 4; i++) {
+        if (FileExists(spritesJogador[i].arquivo)) {
+            *spritesJogador[i].textura = LoadTexture(spritesJogador[i].arquivo);
+            printf("    * %s: carregado\n", spritesJogador[i].nome);
+        } else {
+            printf("    ! %s: nao encontrado\n", spritesJogador[i].nome);
+        }
     }
 
     // =====================================================================
@@ -186,22 +178,26 @@ void carregarRecursos(Recursos* recursos) {
     // =====================================================================
     printf("  - Carregando texturas de zumbis...\n");
 
-    const char* direcoesZumbi[] = {"frente", "tras", "esquerda", "direita"};
+    // Mapeamento: [0]=frente direita, [1]=frente esquerda, [2]=costas direita, [3]=costas esquerda
+    const char* nomesDirecoesZumbi[] = {
+        "frente direita",
+        "frente esquerda",
+        "costas direita",
+        "costas esquerda"
+    };
 
     for (int i = 0; i < 5; i++) {
         for (int j = 0; j < 4; j++) {
             char caminho[256];
 
-            // Tenta nova estrutura
-            snprintf(caminho, sizeof(caminho), "assets/sprites/zombies/zumbi_%d/%s.png", i + 1, direcoesZumbi[j]);
+            // Carregar de assets/zumbis/
+            snprintf(caminho, sizeof(caminho), "assets/zumbis/zumbi %d/zumbi%d %s.png",
+                     i + 1, i + 1, nomesDirecoesZumbi[j]);
             if (FileExists(caminho)) {
                 recursos->zumbis[i][j] = LoadTexture(caminho);
+                printf("    * Carregado: %s\n", caminho);
             } else {
-                // Tenta estrutura antiga
-                snprintf(caminho, sizeof(caminho), "zumbis/zumbi %d/%s.png", i + 1, direcoesZumbi[j]);
-                if (FileExists(caminho)) {
-                    recursos->zumbis[i][j] = LoadTexture(caminho);
-                }
+                printf("    ! ERRO: Nao foi possivel carregar sprite zumbi %d direcao %d\n", i + 1, j);
             }
         }
     }
@@ -212,21 +208,39 @@ void carregarRecursos(Recursos* recursos) {
     printf("  - Carregando texturas de bosses...\n");
 
     const char* tiposBoss[] = {"prowler", "hunter", "abomination"};
-    const char* direcoesBoss[] = {"frente", "tras", "esquerda", "direita"};
+    const char* direcoesBoss[] = {"frente", "costas", "esquerda", "direita"};
 
     for (int i = 0; i < 3; i++) {
         for (int j = 0; j < 4; j++) {
             char caminho[256];
+            bool carregado = false;
 
-            // Tenta nova estrutura
-            snprintf(caminho, sizeof(caminho), "assets/sprites/bosses/%s/%s.png", tiposBoss[i], direcoesBoss[j]);
+            // Tentar carregar de assets/bosses/ com extensão .PNG (Prowler)
+            snprintf(caminho, sizeof(caminho), "assets/bosses/%s/%s.PNG", tiposBoss[i], direcoesBoss[j]);
             if (FileExists(caminho)) {
                 recursos->bosses[i][j] = LoadTexture(caminho);
+                carregado = true;
             } else {
-                // Tenta estrutura antiga
-                snprintf(caminho, sizeof(caminho), "bosses/%s/%s.png", tiposBoss[i], direcoesBoss[j]);
+                // Tentar com extensão .png (Hunter, Abomination)
+                snprintf(caminho, sizeof(caminho), "assets/bosses/%s/%s.png", tiposBoss[i], direcoesBoss[j]);
                 if (FileExists(caminho)) {
                     recursos->bosses[i][j] = LoadTexture(caminho);
+                    carregado = true;
+                }
+            }
+
+            if (carregado) {
+                printf("    * %s %s: carregado\n", tiposBoss[i], direcoesBoss[j]);
+            } else if (j == 0) {  // Só avisar se não tem nem o sprite frontal
+                printf("    ! %s: sprite nao encontrado\n", tiposBoss[i]);
+            }
+        }
+
+        // Abomination: usar sprite frontal para todas as direções se outras não existirem
+        if (i == 2 && texturaValida(recursos->bosses[2][0])) {
+            for (int j = 1; j < 4; j++) {
+                if (!texturaValida(recursos->bosses[2][j])) {
+                    recursos->bosses[2][j] = recursos->bosses[2][0];
                 }
             }
         }
