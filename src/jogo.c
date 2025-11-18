@@ -41,16 +41,22 @@ void adicionarBala(Bala **cabeca, Vector2 posInicial, Vector2 alvo, int tipo, fl
 
     // Calcular a direção da bala (do atirador para o alvo)
     Vector2 direcao = {alvo.x - posInicial.x, alvo.y - posInicial.y};
-    
+
     // Normalizar a direção e aplicar velocidade
     float comprimento = sqrtf(direcao.x * direcao.x + direcao.y * direcao.y);
     if (comprimento > 0) {
         float velocidadeBase = (tipo == 0) ? 500.0f : 300.0f; // Boss tem projéteis mais lentos
         novaBala->velocidade.x = (direcao.x / comprimento) * velocidadeBase;
         novaBala->velocidade.y = (direcao.y / comprimento) * velocidadeBase;
+
+        // Calcular o ângulo de rotação da bala (em graus)
+        // atan2 retorna radianos, então convertemos para graus e adicionamos 90°
+        // porque a sprite está em pé (orientada verticalmente)
+        novaBala->angulo = atan2f(direcao.y, direcao.x) * RAD2DEG + 90.0f;
     } else {
         novaBala->velocidade.x = 0;
         novaBala->velocidade.y = 0;
+        novaBala->angulo = 0;
     }
 
     // 3. Inserir a bala no início da lista (Requisito: Ponteiros e Lista Encadeada)
@@ -233,7 +239,11 @@ void iniciarJogo(Player *jogador) {
     jogador->tempoIntervalo = 0.0f;
     jogador->tempoSpawn = 0.0f;
     jogador->tempoSpawnBoss = 0.0f;
-    
+
+    // Inicializar cooldowns de dano
+    jogador->cooldownDanoBala = 0.0f;
+    jogador->cooldownDanoZumbi = 0.0f;
+
     // Inicializar slots de arma
     inicializarArma(&jogador->slots[0], ARMA_PISTOL);   // Slot 1: Pistol (inicial)
     inicializarArma(&jogador->slots[1], ARMA_NENHUMA);  // Slot 2: Vazio
@@ -355,7 +365,7 @@ void atualizarJogo(Player *jogador, Zumbi **zumbis, Bala **balas) {
 }
 
 // Função para desenhar todos os elementos do jogo
-void desenharJogo(Player *jogador, Zumbi *zumbis, Bala *balas, Texture2D texturaMapa) {
+void desenharJogo(Player *jogador, Zumbi *zumbis, Bala *balas, Texture2D texturaMapa, Recursos *recursos) {
     // NOTA: O mapa é desenhado no main.c com o novo sistema de tiles
 
     // Desenhar os zumbis
@@ -386,7 +396,28 @@ void desenharJogo(Player *jogador, Zumbi *zumbis, Bala *balas, Texture2D textura
     // Desenhar as balas
     Bala *balaAtual = balas;
     while (balaAtual != NULL) {
-        DrawCircleV(balaAtual->posicao, 5, YELLOW);
+        // Verificar se há textura de bala disponível
+        if (recursos != NULL && texturaValida(recursos->texturaBala)) {
+            // Desenhar bala com textura rotacionada
+            float escala = 0.020f; // Reduzido em 70% (0.05 -> 0.015)
+            float largura = recursos->texturaBala.width * escala;
+            float altura = recursos->texturaBala.height * escala;
+
+            Rectangle origem = {0, 0, (float)recursos->texturaBala.width, (float)recursos->texturaBala.height};
+            Rectangle destino = {
+                balaAtual->posicao.x,
+                balaAtual->posicao.y,
+                largura,
+                altura
+            };
+
+            Vector2 pivo = {largura / 2, altura / 2}; // Rotacionar em torno do centro
+
+            DrawTexturePro(recursos->texturaBala, origem, destino, pivo, balaAtual->angulo, WHITE);
+        } else {
+            // Fallback: desenhar círculo amarelo se textura não disponível
+            DrawCircleV(balaAtual->posicao, 5, YELLOW);
+        }
         balaAtual = balaAtual->proximo;
     }
 
@@ -849,11 +880,9 @@ void verificarColisoesBalaZumbi(Bala **balas, Zumbi **zumbis, Player *jogador) {
 // Função para verificar colisões entre balas do boss e o jogador
 void verificarColisoesBalaJogador(Bala **balas, Player *jogador) {
     if (balas == NULL || *balas == NULL || jogador == NULL) return;
-    
-    static float cooldownDano = 0.0f; // Cooldown para dano de projéteis
-    
-    // Atualizar cooldown
-    cooldownDano -= GetFrameTime();
+
+    // Atualizar cooldown (agora parte da struct Player)
+    jogador->cooldownDanoBala -= GetFrameTime();
     
     Bala *balaAtual = *balas;
     Bala *balaAnterior = NULL;
@@ -864,10 +893,10 @@ void verificarColisoesBalaJogador(Bala **balas, Player *jogador) {
             // Verificar colisão com o jogador (raio do jogador = 15.0f)
             if (verificarColisaoCirculos(balaAtual->posicao, balaAtual->raio, jogador->posicao, 15.0f)) {
                 // Aplicar dano apenas se o cooldown acabou (evitar múltiplos hits)
-                if (cooldownDano <= 0.0f) {
+                if (jogador->cooldownDanoBala <= 0.0f) {
                     int dano = (int)balaAtual->dano;
                     jogador->vida -= dano;
-                    cooldownDano = 0.2f; // Cooldown de 0.2 segundos
+                    jogador->cooldownDanoBala = 0.2f; // Cooldown de 0.2 segundos
                     
                     printf("OUCH! Jogador recebeu %d de dano de projetil do boss. Vida: %d\n", dano, jogador->vida);
                     
@@ -901,28 +930,21 @@ void verificarColisoesBalaJogador(Bala **balas, Player *jogador) {
 // Função para verificar colisões entre jogador e zumbis
 void verificarColisoesJogadorZumbi(Player *jogador, Zumbi *zumbis) {
     if (jogador == NULL || zumbis == NULL) return;
-    
-    static float cooldownDano = 0.0f;
-    static float flashDano = 0.0f; // Para piscar a tela em vermelho
-    
-    // Atualizar timers
-    cooldownDano -= GetFrameTime();
-    if (flashDano > 0.0f) {
-        flashDano -= GetFrameTime();
-    }
+
+    // Atualizar cooldown (agora parte da struct Player)
+    jogador->cooldownDanoZumbi -= GetFrameTime();
     
     Zumbi *zumbiAtual = zumbis;
 
     while (zumbiAtual != NULL) {
         // Verificar colisão (raio do jogador = 15, raio do zumbi = 20)
         if (verificarColisaoCirculos(jogador->posicao, 15.0f, zumbiAtual->posicao, zumbiAtual->raio)) {
-            
+
             // Aplicar dano apenas se o cooldown acabou (a cada 0.5 segundos)
-            if (cooldownDano <= 0.0f) {
+            if (jogador->cooldownDanoZumbi <= 0.0f) {
                 int dano = 5; // GDD: 5 HP de dano por contato
                 jogador->vida -= dano;
-                cooldownDano = 0.5f; // Esperar 0.5 segundos para próximo dano
-                flashDano = 0.15f;   // Ativar flash vermelho por 0.15 segundos
+                jogador->cooldownDanoZumbi = 0.5f; // Esperar 0.5 segundos para próximo dano
                 
                 printf("OUCH! Jogador recebeu %d de dano. Vida: %d\n", dano, jogador->vida);
             }
@@ -934,13 +956,6 @@ void verificarColisoesJogadorZumbi(Player *jogador, Zumbi *zumbis) {
         }
 
         zumbiAtual = zumbiAtual->proximo;
-    }
-    
-    // Desenhar flash vermelho se tomou dano recente
-    if (flashDano > 0.0f) {
-        // Intensidade do flash diminui com o tempo
-        int alpha = (int)(flashDano * 200.0f); // 0-200 de transparência
-        DrawRectangle(0, 0, 800, 600, (Color){255, 0, 0, alpha});
     }
 }
 
@@ -992,6 +1007,11 @@ void verificarColisoesZumbiZumbi(Zumbi *zumbis) {
 // Função para criar um novo boss
 void criarBoss(Boss **bosses, TipoBoss tipo, Vector2 posicao, Texture2D spriteFrente, Texture2D spriteCostas, Texture2D spriteDireita, Texture2D spriteEsquerda) {
     Boss *novoBoss = (Boss *)malloc(sizeof(Boss));
+
+    if (novoBoss == NULL) {
+        printf("ERRO: Falha na alocacao de memoria para novo Boss!\n");
+        return;
+    }
 
     novoBoss->tipo = tipo;
     novoBoss->posicao = posicao;
@@ -1176,6 +1196,7 @@ void atualizarBoss(Boss **bosses, Player *jogador, Bala **balas, float deltaTime
                                     novaBala->dano = 25.0f;
                                     novaBala->raio = 8.0f;
                                     novaBala->tempoVida = 0.0f;
+                                    novaBala->angulo = atan2f(dy, dx) * RAD2DEG + 90.0f;
                                     novaBala->proximo = *balas;
                                     *balas = novaBala;
                                 }
@@ -1186,7 +1207,7 @@ void atualizarBoss(Boss **bosses, Player *jogador, Bala **balas, float deltaTime
                         case 1: { // Padrão 2: Spray circular (8 projéteis)
                             for (int i = 0; i < 8; i++) {
                                 float angulo = (360.0f / 8.0f) * i * DEG2RAD;
-                                
+
                                 Bala *novaBala = (Bala *)malloc(sizeof(Bala));
                                 if (novaBala != NULL) {
                                     novaBala->posicao = bossAtual->posicao;
@@ -1196,6 +1217,7 @@ void atualizarBoss(Boss **bosses, Player *jogador, Bala **balas, float deltaTime
                                     novaBala->dano = 20.0f;
                                     novaBala->raio = 6.0f;
                                     novaBala->tempoVida = 0.0f;
+                                    novaBala->angulo = angulo * RAD2DEG + 90.0f;
                                     novaBala->proximo = *balas;
                                     *balas = novaBala;
                                 }
@@ -1206,7 +1228,7 @@ void atualizarBoss(Boss **bosses, Player *jogador, Bala **balas, float deltaTime
                         case 2: { // Padrão 3: Espiral rotativa (3 projéteis)
                             for (int i = 0; i < 3; i++) {
                                 float angulo = (bossAtual->anguloRotacao + (120.0f * i)) * DEG2RAD;
-                                
+
                                 Bala *novaBala = (Bala *)malloc(sizeof(Bala));
                                 if (novaBala != NULL) {
                                     novaBala->posicao = bossAtual->posicao;
@@ -1216,6 +1238,7 @@ void atualizarBoss(Boss **bosses, Player *jogador, Bala **balas, float deltaTime
                                     novaBala->dano = 15.0f;
                                     novaBala->raio = 7.0f;
                                     novaBala->tempoVida = 0.0f;
+                                    novaBala->angulo = angulo * RAD2DEG + 90.0f;
                                     novaBala->proximo = *balas;
                                     *balas = novaBala;
                                 }

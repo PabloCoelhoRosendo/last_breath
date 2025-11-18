@@ -29,6 +29,9 @@ typedef struct {
     // Textura de fundo (se necessária)
     Texture2D fundoMapa;
 
+    // Textura da bala
+    Texture2D texturaBala;
+
 } Recursos;
 
 // Funções de gerenciamento de recursos

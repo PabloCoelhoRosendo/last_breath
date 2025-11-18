@@ -96,6 +96,23 @@ int main(void) {
     // NÃO spawnar zumbis inicialmente - o sistema de hordas irá gerenciar isso
     // O sistema de hordas começará automaticamente quando o jogo iniciar
 
+    // Definir structs para rastreamento de posições (antes do loop)
+    typedef struct PosicaoZumbi {
+        Zumbi *zumbi;
+        Vector2 posicaoAnterior;
+        struct PosicaoZumbi *proximo;
+    } PosicaoZumbi;
+
+    typedef struct PosicaoBoss {
+        Boss *boss;
+        Vector2 posicaoAnterior;
+        struct PosicaoBoss *proximo;
+    } PosicaoBoss;
+
+    // Listas temporárias para rastreamento de posições (declaradas antes do loop)
+    PosicaoZumbi *listaPosicoesAnteriores = NULL;
+    PosicaoBoss *listaPosicoesBosses = NULL;
+
     // Loop principal do jogo
     while (!WindowShouldClose()) {
         // ===== TELA DE MENU =====
@@ -188,6 +205,18 @@ int main(void) {
                 free(temp);
             }
 
+            // CORREÇÃO: Limpar listas temporárias de rastreamento de posições (memory leak fix)
+            while (listaPosicoesAnteriores != NULL) {
+                PosicaoZumbi *temp = listaPosicoesAnteriores;
+                listaPosicoesAnteriores = listaPosicoesAnteriores->proximo;
+                free(temp);
+            }
+            while (listaPosicoesBosses != NULL) {
+                PosicaoBoss *temp = listaPosicoesBosses;
+                listaPosicoesBosses = listaPosicoesBosses->proximo;
+                free(temp);
+            }
+
             // Recarregar mapa da Fase 1
             if (!carregarMapaDeArquivo(mapaAtual, "assets/maps/fase1.txt")) {
                 inicializarMapaPadrao(mapaAtual);
@@ -209,13 +238,13 @@ int main(void) {
         Vector2 posicaoAnteriorJogador = jogador.posicao;
 
         // Salvar posições anteriores dos zumbis
-        typedef struct PosicaoZumbi {
-            Zumbi *zumbi;
-            Vector2 posicaoAnterior;
-            struct PosicaoZumbi *proximo;
-        } PosicaoZumbi;
-
-        PosicaoZumbi *listaPosicoesAnteriores = NULL;
+        // Limpar lista anterior (se houver)
+        while (listaPosicoesAnteriores != NULL) {
+            PosicaoZumbi *temp = listaPosicoesAnteriores;
+            listaPosicoesAnteriores = listaPosicoesAnteriores->proximo;
+            free(temp);
+        }
+        listaPosicoesAnteriores = NULL;
         Zumbi *zTemp = listaZumbis;
         while (zTemp != NULL) {
             PosicaoZumbi *novaPosicao = (PosicaoZumbi*)malloc(sizeof(PosicaoZumbi));
@@ -227,13 +256,13 @@ int main(void) {
         }
 
         // Salvar posições anteriores dos bosses
-        typedef struct PosicaoBoss {
-            Boss *boss;
-            Vector2 posicaoAnterior;
-            struct PosicaoBoss *proximo;
-        } PosicaoBoss;
-
-        PosicaoBoss *listaPosicoesBosses = NULL;
+        // Limpar lista anterior (se houver)
+        while (listaPosicoesBosses != NULL) {
+            PosicaoBoss *temp = listaPosicoesBosses;
+            listaPosicoesBosses = listaPosicoesBosses->proximo;
+            free(temp);
+        }
+        listaPosicoesBosses = NULL;
         Boss *bTemp = listaBosses;
         while (bTemp != NULL) {
             PosicaoBoss *novaPosicao = (PosicaoBoss*)malloc(sizeof(PosicaoBoss));
@@ -539,7 +568,7 @@ int main(void) {
 
         // Desenhar elementos do jogo (jogador, zumbis, balas)
         // A função antiga desenharJogo() também desenha o mapa antigo, mas vamos sobrescrever
-        desenharJogo(&jogador, listaZumbis, listaBalas, texturaMapa);
+        desenharJogo(&jogador, listaZumbis, listaBalas, texturaMapa, recursos);
         
         // Só desenhar elementos do jogo se estiver vivo e não tiver vencido
         if (jogador.vida > 0 && !jogador.jogoVencido) {

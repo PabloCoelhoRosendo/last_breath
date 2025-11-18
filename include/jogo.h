@@ -81,6 +81,10 @@ typedef struct {
     float tempoIntervalo;    // Tempo restante do intervalo entre hordas
     float tempoSpawn;        // Timer para controlar spawn gradual de zumbis
     float tempoSpawnBoss;    // Timer para controlar spawn gradual de bosses
+
+    // Cooldowns de dano (anteriormente static - movidos para struct para resetar entre sessões)
+    float cooldownDanoBala;  // Cooldown para dano de balas de boss
+    float cooldownDanoZumbi; // Cooldown para dano de colisão com zumbis
 } Player;
 
 // 2. Estrutura para Zumbis (Victor - Requisito: Structs, Lista Encadeada)
@@ -112,6 +116,7 @@ typedef struct Bala {
     float dano;         // Quantidade de dano causado
     float raio;         // Raio da bala para colisão
     float tempoVida;    // Tempo que a bala existe (para efeitos ou limitar alcance)
+    float angulo;       // Ângulo de rotação da bala em graus
     struct Bala *proximo;
 } Bala;
 
@@ -179,7 +184,7 @@ typedef struct {
 // Protótipos das funções principais (a serem implementadas em src/jogo.c)
 void iniciarJogo(Player *jogador);
 void atualizarJogo(Player *jogador, struct Zumbi **zumbis, struct Bala **balas);
-void desenharJogo(Player *jogador, struct Zumbi *zumbis, struct Bala *balas, Texture2D texturaMapa);
+void desenharJogo(Player *jogador, struct Zumbi *zumbis, struct Bala *balas, Texture2D texturaMapa, Recursos *recursos);
 
 // Protótipos do Sistema de Armas
 void inicializarArma(Arma *arma, TipoArma tipo);

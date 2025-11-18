@@ -39,6 +39,7 @@ Recursos* criarRecursos(void) {
     recursos->chaoMercado.id = 0;
     recursos->chaoRua.id = 0;
     recursos->chaoLab.id = 0;
+    recursos->texturaBala.id = 0;
 
     return recursos;
 }
@@ -257,6 +258,17 @@ void carregarRecursos(Recursos* recursos) {
         printf("  - Textura de fundo (antiga) carregada\n");
     }
 
+    // =====================================================================
+    // TEXTURA DA BALA
+    // =====================================================================
+    printf("  - Carregando textura da bala...\n");
+    if (FileExists("assets/bala/bala.png")) {
+        recursos->texturaBala = LoadTexture("assets/bala/bala.png");
+        printf("    * Bala: carregado\n");
+    } else {
+        printf("    ! Bala: nao encontrado (usando circulo)\n");
+    }
+
     printf("Recursos carregados com sucesso!\n\n");
 }
 
@@ -304,10 +316,27 @@ void descarregarRecursos(Recursos* recursos) {
     }
 
     // Descarrega texturas de bosses e zera IDs
+    // IMPORTANTE: Evitar double-free nas texturas compartilhadas (Abomination usa mesma textura para múltiplas direções)
+    // Rastrear quais texture IDs já foram descarregados
+    unsigned int idsDescarregados[12] = {0}; // Máximo de 12 texturas (3 bosses x 4 direções)
+    int numDescarregados = 0;
+
     for (int i = 0; i < 3; i++) {
         for (int j = 0; j < 4; j++) {
             if (texturaValida(recursos->bosses[i][j])) {
-                UnloadTexture(recursos->bosses[i][j]);
+                // Verificar se este ID já foi descarregado
+                bool jaDescarregado = false;
+                for (int k = 0; k < numDescarregados; k++) {
+                    if (idsDescarregados[k] == recursos->bosses[i][j].id) {
+                        jaDescarregado = true;
+                        break;
+                    }
+                }
+
+                if (!jaDescarregado) {
+                    UnloadTexture(recursos->bosses[i][j]);
+                    idsDescarregados[numDescarregados++] = recursos->bosses[i][j].id;
+                }
                 recursos->bosses[i][j].id = 0;
             }
         }
@@ -317,6 +346,12 @@ void descarregarRecursos(Recursos* recursos) {
     if (texturaValida(recursos->fundoMapa)) {
         UnloadTexture(recursos->fundoMapa);
         recursos->fundoMapa.id = 0;
+    }
+
+    // Descarrega textura da bala
+    if (texturaValida(recursos->texturaBala)) {
+        UnloadTexture(recursos->texturaBala);
+        recursos->texturaBala.id = 0;
     }
 
     // Zera IDs das referências de chão (já descarregadas via texturasTiles[])
