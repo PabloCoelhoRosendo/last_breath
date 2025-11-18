@@ -248,9 +248,9 @@ int main(void) {
         atualizarJogo(&jogador, &listaZumbis, &listaBalas);
         
         // ===== SISTEMA DE HORDAS =====
-        // Atualizar sistema de hordas (apenas na Fase 1)
-        if (jogador.fase == 1) {
-            atualizarHorda(&jogador, &listaZumbis, GetFrameTime());
+        // Atualizar sistema de hordas (Fase 1 e Fase 2)
+        if (jogador.fase == 1 || jogador.fase == 2) {
+            atualizarHorda(&jogador, &listaZumbis, &listaBosses, GetFrameTime());
             
             // Spawnar zumbis conforme a horda progride (com delay de 1 segundo entre cada spawn)
             if (jogador.estadoHorda == HORDA_EM_PROGRESSO && 
@@ -265,6 +265,32 @@ int main(void) {
                     jogador.zumbisSpawnados++;
                     jogador.tempoSpawn = 0.0f;  // Resetar timer
                     printf("Zumbi spawnado! (%d/%d)\n", jogador.zumbisSpawnados, jogador.zumbisTotaisHorda);
+                }
+            }
+            
+            // Spawnar bosses conforme a horda progride (com delay de 2 segundos entre cada spawn)
+            if (jogador.estadoHorda == HORDA_EM_PROGRESSO && 
+                jogador.bossesSpawnados < jogador.bossesTotaisHorda) {
+                
+                jogador.tempoSpawnBoss += GetFrameTime();
+                
+                // Spawnar um boss a cada 2 segundos
+                if (jogador.tempoSpawnBoss >= 2.0f) {
+                    Vector2 posSpawn = gerarPosicaoValidaSpawn(mapaAtual, 25.0f);
+                    
+                    // Spawnar tipo correto de boss baseado na fase
+                    if (jogador.fase == 1) {
+                        // Fase 1: Prowler
+                        criarBoss(&listaBosses, BOSS_PROWLER, posSpawn, prowlerFrente, prowlerCostas, prowlerDireita, prowlerEsquerda);
+                        printf("PROWLER spawnado! (%d/%d)\n", jogador.bossesSpawnados + 1, jogador.bossesTotaisHorda);
+                    } else if (jogador.fase == 2) {
+                        // Fase 2: Hunter
+                        criarBoss(&listaBosses, BOSS_HUNTER, posSpawn, hunterFrente, hunterCostas, hunterDireita, hunterEsquerda);
+                        printf("HUNTER spawnado! (%d/%d)\n", jogador.bossesSpawnados + 1, jogador.bossesTotaisHorda);
+                    }
+                    
+                    jogador.bossesSpawnados++;
+                    jogador.tempoSpawnBoss = 0.0f;  // Resetar timer
                 }
             }
         }
@@ -296,21 +322,22 @@ int main(void) {
         }
 
         // Atualizar timer de boss e spawnar quando necessário
-        // MODIFICADO: Na Fase 1, o boss spawna apenas na terceira horda
+        // MODIFICADO: Na Fase 1, o boss spawna apenas na terceira horda via sistema de hordas
+        // Na Fase 2, os Hunters spawnam via sistema de hordas
+        // Na Fase 3, o Abomination spawna por timer ou quando zumbis acabam
         if (!jogador.bossSpawnado && jogador.vida > 0) {
-            // Na Fase 1, spawnar boss apenas na horda 3
+            // Na Fase 1, boss spawna via sistema de hordas (não usar timer)
             if (jogador.fase == 1) {
-                // Verificar se é a terceira horda e todos os zumbis foram spawnados
-                if (jogador.hordaAtual == 3 && jogador.zumbisSpawnados >= jogador.zumbisTotaisHorda) {
-                    Vector2 posicaoBoss = gerarPosicaoValidaSpawn(mapaAtual, 30.0f);
-                    criarBoss(&listaBosses, BOSS_PROWLER, posicaoBoss, prowlerFrente, prowlerCostas, prowlerDireita, prowlerEsquerda);
-                    printf("=== HORDA FINAL ===\n");
-                    printf("BOSS APARECEU: PROWLER!\n");
-                    jogador.bossSpawnado = true;
-                }
+                // Boss já é spawnado pelo sistema de hordas na horda 3
+                // Nada a fazer aqui
             }
-            // Outras fases mantêm o sistema de timer original
-            else {
+            // Na Fase 2, Hunters spawnam via sistema de hordas (não usar timer)
+            else if (jogador.fase == 2) {
+                // Hunters já são spawnados pelo sistema de hordas
+                // Nada a fazer aqui
+            }
+            // Fase 3 mantém o sistema de timer original
+            else if (jogador.fase == 3) {
                 jogador.timerBoss += GetFrameTime();
                 
                 // Verificar se passou 45 segundos ou se todos os zumbis foram mortos
@@ -322,26 +349,10 @@ int main(void) {
                 }
                 
                 if (jogador.timerBoss >= 45.0f || numZumbis == 0) {
-                    // Spawnar boss baseado na fase atual em posição válida
-                    
-                    switch (jogador.fase) {
-                        case 2: {
-                            // Spawnar 2 Hunters em posições válidas
-                            Vector2 posicaoBoss1 = gerarPosicaoValidaSpawn(mapaAtual, 25.0f);
-                            Vector2 posicaoBoss2 = gerarPosicaoValidaSpawn(mapaAtual, 25.0f);
-                            criarBoss(&listaBosses, BOSS_HUNTER, posicaoBoss1, hunterFrente, hunterCostas, hunterDireita, hunterEsquerda);
-                            criarBoss(&listaBosses, BOSS_HUNTER, posicaoBoss2, hunterFrente, hunterCostas, hunterDireita, hunterEsquerda);
-                            printf("BOSS APARECEU: 2x HUNTERS!\n");
-                            break;
-                        }
-                        case 3: {
-                            // Boss ABOMINATION centralizado no mapa (32x24 tiles * 32px = centro em 512, 384)
-                            Vector2 posicaoBoss = {512.0f, 384.0f};
-                            criarBoss(&listaBosses, BOSS_ABOMINATION, posicaoBoss, abominationFrente, abominationCostas, abominationDireita, abominationEsquerda);
-                            printf("BOSS APARECEU: ABOMINATION!\n");
-                            break;
-                        }
-                    }
+                    // Boss ABOMINATION centralizado no mapa (32x24 tiles * 32px = centro em 512, 384)
+                    Vector2 posicaoBoss = {512.0f, 384.0f};
+                    criarBoss(&listaBosses, BOSS_ABOMINATION, posicaoBoss, abominationFrente, abominationCostas, abominationDireita, abominationEsquerda);
+                    printf("BOSS APARECEU: ABOMINATION!\n");
                     
                     jogador.bossSpawnado = true;
                 }
@@ -368,8 +379,8 @@ int main(void) {
             free(temp);
         }
         
-        // Verificar colisões boss vs balas (passa os 2 itens para dropar) e boss vs jogador
-        verificarColisoesBossBala(&listaBosses, &listaBalas, &itemProgresso, &itemArma);
+        // Verificar colisões boss vs balas (passa os 2 itens para dropar e o jogador) e boss vs jogador
+        verificarColisoesBossBala(&listaBosses, &listaBalas, &itemProgresso, &itemArma, &jogador);
         verificarColisoesBossJogador(listaBosses, &jogador);
         
         // Verificar coleta de itens
@@ -386,6 +397,48 @@ int main(void) {
             jogador.fase = porta.faseDestino;
             jogador.timerBoss = 0.0f;
             jogador.bossSpawnado = false;
+            
+            // IMPORTANTE: Limpar todos os inimigos da fase anterior
+            printf("Limpando zumbis da fase anterior...\n");
+            liberarZumbis(&listaZumbis);
+            listaZumbis = NULL;
+            
+            // Limpar bosses da fase anterior
+            printf("Limpando bosses da fase anterior...\n");
+            int bossCount = 0;
+            while (listaBosses != NULL) {
+                Boss *temp = listaBosses;
+                listaBosses = listaBosses->proximo;
+                free(temp);
+                bossCount++;
+            }
+            listaBosses = NULL;
+            printf("Bosses liberados: %d\n", bossCount);
+            
+            // Limpar balas da fase anterior
+            printf("Limpando balas da fase anterior...\n");
+            int balaCount = 0;
+            while (listaBalas != NULL) {
+                Bala *temp = listaBalas;
+                listaBalas = listaBalas->proximo;
+                free(temp);
+                balaCount++;
+            }
+            listaBalas = NULL;
+            printf("Balas liberadas: %d\n", balaCount);
+            printf("Limpeza concluida! Iniciando nova fase...\n");
+            
+            // Resetar sistema de hordas para nova fase
+            jogador.hordaAtual = 0;
+            jogador.estadoHorda = HORDA_NAO_INICIADA;
+            jogador.zumbisRestantes = 0;
+            jogador.zumbisTotaisHorda = 0;
+            jogador.zumbisSpawnados = 0;
+            jogador.bossesTotaisHorda = 0;
+            jogador.bossesSpawnados = 0;
+            jogador.tempoIntervalo = 0.0f;
+            jogador.tempoSpawn = 0.0f;
+            jogador.tempoSpawnBoss = 0.0f;
 
             // Carregar o mapa da nova fase
             char caminhoMapa[64];
@@ -493,23 +546,44 @@ int main(void) {
             // Desenhar bosses
             desenharBoss(listaBosses);
             
-            // Desenhar informações de horda (apenas na Fase 1)
-            if (jogador.fase == 1) {
+            // Desenhar informações de horda (Fase 1 e Fase 2)
+            if (jogador.fase == 1 || jogador.fase == 2) {
                 if (jogador.estadoHorda == HORDA_INTERVALO) {
-                    // Mostrar countdown do intervalo
+                    // Mostrar countdown do intervalo com destaque
                     int segundosIntervalo = (int)jogador.tempoIntervalo + 1;
-                    DrawText(TextFormat("PROXIMA HORDA EM: %ds", segundosIntervalo), 300, 100, 24, YELLOW);
+                    const char* mensagem = TextFormat("PROXIMA HORDA EM %ds", segundosIntervalo);
+                    
+                    // Calcular posição centralizada
+                    int larguraTexto = MeasureText(mensagem, 32);
+                    int posX = (1024 - larguraTexto) / 2;
+                    
+                    // Desenhar com fundo semi-transparente
+                    DrawRectangle(posX - 20, 90, larguraTexto + 40, 50, (Color){0, 0, 0, 180});
+                    DrawText(mensagem, posX, 100, 32, YELLOW);
                 } else if (jogador.estadoHorda == HORDA_EM_PROGRESSO) {
                     // Mostrar informações da horda atual
-                    DrawText(TextFormat("HORDA %d/3", jogador.hordaAtual), 10, 100, 20, YELLOW);
-                    DrawText(TextFormat("Zumbis: %d/%d", jogador.zumbisRestantes, jogador.zumbisTotaisHorda), 10, 125, 18, WHITE);
+                    const char* faseNome = (jogador.fase == 1) ? "FASE 1" : "FASE 2";
+                    DrawText(TextFormat("%s - HORDA %d/3", faseNome, jogador.hordaAtual), 10, 100, 20, YELLOW);
+                    
+                    // Mostrar contadores de inimigos
+                    int inimigosTotais = jogador.zumbisRestantes + contarBossesVivos(listaBosses);
+                    DrawText(TextFormat("Inimigos: %d", inimigosTotais), 10, 125, 18, WHITE);
+                    
+                    if (jogador.bossesTotaisHorda > 0) {
+                        int bossesVivos = contarBossesVivos(listaBosses);
+                        DrawText(TextFormat("Bosses: %d/%d", bossesVivos, jogador.bossesTotaisHorda), 10, 145, 18, RED);
+                    }
                 } else if (jogador.estadoHorda == HORDA_COMPLETA && jogador.hordaAtual == 3) {
-                    DrawText("TODAS AS HORDAS COMPLETAS!", 280, 100, 24, GREEN);
+                    // Mensagem de conclusão
+                    const char* mensagem = "TODAS AS HORDAS COMPLETAS!";
+                    int larguraTexto = MeasureText(mensagem, 24);
+                    int posX = (1024 - larguraTexto) / 2;
+                    DrawText(mensagem, posX, 100, 24, GREEN);
                 }
             }
             
-            // Desenhar timer de boss se ainda não spawnou (apenas para fases 2 e 3)
-            if (!jogador.bossSpawnado && jogador.fase > 1) {
+            // Desenhar timer de boss se ainda não spawnou (apenas para Fase 3)
+            if (!jogador.bossSpawnado && jogador.fase == 3) {
                 int segundosRestantes = (int)(45.0f - jogador.timerBoss);
                 if (segundosRestantes < 0) segundosRestantes = 0;
                 DrawText(TextFormat("BOSS EM: %ds", segundosRestantes), 320, 10, 24, RED);

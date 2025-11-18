@@ -228,8 +228,11 @@ void iniciarJogo(Player *jogador) {
     jogador->zumbisRestantes = 0;
     jogador->zumbisTotaisHorda = 0;
     jogador->zumbisSpawnados = 0;
+    jogador->bossesTotaisHorda = 0;
+    jogador->bossesSpawnados = 0;
     jogador->tempoIntervalo = 0.0f;
     jogador->tempoSpawn = 0.0f;
+    jogador->tempoSpawnBoss = 0.0f;
     
     // Inicializar slots de arma
     inicializarArma(&jogador->slots[0], ARMA_PISTOL);   // Slot 1: Pistol (inicial)
@@ -1328,7 +1331,8 @@ void desenharBoss(Boss *bosses) {
 }
 
 // Função para verificar colisões entre boss e balas do jogador
-void verificarColisoesBossBala(Boss **bosses, Bala **balas, Item *itemProgresso, Item *itemArma) {
+// Agora também recebe o jogador para saber fase/horda atual
+void verificarColisoesBossBala(Boss **bosses, Bala **balas, Item *itemProgresso, Item *itemArma, Player *jogador) {
     if (bosses == NULL || balas == NULL || *balas == NULL) return;
     
     Boss *bossAtual = *bosses;
@@ -1392,13 +1396,36 @@ void verificarColisoesBossBala(Boss **bosses, Bala **balas, Item *itemProgresso,
                     }
                     break;
                 case BOSS_HUNTER:
-                    if (itemProgresso != NULL && !itemProgresso->ativo) {
-                        criarItem(itemProgresso, ITEM_MAPA, posicaoItem1);
-                        printf("Boss morreu! MAPA dropado!\n");
-                    }
-                    if (itemArma != NULL && !itemArma->ativo) {
-                        criarItem(itemArma, ITEM_SMG, posicaoItem2);
-                        printf("Boss morreu! SMG dropada!\n");
+                    // LÓGICA ESPECIAL: Só dropar itens na Fase 2, Horda 3, quando for o ÚLTIMO Hunter
+                    if (jogador != NULL && jogador->fase == 2 && jogador->hordaAtual == 3) {
+                        // Contar quantos Hunters ainda estão vivos (após este morrer)
+                        int huntersVivos = 0;
+                        Boss *b = *bosses;
+                        while (b != NULL) {
+                            // Contar apenas Hunters que ainda estão ativos (excluindo o que está morrendo agora)
+                            if (b->tipo == BOSS_HUNTER && b->ativo && b != bossAtual) {
+                                huntersVivos++;
+                            }
+                            b = b->proximo;
+                        }
+                        
+                        // Se este era o último Hunter vivo (agora está morrendo), dropar itens
+                        if (huntersVivos == 0) {
+                            if (itemProgresso != NULL && !itemProgresso->ativo) {
+                                criarItem(itemProgresso, ITEM_CHAVE, posicaoItem1);
+                                printf("=== ULTIMO HUNTER DA HORDA 3 MORREU! ===\n");
+                                printf("CHAVE dropada!\n");
+                            }
+                            if (itemArma != NULL && !itemArma->ativo) {
+                                criarItem(itemArma, ITEM_SMG, posicaoItem2);
+                                printf("SMG dropada!\n");
+                            }
+                        } else {
+                            printf("Hunter morreu! Ainda restam %d Hunter(s).\n", huntersVivos);
+                        }
+                    } else {
+                        // Hunters de outras fases/hordas NÃO dropam itens
+                        printf("Hunter morreu (horda %d)! Sem drop.\n", jogador != NULL ? jogador->hordaAtual : 0);
                     }
                     break;
                 case BOSS_ABOMINATION:
@@ -1627,8 +1654,9 @@ bool verificarInteracaoPorta(Porta *porta, Player *jogador) {
                 return false;
             }
             
-            if (porta->faseDestino == 3 && !jogador->temMapa) {
-                DrawText("Precisa do MAPA", (int)porta->posicao.x - 60, (int)porta->posicao.y - 50, 14, RED);
+            // Porta para Fase 3 também requer CHAVE (dropada pelo Hunter da Horda 3)
+            if (porta->faseDestino == 3 && !jogador->temChave) {
+                DrawText("Precisa da CHAVE", (int)porta->posicao.x - 60, (int)porta->posicao.y - 50, 14, RED);
                 return false;
             }
         }
@@ -1640,12 +1668,9 @@ bool verificarInteracaoPorta(Porta *porta, Player *jogador) {
         if (IsKeyPressed(KEY_E)) {
             if (porta->trancada) {
                 // Destrancar porta e consumir o item necessário
-                if (porta->faseDestino == 2) {
+                if (porta->faseDestino == 2 || porta->faseDestino == 3) {
                     jogador->temChave = false;  // Remover chave do inventário
                     printf("Chave usada! Porta destrancada!\n");
-                } else if (porta->faseDestino == 3) {
-                    jogador->temMapa = false;   // Remover mapa do inventário
-                    printf("Mapa usado! Porta destrancada!\n");
                 }
                 
                 porta->trancada = false;
@@ -1666,10 +1691,14 @@ void iniciarHorda(Player *jogador, int numeroHorda) {
     jogador->hordaAtual = numeroHorda;
     jogador->estadoHorda = HORDA_EM_PROGRESSO;
     jogador->zumbisSpawnados = 0;
+    jogador->bossesSpawnados = 0;
     jogador->tempoSpawn = 0.0f;  // Resetar timer de spawn
+    jogador->tempoSpawnBoss = 0.0f;  // Resetar timer de spawn de boss
     
-    // Definir quantidade de zumbis por horda na Fase 1
+    // Definir quantidade de zumbis e bosses por horda baseado na fase
     if (jogador->fase == 1) {
+        // FASE 1: Sistema original com zumbis e boss final
+        jogador->bossesTotaisHorda = 0;  // Sem bosses nas hordas normais
         switch (numeroHorda) {
             case 1:
                 jogador->zumbisTotaisHorda = 5;  // Primeira horda: 5 zumbis
@@ -1679,26 +1708,71 @@ void iniciarHorda(Player *jogador, int numeroHorda) {
                 break;
             case 3:
                 jogador->zumbisTotaisHorda = 2;  // Terceira horda: 2 zumbis + boss (boss spawnado separadamente)
+                jogador->bossesTotaisHorda = 1;  // 1 Prowler
                 break;
             default:
                 jogador->zumbisTotaisHorda = 5;
                 break;
         }
+    } else if (jogador->fase == 2) {
+        // FASE 2: Sistema de hordas com Hunters
+        switch (numeroHorda) {
+            case 1:
+                jogador->zumbisTotaisHorda = 2;   // 2 zumbis normais
+                jogador->bossesTotaisHorda = 1;   // 1 Hunter
+                break;
+            case 2:
+                jogador->zumbisTotaisHorda = 2;   // 2 zumbis normais
+                jogador->bossesTotaisHorda = 1;   // 1 Hunter
+                break;
+            case 3:
+                jogador->zumbisTotaisHorda = 0;   // Sem zumbis normais
+                jogador->bossesTotaisHorda = 2;   // 2 Hunters (HORDA FINAL)
+                break;
+            default:
+                jogador->zumbisTotaisHorda = 2;
+                jogador->bossesTotaisHorda = 1;
+                break;
+        }
     } else {
         // Outras fases podem ter suas próprias configurações
         jogador->zumbisTotaisHorda = 5;
+        jogador->bossesTotaisHorda = 0;
     }
     
     jogador->zumbisRestantes = jogador->zumbisTotaisHorda;
     
-    printf("=== HORDA %d INICIADA ===\n", numeroHorda);
+    printf("=== HORDA %d INICIADA (FASE %d) ===\n", numeroHorda, jogador->fase);
     printf("Zumbis a spawnar: %d\n", jogador->zumbisTotaisHorda);
+    printf("Bosses a spawnar: %d\n", jogador->bossesTotaisHorda);
+}
+
+// Função auxiliar para contar quantos bosses estão vivos
+int contarBossesVivos(Boss *bosses) {
+    if (bosses == NULL) {
+        return 0;  // Proteção contra NULL
+    }
+    
+    int count = 0;
+    Boss *atual = bosses;
+    while (atual != NULL) {
+        if (atual->ativo) {
+            count++;
+        }
+        atual = atual->proximo;
+    }
+    return count;
 }
 
 // Função para atualizar o sistema de hordas
-void atualizarHorda(Player *jogador, Zumbi **zumbis, float deltaTime) {
+void atualizarHorda(Player *jogador, Zumbi **zumbis, Boss **bosses, float deltaTime) {
     // Não atualizar se jogador morreu ou venceu
     if (jogador->vida <= 0 || jogador->jogoVencido) {
+        return;
+    }
+    
+    // Proteção contra ponteiros NULL
+    if (jogador == NULL || zumbis == NULL || bosses == NULL) {
         return;
     }
     
@@ -1711,25 +1785,30 @@ void atualizarHorda(Player *jogador, Zumbi **zumbis, float deltaTime) {
     }
     jogador->zumbisRestantes = zumbisVivos;
     
+    // Contar quantos bosses estão vivos
+    int bossesVivos = contarBossesVivos(*bosses);
+    
     switch (jogador->estadoHorda) {
         case HORDA_NAO_INICIADA:
-            // Iniciar primeira horda automaticamente
-            if (jogador->fase == 1 && jogador->hordaAtual == 0) {
+            // Iniciar primeira horda automaticamente nas fases 1 e 2
+            if ((jogador->fase == 1 || jogador->fase == 2) && jogador->hordaAtual == 0) {
                 iniciarHorda(jogador, 1);
             }
             break;
             
         case HORDA_EM_PROGRESSO:
-            // Verificar se todos os zumbis foram mortos
-            if (zumbisVivos == 0 && jogador->zumbisSpawnados >= jogador->zumbisTotaisHorda) {
+            // Verificar se todos os zumbis e bosses foram mortos e spawnados
+            if (zumbisVivos == 0 && jogador->zumbisSpawnados >= jogador->zumbisTotaisHorda &&
+                bossesVivos == 0 && jogador->bossesSpawnados >= jogador->bossesTotaisHorda) {
                 jogador->estadoHorda = HORDA_COMPLETA;
                 printf("=== HORDA %d COMPLETA! ===\n", jogador->hordaAtual);
                 
                 // Verificar se há mais hordas
-                if (jogador->fase == 1 && jogador->hordaAtual < 3) {
+                int maxHordas = 3; // Padrão para fases 1 e 2
+                if ((jogador->fase == 1 || jogador->fase == 2) && jogador->hordaAtual < maxHordas) {
                     jogador->estadoHorda = HORDA_INTERVALO;
-                    jogador->tempoIntervalo = 5.0f;  // 5 segundos de intervalo
-                    printf("Próxima horda em 5 segundos...\n");
+                    jogador->tempoIntervalo = 10.0f;  // 10 segundos de intervalo
+                    printf("Proxima horda em 10 segundos...\n");
                 }
             }
             break;

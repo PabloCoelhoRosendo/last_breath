@@ -76,8 +76,11 @@ typedef struct {
     int zumbisRestantes;     // Zumbis vivos da horda atual
     int zumbisTotaisHorda;   // Total de zumbis que devem spawnar na horda
     int zumbisSpawnados;     // Quantos zumbis já foram spawnados
+    int bossesTotaisHorda;   // Total de bosses que devem spawnar na horda
+    int bossesSpawnados;     // Quantos bosses já foram spawnados
     float tempoIntervalo;    // Tempo restante do intervalo entre hordas
     float tempoSpawn;        // Timer para controlar spawn gradual de zumbis
+    float tempoSpawnBoss;    // Timer para controlar spawn gradual de bosses
 } Player;
 
 // 2. Estrutura para Zumbis (Victor - Requisito: Structs, Lista Encadeada)
@@ -188,7 +191,7 @@ void atirarArma(Player *jogador, struct Bala **balas, Vector2 alvo);
 void criarBoss(struct Boss **bosses, TipoBoss tipo, Vector2 posicao, Texture2D spriteFrente, Texture2D spriteCostas, Texture2D spriteDireita, Texture2D spriteEsquerda);
 void atualizarBoss(struct Boss **bosses, Player *jogador, struct Bala **balas, float deltaTime);
 void desenharBoss(struct Boss *bosses);
-void verificarColisoesBossBala(struct Boss **bosses, struct Bala **balas, Item *itemProgresso, Item *itemArma);
+void verificarColisoesBossBala(struct Boss **bosses, struct Bala **balas, Item *itemProgresso, Item *itemArma, Player *jogador);
 void verificarColisoesBossJogador(struct Boss *bosses, Player *jogador);
 
 // Protótipos do Sistema de Itens e Interação
@@ -211,7 +214,8 @@ void liberarZumbis(struct Zumbi **cabeca);
 
 // Protótipos do Sistema de Hordas
 void iniciarHorda(Player *jogador, int numeroHorda);
-void atualizarHorda(Player *jogador, struct Zumbi **zumbis, float deltaTime);
+void atualizarHorda(Player *jogador, struct Zumbi **zumbis, struct Boss **bosses, float deltaTime);
+int contarBossesVivos(struct Boss *bosses);
 
 // Protótipos das Funções de Colisão
 int verificarColisaoCirculos(Vector2 pos1, float raio1, Vector2 pos2, float raio2);
