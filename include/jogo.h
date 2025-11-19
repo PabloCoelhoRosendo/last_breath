@@ -183,7 +183,7 @@ typedef struct {
 
 // Protótipos das funções principais (a serem implementadas em src/jogo.c)
 void iniciarJogo(Player *jogador);
-void atualizarJogo(Player *jogador, struct Zumbi **zumbis, struct Bala **balas);
+void atualizarJogo(Player *jogador, struct Zumbi **zumbis, struct Bala **balas, Mapa *mapa);
 void desenharJogo(Player *jogador, struct Zumbi *zumbis, struct Bala *balas, Texture2D texturaMapa, Recursos *recursos);
 
 // Protótipos do Sistema de Armas
@@ -194,7 +194,7 @@ void atirarArma(Player *jogador, struct Bala **balas, Vector2 alvo);
 
 // Protótipos do Sistema de Boss
 void criarBoss(struct Boss **bosses, TipoBoss tipo, Vector2 posicao, Texture2D spriteFrente, Texture2D spriteCostas, Texture2D spriteDireita, Texture2D spriteEsquerda);
-void atualizarBoss(struct Boss **bosses, Player *jogador, struct Bala **balas, float deltaTime);
+void atualizarBoss(struct Boss **bosses, Player *jogador, struct Bala **balas, float deltaTime, Mapa *mapa);
 void desenharBoss(struct Boss *bosses);
 void verificarColisoesBossBala(struct Boss **bosses, struct Bala **balas, Item *itemProgresso, Item *itemArma, Player *jogador);
 void verificarColisoesBossJogador(struct Boss *bosses, Player *jogador);
@@ -213,7 +213,7 @@ void atualizarBalas(struct Bala **cabeca, Mapa *mapa);
 
 // Protótipos do Módulo de Zumbis ( - Victor)
 void adicionarZumbi(struct Zumbi **cabeca, Vector2 posInicial, Texture2D sprites[][4]);
-void atualizarZumbis(struct Zumbi **cabeca, Vector2 posicaoJogador, float deltaTime);
+void atualizarZumbis(struct Zumbi **cabeca, Vector2 posicaoJogador, float deltaTime, Mapa *mapa);
 void desenharZumbis(struct Zumbi *cabeca);
 void liberarZumbis(struct Zumbi **cabeca);
 

@@ -252,7 +252,7 @@ void iniciarJogo(Player *jogador) {
 }
 
 // Função para atualizar a lógica do jogo
-void atualizarJogo(Player *jogador, Zumbi **zumbis, Bala **balas) {
+void atualizarJogo(Player *jogador, Zumbi **zumbis, Bala **balas, Mapa *mapa) {
     float deltaTime = GetFrameTime();
     
     // Se jogador está morto ou venceu, não atualizar nada (tempo para)
@@ -348,7 +348,7 @@ void atualizarJogo(Player *jogador, Zumbi **zumbis, Bala **balas) {
     // atualizarBalas(balas, NULL);
 
     // Atualizar zumbis
-    atualizarZumbis(zumbis, jogador->posicao, deltaTime);
+    atualizarZumbis(zumbis, jogador->posicao, deltaTime, mapa);
 
     // Verificar colisões
     verificarColisoesBalaZumbi(balas, zumbis, jogador);
@@ -633,11 +633,14 @@ void adicionarZumbi(Zumbi **cabeca, Vector2 posInicial, Texture2D sprites[][4]) 
     *cabeca = novoZumbi;
 }
 // Função para atualizar todos os zumbis com diferentes comportamentos
-void atualizarZumbis(Zumbi **cabeca, Vector2 posicaoJogador, float deltaTime) {
+void atualizarZumbis(Zumbi **cabeca, Vector2 posicaoJogador, float deltaTime, Mapa *mapa) {
     Zumbi *atual = *cabeca;
     Zumbi *anterior = NULL;
-    
+
     while (atual != NULL) {
+        // Salvar posição anterior para colisão
+        Vector2 posicaoAnterior = atual->posicao;
+
         // Calcular direção base para o jogador
         Vector2 direcao = {
             posicaoJogador.x - atual->posicao.x,
@@ -754,7 +757,10 @@ void atualizarZumbis(Zumbi **cabeca, Vector2 posicaoJogador, float deltaTime) {
         atual->posicao.x += atual->velocidade.x * deltaTime;
         atual->posicao.y += atual->velocidade.y * deltaTime;
 
-        // NOTA: Colisão de zumbis com mapa agora tratada no main.c
+        // Verificar colisão com mapa e reverter se necessário
+        if (mapa != NULL && verificarColisaoMapa(mapa, atual->posicao, 20.0f)) {
+            atual->posicao = posicaoAnterior;
+        }
 
         // Verificar se o zumbi morreu
         if (atual->vida <= 0) {
@@ -1079,15 +1085,18 @@ void criarBoss(Boss **bosses, TipoBoss tipo, Vector2 posicao, Texture2D spriteFr
 }
 
 // Função para atualizar lógica dos bosses
-void atualizarBoss(Boss **bosses, Player *jogador, Bala **balas, float deltaTime) {
+void atualizarBoss(Boss **bosses, Player *jogador, Bala **balas, float deltaTime, Mapa *mapa) {
     Boss *bossAtual = *bosses;
-    
+
     while (bossAtual != NULL) {
         if (!bossAtual->ativo) {
             bossAtual = bossAtual->proximo;
             continue;
         }
-        
+
+        // Salvar posição anterior para colisão
+        Vector2 posicaoAnterior = bossAtual->posicao;
+
         // Atualizar timer de ataque
         bossAtual->tempoAtaque += deltaTime;
         
@@ -1193,7 +1202,7 @@ void atualizarBoss(Boss **bosses, Player *jogador, Bala **balas, float deltaTime
                             float dx = jogador->posicao.x - bossAtual->posicao.x;
                             float dy = jogador->posicao.y - bossAtual->posicao.y;
                             float distancia = sqrtf(dx * dx + dy * dy);
-                            
+
                             if (distancia > 0) {
                                 Bala *novaBala = (Bala *)malloc(sizeof(Bala));
                                 if (novaBala != NULL) {
@@ -1207,6 +1216,8 @@ void atualizarBoss(Boss **bosses, Player *jogador, Bala **balas, float deltaTime
                                     novaBala->angulo = atan2f(dy, dx) * RAD2DEG + 90.0f;
                                     novaBala->proximo = *balas;
                                     *balas = novaBala;
+                                } else {
+                                    printf("ERRO: Falha ao alocar bala do boss (Padrao 0)\n");
                                 }
                             }
                             break;
@@ -1228,6 +1239,8 @@ void atualizarBoss(Boss **bosses, Player *jogador, Bala **balas, float deltaTime
                                     novaBala->angulo = angulo * RAD2DEG + 90.0f;
                                     novaBala->proximo = *balas;
                                     *balas = novaBala;
+                                } else {
+                                    printf("ERRO: Falha ao alocar bala do boss (Padrao 1, projetil %d)\n", i);
                                 }
                             }
                             break;
@@ -1249,9 +1262,11 @@ void atualizarBoss(Boss **bosses, Player *jogador, Bala **balas, float deltaTime
                                     novaBala->angulo = angulo * RAD2DEG + 90.0f;
                                     novaBala->proximo = *balas;
                                     *balas = novaBala;
+                                } else {
+                                    printf("ERRO: Falha ao alocar bala do boss (Padrao 2, projetil %d)\n", i);
                                 }
                             }
-                            
+
                             bossAtual->anguloRotacao += 15.0f; // Incrementar rotação
                             if (bossAtual->anguloRotacao >= 360.0f) {
                                 bossAtual->anguloRotacao = 0.0f;
@@ -1268,7 +1283,12 @@ void atualizarBoss(Boss **bosses, Player *jogador, Bala **balas, float deltaTime
             default:
                 break;
         }
-        
+
+        // Verificar colisão com mapa e reverter se necessário
+        if (mapa != NULL && verificarColisaoMapa(mapa, bossAtual->posicao, bossAtual->raio)) {
+            bossAtual->posicao = posicaoAnterior;
+        }
+
         bossAtual = bossAtual->proximo;
     }
 }
