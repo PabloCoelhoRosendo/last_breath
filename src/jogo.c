@@ -210,7 +210,7 @@ void iniciarJogo(Player *jogador) {
     jogador->vida = 100;
     jogador->tempoTotal = 0.0f;
     jogador->fase = 1;
-    jogador->velocidadeBase = 4.0f;  // Velocidade inicial 4.0 m/s
+    jogador->velocidadeBase = 3.0f;
     jogador->direcaoVertical = 0;
     jogador->direcaoHorizontal = 1;
     jogador->estaRecarregando = false;
@@ -424,25 +424,27 @@ void desenharJogo(Player *jogador, Zumbi *zumbis, Bala *balas, Texture2D textura
     // --- HUD MELHORADO ---
     
     Arma *armaAtual = &jogador->slots[jogador->slotAtivo];
-    
-    // Barra de Vida (com cores baseadas na vida)
+
+    // HUD Superior Esquerdo - Espaçamento de 30 pixels entre linhas
+    int hudEsquerdoX = 10;
+    int linhaY = 10;
+    int espacamentoLinha = 30;
+
+    // Linha 1: Barra de Vida (com cores baseadas na vida)
     Color corVida = GREEN;
     if (jogador->vida <= 30) {
         corVida = RED;
     } else if (jogador->vida <= 60) {
         corVida = ORANGE;
     }
-    
-    // Desenhar fundo da barra de vida
-    DrawRectangle(10, 10, 204, 24, DARKGRAY);
-    // Desenhar barra de vida atual
-    DrawRectangle(12, 12, (jogador->vida * 2), 20, corVida);
-    // Contorno da barra
-    DrawRectangleLines(10, 10, 204, 24, WHITE);
-    // Texto da vida
-    DrawText(TextFormat("Vida: %d/100", jogador->vida), 15, 13, 20, WHITE);
-    
-    // Munição com reserva [Pente] / [Total]
+
+    DrawRectangle(hudEsquerdoX, linhaY, 200, 20, DARKGRAY);  // Fundo
+    DrawRectangle(hudEsquerdoX, linhaY, (int)(200 * (jogador->vida / 100.0f)), 20, corVida);  // Barra atual
+    DrawRectangleLines(hudEsquerdoX, linhaY, 200, 20, WHITE);  // Contorno
+    DrawText(TextFormat("Vida: %d/100", jogador->vida), hudEsquerdoX + 5, linhaY + 2, 18, WHITE);
+    linhaY += espacamentoLinha;
+
+    // Linha 2: Munição ou Estado de Recarga
     Color corMunicao = WHITE;
     if (armaAtual->penteAtual <= 5) {
         corMunicao = RED;
@@ -450,56 +452,65 @@ void desenharJogo(Player *jogador, Zumbi *zumbis, Bala *balas, Texture2D textura
         if ((int)(GetTime() * 2) % 2 == 0 && !jogador->estaRecarregando) {
             const char *avisoRecarga = "RECARREGUE!";
             int larguraTexto = MeasureText(avisoRecarga, 20);
-            DrawText(avisoRecarga, 512 - larguraTexto / 2, 85, 20, RED);  // Centralizado em 1024px
+            DrawText(avisoRecarga, 512 - larguraTexto / 2, 120, 20, RED);  // Centralizado
         }
     }
-    
-    // Mostrar estado de recarga
+
     if (jogador->estaRecarregando) {
-        DrawText("RECARREGANDO...", 10, 40, 20, YELLOW);
+        DrawText("RECARREGANDO...", hudEsquerdoX, linhaY, 20, YELLOW);
+        linhaY += espacamentoLinha;
         // Barra de progresso da recarga
         float progresso = 1.0f - (jogador->tempoRecargaAtual / armaAtual->tempoRecarga);
-        DrawRectangle(10, 65, 200, 10, DARKGRAY);
-        DrawRectangle(10, 65, (int)(200 * progresso), 10, YELLOW);
-        DrawRectangleLines(10, 65, 200, 10, WHITE);
+        DrawRectangle(hudEsquerdoX, linhaY, 200, 10, DARKGRAY);
+        DrawRectangle(hudEsquerdoX, linhaY, (int)(200 * progresso), 10, YELLOW);
+        DrawRectangleLines(hudEsquerdoX, linhaY, 200, 10, WHITE);
+        linhaY += 20;  // Barra menor, espaço menor
     } else {
-        DrawText(TextFormat("Municao: [%d] / %d", armaAtual->penteAtual, armaAtual->municaoTotal), 10, 40, 20, corMunicao);
+        DrawText(TextFormat("Municao: [%d] / %d", armaAtual->penteAtual, armaAtual->municaoTotal), hudEsquerdoX, linhaY, 20, corMunicao);
+        linhaY += espacamentoLinha;
     }
-    
-    // Tempo e fase
+
+    // Linha 3: Tempo
     int minutos = (int)jogador->tempoTotal / 60;
     float segundos = fmod(jogador->tempoTotal, 60.0f);
-    DrawText(TextFormat("Tempo: %02d:%05.2f", minutos, segundos), 10, 90, 20, GOLD);
-    DrawText(TextFormat("Fase: %d/3", jogador->fase), 10, 115, 20, WHITE);
+    DrawText(TextFormat("Tempo: %02d:%05.2f", minutos, segundos), hudEsquerdoX, linhaY, 20, GOLD);
+    linhaY += espacamentoLinha;
+
+    // Linha 4: Fase
+    DrawText(TextFormat("Fase: %d/3", jogador->fase), hudEsquerdoX, linhaY, 20, WHITE);
     
-    // HUD de Slots de Arma (Inferior Central) - Ajustado para 1024x768
-    int hudX = 390;  // Centro horizontal (1024/2 - 120)
+    // HUD de Slots de Arma (Inferior Direito) - Ajustado para 1024x768
+    int hudX = 800;  // Canto inferior direito (1024 - 224)
     int hudY = 690;  // Parte inferior (768 - 78)
+
+    // Instruções (diretamente acima dos slots de arma)
+    DrawText("WASD - Mover | 1,2,3 - Armas", hudX, 640, 15, LIGHTGRAY);
+    DrawText("R - Recarregar | Click - Atirar", hudX, 660, 15, LIGHTGRAY);
     int slotWidth = 60;
     int slotHeight = 60;
     int slotSpacing = 10;
-    
+
     const char* nomesArmas[] = {"Vazio", "Pistol", "Shotgun", "SMG"};
-    
+
     for (int i = 0; i < 3; i++) {
         int posX = hudX + (i * (slotWidth + slotSpacing));
         Color corSlot = DARKGRAY;
         Color corTexto = LIGHTGRAY;
-        
+
         // Destaque para slot ativo
         if (i == jogador->slotAtivo) {
             corSlot = GREEN;
             corTexto = WHITE;
             DrawRectangle(posX - 2, hudY - 2, slotWidth + 4, slotHeight + 4, LIME);
         }
-        
+
         // Desenhar slot
         DrawRectangle(posX, hudY, slotWidth, slotHeight, corSlot);
         DrawRectangleLines(posX, hudY, slotWidth, slotHeight, WHITE);
-        
+
         // Número do slot
         DrawText(TextFormat("%d", i + 1), posX + 5, hudY + 5, 20, corTexto);
-        
+
         // Nome da arma (se tiver)
         if (jogador->slots[i].tipo != ARMA_NENHUMA) {
             const char* nomeArma = nomesArmas[jogador->slots[i].tipo];
@@ -508,9 +519,6 @@ void desenharJogo(Player *jogador, Zumbi *zumbis, Bala *balas, Texture2D textura
             DrawText("---", posX + 15, hudY + 30, 15, GRAY);
         }
     }
-    
-    // Instruções atualizadas - Ajustado para 1024x768
-    DrawText("WASD - Mover | 1,2,3 - Armas | R - Recarregar | Click - Atirar", 230, 660, 15, LIGHTGRAY);
     
     // Tela de Vitória (coletou CURE na Fase 3)
     if (jogador->jogoVencido) {
@@ -1624,36 +1632,13 @@ void criarPorta(Porta *porta, Vector2 posicao, int faseDestino) {
     porta->faseDestino = faseDestino;
 }
 
-// Função para desenhar uma porta
-void desenharPorta(Porta *porta) {
-    if (!porta->ativa) {
-        return;
-    }
-    
-    // Cor baseada no estado da porta
-    Color corPorta = porta->trancada ? DARKBROWN : BROWN;
-    
-    // Desenhar retângulo da porta
-    Rectangle rectPorta = {
-        porta->posicao.x - porta->largura / 2,
-        porta->posicao.y - porta->altura / 2,
-        porta->largura,
-        porta->altura
-    };
-    
-    DrawRectangleRec(rectPorta, corPorta);
-    DrawRectangleLinesEx(rectPorta, 3, BLACK);
-    
-    // Desenhar símbolo de cadeado se trancada
-    if (porta->trancada) {
-        DrawCircle((int)porta->posicao.x, (int)porta->posicao.y - 10, 8, GOLD);
-        DrawRectangle((int)porta->posicao.x - 6, (int)porta->posicao.y - 10, 12, 15, GOLD);
-    }
-    
-    // Desenhar texto indicando fase destino
-    const char *texto = TextFormat("Fase %d", porta->faseDestino);
-    int largura = MeasureText(texto, 12);
-    DrawText(texto, (int)porta->posicao.x - largura / 2, (int)porta->posicao.y + 45, 12, WHITE);
+// Função para desenhar uma porta (porta está no mapa como tile, sem UI adicional)
+void desenharPorta(Porta *porta, Texture2D texturaPorta) {
+    (void)texturaPorta;  // Não usado - porta já está renderizada no mapa
+    (void)porta;  // Não precisa desenhar nada - porta está no mapa
+
+    // A porta já está renderizada como tile no mapa (TILE_PORTA_MERCADO)
+    // Não desenhar nenhum elemento adicional (sem cadeado, sem texto)
 }
 
 // Função para verificar interação com porta
@@ -1671,15 +1656,15 @@ bool verificarInteracaoPorta(Porta *porta, Player *jogador) {
     if (distancia <= 50.0f) {
         // Verificar se a porta está trancada
         if (porta->trancada) {
-            // Verificar se tem a chave necessária
+            // Porta Fase 1 -> Fase 2 requer CHAVE
             if (porta->faseDestino == 2 && !jogador->temChave) {
                 DrawText("Precisa da CHAVE", (int)porta->posicao.x - 60, (int)porta->posicao.y - 50, 14, RED);
                 return false;
             }
-            
-            // Porta para Fase 3 também requer CHAVE (dropada pelo Hunter da Horda 3)
-            if (porta->faseDestino == 3 && !jogador->temChave) {
-                DrawText("Precisa da CHAVE", (int)porta->posicao.x - 60, (int)porta->posicao.y - 50, 14, RED);
+
+            // Porta Fase 2 -> Fase 3 requer MAPA
+            if (porta->faseDestino == 3 && !jogador->temMapa) {
+                DrawText("Precisa do MAPA", (int)porta->posicao.x - 60, (int)porta->posicao.y - 50, 14, RED);
                 return false;
             }
         }
@@ -1691,14 +1676,17 @@ bool verificarInteracaoPorta(Porta *porta, Player *jogador) {
         if (IsKeyPressed(KEY_E)) {
             if (porta->trancada) {
                 // Destrancar porta e consumir o item necessário
-                if (porta->faseDestino == 2 || porta->faseDestino == 3) {
+                if (porta->faseDestino == 2) {
                     jogador->temChave = false;  // Remover chave do inventário
                     printf("Chave usada! Porta destrancada!\n");
+                } else if (porta->faseDestino == 3) {
+                    jogador->temMapa = false;  // Remover mapa do inventário
+                    printf("Mapa usado! Porta destrancada!\n");
                 }
-                
+
                 porta->trancada = false;
             }
-            
+
             // Usar a porta (transição de fase)
             return true;
         }

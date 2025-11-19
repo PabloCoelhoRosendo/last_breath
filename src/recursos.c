@@ -152,6 +152,22 @@ void carregarRecursos(Recursos* recursos) {
         printf("    * caixa mercado.png não encontrado (usando placeholder)\n");
     }
 
+    // Tile 10: Porta do Mercado (decoração)
+    if (FileExists("assets/tiles/porta do mercado.png")) {
+        recursos->texturasTiles[TILE_PORTA_MERCADO] = LoadTexture("assets/tiles/porta do mercado.png");
+        printf("    * porta do mercado.png carregado (Tile 10)\n");
+    } else {
+        printf("    * porta do mercado.png não encontrado (usando placeholder)\n");
+    }
+
+    // Tile 11: Porta do Laboratório (ponto de interação invisível - sem textura)
+    // Não carrega textura, apenas marca o ponto de interação abaixo do laboratório
+    printf("    * Tile 11 (TILE_PORTA_LAB) configurado como ponto de interacao invisivel\n");
+
+    // Tile 12: Parede Invisível (colisão invisível - sem textura)
+    // Não carrega textura, usado apenas para colisão nas bordas da Fase 1
+    printf("    * Tile 12 (TILE_PAREDE_INVISIVEL) configurado como parede de colisao invisivel\n");
+
     // =====================================================================
     // TEXTURAS DO JOGADOR
     // =====================================================================

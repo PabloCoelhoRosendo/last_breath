@@ -10,6 +10,42 @@
 #include "mapa.h"
 #include "recursos.h"
 
+// Função auxiliar para detectar porta no mapa atual
+// Procura tiles 10 (TILE_PORTA_MERCADO) ou 11 (TILE_PORTA_LAB)
+// e cria uma Porta na posição correta
+void detectarPortaNoMapa(Mapa* mapa, Porta* portaPtr) {
+    portaPtr->ativa = false;  // Resetar porta
+
+    // Procurar tile da porta no mapa
+    for (int i = 0; i < mapa->altura; i++) {
+        for (int j = 0; j < mapa->largura; j++) {
+            if (mapa->tiles[i][j] == TILE_PORTA_MERCADO) {
+                // Encontrou a porta do mercado (Fase 1 -> Fase 2)
+                // A porta está em 7 tiles verticais, calcular centro
+                Vector2 posPorta = {(j * 32) + 16, ((i + 3) * 32) + 16};  // Centro aproximado
+                criarPorta(portaPtr, posPorta, 2);  // Porta para Fase 2
+                printf("Porta do Mercado encontrada no mapa em tile (%d, %d) -> posicao (%.0f, %.0f)\n",
+                       i, j, posPorta.x, posPorta.y);
+                return;  // Encontrou, sair
+            } else if (mapa->tiles[i][j] == TILE_PORTA_LAB) {
+                // Encontrou a porta do laboratório (Fase 2 -> Fase 3)
+                // É um tile único invisível abaixo do prédio do laboratório
+                Vector2 posPorta = {(j * 32) + 16, (i * 32) + 16};  // Centro do tile
+                criarPorta(portaPtr, posPorta, 3);  // Porta para Fase 3
+                // Aumentar área de detecção para a porta invisível do laboratório
+                portaPtr->largura = 100.0f;  // Área mais larga (aproximadamente 3 tiles)
+                portaPtr->altura = 80.0f;    // Área mais alta (aproximadamente 2.5 tiles)
+                printf("Porta do Laboratorio encontrada no mapa em tile (%d, %d) -> posicao (%.0f, %.0f) [Area: %.0fx%.0f]\n",
+                       i, j, posPorta.x, posPorta.y, portaPtr->largura, portaPtr->altura);
+                return;  // Encontrou, sair
+            }
+        }
+    }
+
+    // Se não encontrou nenhuma porta, avisar
+    printf("Aviso: Nenhuma porta encontrada no mapa atual\n");
+}
+
 int main(void) {
     // Configurações da janela (nova resolução para tiles 32x32)
     const int larguraTela = 1024;
@@ -18,10 +54,15 @@ int main(void) {
     InitWindow(larguraTela, alturaTela, "Last Breath - Zumbi Survival Game");
     SetTargetFPS(60);
 
-    // Carregar logo do menu
+    // Carregar logo e background do menu
     Texture2D logoTexture = LoadTexture("assets/logo/imagem.png");
     if (logoTexture.id == 0) {
         printf("Aviso: Logo nao foi carregada de assets/logo/imagem.png\n");
+    }
+
+    Texture2D backgroundTexture = LoadTexture("assets/background/background.png");
+    if (backgroundTexture.id == 0) {
+        printf("Aviso: Background nao foi carregado de assets/background/background.png\n");
     }
 
     // ===== NOVO SISTEMA DE RECURSOS =====
@@ -30,7 +71,6 @@ int main(void) {
     carregarRecursos(recursos);
 
     // ===== NOVO SISTEMA DE MAPA =====
-    // Criar mapa e carregar Fase 1
     Mapa* mapaAtual = criarMapa();
     if (!carregarMapaDeArquivo(mapaAtual, "assets/maps/fase1.txt")) {
         printf("Aviso: Nao foi possivel carregar fase1.txt. Usando mapa padrao.\n");
@@ -80,8 +120,14 @@ int main(void) {
     itemProgresso.ativo = false;      // Começa sem item no mapa
     Item itemArma;                    // Item de arma (Shotgun, SMG)
     itemArma.ativo = false;           // Começa sem arma no mapa
-    Porta porta;                      // Porta para transição de fase
-    criarPorta(&porta, (Vector2){960, 384}, 2); // Porta para Fase 2 (ajustada para 1024x768)
+
+    // Detectar porta no mapa (tile 10 = TILE_PORTA_MERCADO, tile 11 = TILE_PORTA_LAB)
+    // A função detectarPortaNoMapa() será chamada sempre que o mapa for carregado
+    Porta porta;
+    porta.ativa = false;  // Será ativada quando encontrarmos o tile
+
+    // Detectar porta no mapa inicial (Fase 1)
+    detectarPortaNoMapa(mapaAtual, &porta);
 
     // Inicializar o jogador no estado de menu
     jogador.estadoJogo = ESTADO_MENU;
@@ -134,7 +180,18 @@ int main(void) {
                 // Iniciar o jogo
                 if (!jogoIniciado) {
                     iniciarJogo(&jogador);
-                    jogador.posicao = gerarPosicaoValidaSpawn(mapaAtual, 15.0f);
+
+                    // Definir posição inicial baseada na fase
+                    if (jogador.fase == 3) {
+                        // Fase 3: Spawnar em posição específica (linha=21, coluna=16 - meio)
+                        jogador.posicao = (Vector2){16 * 32 + 16, 21 * 32 + 16};  // (528, 688)
+                        printf("Spawn inicial Fase 3: (linha=21, coluna=16 - meio) -> (%.0f, %.0f)\n",
+                               jogador.posicao.x, jogador.posicao.y);
+                    } else {
+                        // Fase 1 ou 2: spawn aleatório válido
+                        jogador.posicao = gerarPosicaoValidaSpawn(mapaAtual, 15.0f);
+                    }
+
                     jogador.spriteAtual = spriteFrenteDireita;
                     jogoIniciado = true;
                 }
@@ -145,6 +202,18 @@ int main(void) {
             // Desenhar tela de menu
             BeginDrawing();
             ClearBackground(BLACK);
+
+            // Desenhar background (fullscreen)
+            if (backgroundTexture.id > 0) {
+                DrawTexturePro(
+                    backgroundTexture,
+                    (Rectangle){0, 0, (float)backgroundTexture.width, (float)backgroundTexture.height},
+                    (Rectangle){0, 0, (float)larguraTela, (float)alturaTela},
+                    (Vector2){0, 0},
+                    0.0f,
+                    WHITE
+                );
+            }
 
             // Desenhar logo (centralizada)
             if (logoTexture.id > 0) {
@@ -477,8 +546,23 @@ int main(void) {
                 inicializarMapaPadrao(mapaAtual);
             }
 
-            // Garantir spawn válido do jogador na nova fase
-            jogador.posicao = gerarPosicaoValidaSpawn(mapaAtual, 15.0f);
+            // Spawn do jogador na nova fase
+            if (jogador.fase == 2) {
+                // Fase 2: Spawnar em posição específica da matriz (linha=9, coluna=8)
+                // Converter para coordenadas do mundo (centro do tile)
+                jogador.posicao = (Vector2){8 * 32 + 16, 9 * 32 + 16};  // (272, 304)
+                printf("Jogador spawnado na Fase 2 em posicao fixa: (linha=9, coluna=8) -> (%.0f, %.0f)\n",
+                       jogador.posicao.x, jogador.posicao.y);
+            } else if (jogador.fase == 3) {
+                // Fase 3: Spawnar em posição específica (linha=21, coluna=16 - meio)
+                // Converter para coordenadas do mundo (centro do tile)
+                jogador.posicao = (Vector2){16 * 32 + 16, 21 * 32 + 16};  // (528, 688)
+                printf("Jogador spawnado na Fase 3 em posicao fixa: (linha=21, coluna=16 - meio) -> (%.0f, %.0f)\n",
+                       jogador.posicao.x, jogador.posicao.y);
+            } else {
+                // Fase 1: spawn aleatório em posição válida
+                jogador.posicao = gerarPosicaoValidaSpawn(mapaAtual, 15.0f);
+            }
 
             // Aplicar upgrade de velocidade após Fase 1
             if (jogador.fase == 2) {
@@ -486,64 +570,10 @@ int main(void) {
                 printf("UPGRADE! Velocidade aumentada para 5.0 m/s\n");
             }
 
-            // Atualizar porta para próxima fase
-            if (porta.faseDestino == 2) {
-                criarPorta(&porta, (Vector2){960, 384}, 3); // Porta para Fase 3
-            } else if (porta.faseDestino == 3) {
-                porta.ativa = false; // Última fase, sem mais portas
-            }
+            // Detectar porta no novo mapa (busca automática por tiles 10 ou 11)
+            detectarPortaNoMapa(mapaAtual, &porta);
         }
         
-        // TODO: Implementar sistema de zumbis fortes
-        // Atualizar zumbis fortes
-        // atualizarZumbisFortes(&listaZumbisFortes, jogador.posicao, GetFrameTime());
-        
-        // // Verificar colisões com zumbis fortes
-        // verificarColisoesBalaZumbiForte(&listaBalas, &listaZumbisFortes, &jogador);
-        // verificarColisoesJogadorZumbiForte(&jogador, listaZumbisFortes);
-        // verificarColisoesZumbiForteZumbiForte(listaZumbisFortes);
-        
-        // // Verificar se o zumbi forte morreu e dropar chave
-        // if (mapaAtual.temChave && listaZumbisFortes == NULL && !jogadorTemChave && !chaveDropada) {
-        //     criarChave(&chave, (Vector2){400, 300});
-        //     chaveDropada = true;
-        //     printf("Chave dropada! Colete-a para abrir a porta.\n");
-        // }
-
-        // // Verificar coleta de chave
-        // if (mapaAtual.temChave && !jogadorTemChave && chaveDropada) {
-        //     if (verificarColetaChave(&chave, &jogador)) {
-        //         jogadorTemChave = true;
-        //         printf("CHAVE COLETADA! Va ate a porta e pressione E.\n");
-        //     }
-        // }
-
-        // // Verificar interação com porta
-        // if (mapaAtual.temPorta) {
-        //     if (verificarInteracaoPorta(&porta, &jogador, jogadorTemChave)) {
-        //         idMapaAtual = 2;
-        //         carregarMapa(&mapaAtual, idMapaAtual);
-        //         printf("Entrando no Mapa %d!\n", idMapaAtual);
-        //         jogador.posicao = mapaAtual.spawnJogador;
-        //         jogadorTemChave = false;
-        //         chaveDropada = false;
-        //         liberarZumbis(&listaZumbis);
-        //         liberarZumbisFortes(&listaZumbisFortes);
-        //         listaZumbis = NULL;
-        //         listaZumbisFortes = NULL;
-        //         for (int i = 0; i < mapaAtual.numZumbis; i++) {
-        //             float x = GetRandomValue(50, 750);
-        //             float y = GetRandomValue(50, 550);
-        //             adicionarZumbi(&listaZumbis, (Vector2){x, y}, recursos->zumbis);
-        //         }
-        //         for (int i = 0; i < mapaAtual.numZumbisFortes; i++) {
-        //             float x = GetRandomValue(100, 700);
-        //             float y = GetRandomValue(100, 200);
-        //             adicionarZumbiForte(&listaZumbisFortes, (Vector2){x, y});
-        //         }
-        //     }
-        // }
-
         // Atualizar sprite do jogador baseado na direção
         if (jogador.direcaoVertical == 0) { // Frente
             if (jogador.direcaoHorizontal == 0) {
@@ -578,36 +608,36 @@ int main(void) {
             // Desenhar informações de horda (Fase 1 e Fase 2)
             if (jogador.fase == 1 || jogador.fase == 2) {
                 if (jogador.estadoHorda == HORDA_INTERVALO) {
-                    // Mostrar countdown do intervalo com destaque
+                    // Mostrar countdown do intervalo com destaque (centralizado)
                     int segundosIntervalo = (int)jogador.tempoIntervalo + 1;
                     const char* mensagem = TextFormat("PROXIMA HORDA EM %ds", segundosIntervalo);
-                    
+
                     // Calcular posição centralizada
                     int larguraTexto = MeasureText(mensagem, 32);
                     int posX = (1024 - larguraTexto) / 2;
-                    
-                    // Desenhar com fundo semi-transparente
-                    DrawRectangle(posX - 20, 90, larguraTexto + 40, 50, (Color){0, 0, 0, 180});
-                    DrawText(mensagem, posX, 100, 32, YELLOW);
+
+                    // Desenhar com fundo semi-transparente (posição ajustada para não sobrepor)
+                    DrawRectangle(posX - 20, 200, larguraTexto + 40, 50, (Color){0, 0, 0, 180});
+                    DrawText(mensagem, posX, 210, 32, YELLOW);
                 } else if (jogador.estadoHorda == HORDA_EM_PROGRESSO) {
-                    // Mostrar informações da horda atual
+                    // Mostrar informações da horda atual (abaixo do HUD principal)
                     const char* faseNome = (jogador.fase == 1) ? "FASE 1" : "FASE 2";
-                    DrawText(TextFormat("%s - HORDA %d/3", faseNome, jogador.hordaAtual), 10, 100, 20, YELLOW);
-                    
+                    DrawText(TextFormat("%s - HORDA %d/3", faseNome, jogador.hordaAtual), 10, 150, 20, YELLOW);
+
                     // Mostrar contadores de inimigos
                     int inimigosTotais = jogador.zumbisRestantes + contarBossesVivos(listaBosses);
-                    DrawText(TextFormat("Inimigos: %d", inimigosTotais), 10, 125, 18, WHITE);
-                    
+                    DrawText(TextFormat("Inimigos: %d", inimigosTotais), 10, 175, 18, WHITE);
+
                     if (jogador.bossesTotaisHorda > 0) {
                         int bossesVivos = contarBossesVivos(listaBosses);
-                        DrawText(TextFormat("Bosses: %d/%d", bossesVivos, jogador.bossesTotaisHorda), 10, 145, 18, RED);
+                        DrawText(TextFormat("Bosses: %d/%d", bossesVivos, jogador.bossesTotaisHorda), 10, 195, 18, RED);
                     }
                 } else if (jogador.estadoHorda == HORDA_COMPLETA && jogador.hordaAtual == 3) {
-                    // Mensagem de conclusão
+                    // Mensagem de conclusão (centralizada)
                     const char* mensagem = "TODAS AS HORDAS COMPLETAS!";
                     int larguraTexto = MeasureText(mensagem, 24);
                     int posX = (1024 - larguraTexto) / 2;
-                    DrawText(mensagem, posX, 100, 24, GREEN);
+                    DrawText(mensagem, posX, 210, 24, GREEN);
                 }
             }
             
@@ -618,9 +648,10 @@ int main(void) {
                 DrawText(TextFormat("BOSS EM: %ds", segundosRestantes), 320, 10, 24, RED);
             }
             
-            // Desenhar porta
-            if (porta.ativa) {
-                desenharPorta(&porta);
+            // Desenhar porta (apenas na Fase 1 - porta do mercado é visível)
+            // Na Fase 2, a porta é invisível (apenas ponto de interação)
+            if (porta.ativa && jogador.fase == 1) {
+                desenharPorta(&porta, recursos->texturasTiles[TILE_PORTA_MERCADO]);
             }
             
             // Desenhar itens coletáveis
@@ -631,18 +662,46 @@ int main(void) {
                 desenharItem(&itemArma);
             }
             
-            // HUD adicional - Itens coletados
-            int offsetX = 600;
-            if (jogador.temChave) {
-                DrawText("CHAVE", offsetX, 10, 16, GOLD);
-                offsetX += 70;
+            // HUD adicional - Itens coletados (canto superior direito)
+            int offsetX = 1024 - 10;  // Começar do canto direito
+            if (jogador.temCure) {
+                int largura = MeasureText("CURE", 18);
+                offsetX -= largura;
+                DrawText("CURE", offsetX, 10, 18, GREEN);
+                offsetX -= 15;  // Espaço entre itens
             }
             if (jogador.temMapa) {
-                DrawText("MAPA", offsetX, 10, 16, SKYBLUE);
-                offsetX += 60;
+                int largura = MeasureText("MAPA", 18);
+                offsetX -= largura;
+                DrawText("MAPA", offsetX, 10, 18, SKYBLUE);
+                offsetX -= 15;
             }
-            if (jogador.temCure) {
-                DrawText("CURE", offsetX, 10, 16, GREEN);
+            if (jogador.temChave) {
+                int largura = MeasureText("CHAVE", 18);
+                offsetX -= largura;
+                DrawText("CHAVE", offsetX, 10, 18, GOLD);
+            }
+
+            // Mensagem piscante quando tiver chave na Fase 1 ou mapa na Fase 2
+            if ((jogador.fase == 1 && jogador.temChave && porta.ativa) ||
+                (jogador.fase == 2 && jogador.temMapa && porta.ativa)) {
+                // Piscar a cada 0.5 segundos (usando tempo do jogo)
+                float tempoTotal = GetTime();
+                int mostrar = ((int)(tempoTotal * 2)) % 2;  // Alterna entre 0 e 1
+
+                if (mostrar) {
+                    // Mensagem diferente para cada fase
+                    const char* mensagem = (jogador.fase == 1) ?
+                        ">> VA PARA A PORTA! <<" :
+                        ">> VA PARA A PORTA DO LABORATORIO! <<";
+                    int larguraMensagem = MeasureText(mensagem, 20);
+                    int posX = 1024 - larguraMensagem - 10;  // Canto superior direito
+                    int posY = 40;  // Abaixo dos itens coletados
+
+                    // Desenhar com fundo semi-transparente
+                    DrawRectangle(posX - 5, posY - 5, larguraMensagem + 10, 30, (Color){0, 0, 0, 150});
+                    DrawText(mensagem, posX, posY, 20, YELLOW);
+                }
             }
         }
         
@@ -678,8 +737,9 @@ int main(void) {
     // NOTA: Sprites do jogador, zumbis e bosses são descarregados pelo sistema de recursos
     // em descarregarRecursos(recursos) - não precisamos descarregar as referências
 
-    // Descarregar logo do menu
+    // Descarregar logo e background do menu
     UnloadTexture(logoTexture);
+    UnloadTexture(backgroundTexture);
 
     CloseWindow();
 

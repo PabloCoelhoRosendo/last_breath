@@ -6,6 +6,7 @@
 # 3 = POSTO (Azul) - Prédio médio
 # 4 = LABORATÓRIO (Verde) - Prédio grande
 # 5 = Prédio Tipo 4 (Amarelo) - reservado
+# 11 = Ponto de interação invisível (TILE_PORTA_LAB) - Linha 31 (matriz), coluna 23 - Abaixo do laboratório
 #
 # Layout Fase 2: Mercado (esquerda superior), Posto (direita superior), Laboratório (centro inferior)
 
@@ -28,7 +29,7 @@
 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 4 4 4 4 4 4 4 4 4 4 4 4 0 0
 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 4 4 4 4 4 4 4 4 4 4 4 4 0 0
 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 4 4 4 4 4 4 4 4 4 4 4 4 0 0
-0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 11 0 0 0 0 0 0 0 0
 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0

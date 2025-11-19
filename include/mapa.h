@@ -8,7 +8,7 @@
 #define LARGURA_MAPA 32
 #define ALTURA_MAPA 24
 #define TAMANHO_TILE 32
-#define MAX_TIPOS_TILE 10
+#define MAX_TIPOS_TILE 13
 
 // Tipos de tiles
 typedef enum {
@@ -22,6 +22,9 @@ typedef enum {
     TILE_PRATELEIRA_MERCADO = 7,  // Prateleira do mercado (obstáculo)
     TILE_CAIXA_MERCADO = 8,       // Caixa do mercado (obstáculo)
     TILE_CHAO_LAB = 9,            // Chão do laboratório (Fase 3)
+    TILE_PORTA_MERCADO = 10,      // Porta do mercado (decoração Fase 1)
+    TILE_PORTA_LAB = 11,          // Porta do laboratório (ponto invisível Fase 2)
+    TILE_PAREDE_INVISIVEL = 12,   // Parede invisível (colisão sem textura - bordas Fase 1)
     // Adicione mais tipos conforme necessário
 } TipoTile;
 

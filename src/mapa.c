@@ -131,9 +131,10 @@ void inicializarMapaPadrao(Mapa* mapa) {
 static void detectarPredio(const Mapa* mapa, int linha, int coluna, Predio* predio) {
     int tipo = mapa->tiles[linha][coluna];
 
-    // Tiles que NÃO são prédios: chão (0, 6, 9), parede (1), obstáculos (7 e 8)
+    // Tiles que NÃO são prédios: chão (0, 6, 9), parede (1), obstáculos (7 e 8), parede invisível (12)
     if (tipo == TILE_CHAO || tipo == TILE_PAREDE || tipo == TILE_CHAO_MERCADO ||
-        tipo == TILE_PRATELEIRA_MERCADO || tipo == TILE_CAIXA_MERCADO || tipo == TILE_CHAO_LAB) {
+        tipo == TILE_PRATELEIRA_MERCADO || tipo == TILE_CAIXA_MERCADO || tipo == TILE_CHAO_LAB ||
+        tipo == TILE_PAREDE_INVISIVEL) {
         predio->tipo = 0;
         return;
     }
@@ -273,9 +274,11 @@ void desenharMapaTiles(const Mapa* mapa, Texture2D texturasTiles[]) {
                     }
                 }
             }
-            // Se for um obstáculo (prateleira ou caixa) - desenhar como imagem completa
-            else if (tipoTile == TILE_PRATELEIRA_MERCADO || tipoTile == TILE_CAIXA_MERCADO) {
-                // Detectar dimensões do bloco de obstáculos
+            // Se for um obstáculo (prateleira ou caixa) ou porta visível - desenhar como imagem completa
+            else if (tipoTile == TILE_PRATELEIRA_MERCADO ||
+                     tipoTile == TILE_CAIXA_MERCADO ||
+                     tipoTile == TILE_PORTA_MERCADO) {
+                // Detectar dimensões do bloco
                 int larguraTiles = 1;
                 int alturaTiles = 1;
 
@@ -293,20 +296,25 @@ void desenharMapaTiles(const Mapa* mapa, Texture2D texturasTiles[]) {
                 int larguraPx = larguraTiles * mapa->tamanhoTile;
                 int alturaPx = alturaTiles * mapa->tamanhoTile;
 
-                // Desenhar a imagem completa do obstáculo esticada
+                // Desenhar a imagem completa esticada
                 if (texturasTiles != NULL && texturasTiles[tipoTile].id != 0) {
                     Rectangle origem = {0, 0, (float)texturasTiles[tipoTile].width, (float)texturasTiles[tipoTile].height};
                     Rectangle destino = {(float)x, (float)y, (float)larguraPx, (float)alturaPx};
                     DrawTexturePro(texturasTiles[tipoTile], origem, destino, (Vector2){0, 0}, 0.0f, WHITE);
                 } else {
-                    // Placeholder para obstáculos
-                    Color cor = (tipoTile == TILE_PRATELEIRA_MERCADO) ?
-                               (Color){139, 90, 43, 255} :  // Marrom para prateleira
-                               (Color){101, 67, 33, 255};   // Marrom escuro para caixa
+                    // Placeholder para obstáculos e porta do mercado
+                    Color cor;
+                    if (tipoTile == TILE_PRATELEIRA_MERCADO) {
+                        cor = (Color){139, 90, 43, 255};  // Marrom para prateleira
+                    } else if (tipoTile == TILE_CAIXA_MERCADO) {
+                        cor = (Color){101, 67, 33, 255};   // Marrom escuro para caixa
+                    } else {  // TILE_PORTA_MERCADO
+                        cor = (Color){80, 50, 20, 255};    // Marrom escuro para porta mercado
+                    }
                     DrawRectangle(x, y, larguraPx, alturaPx, cor);
                 }
 
-                // Marcar todos os tiles deste obstáculo como processados
+                // Marcar todos os tiles deste bloco como processados
                 for (int pi = 0; pi < alturaTiles; pi++) {
                     for (int pj = 0; pj < larguraTiles; pj++) {
                         if (i + pi < ALTURA_MAPA && j + pj < LARGURA_MAPA) {
@@ -315,6 +323,7 @@ void desenharMapaTiles(const Mapa* mapa, Texture2D texturasTiles[]) {
                     }
                 }
             }
+            // TILE_PORTA_POSTO (tile 11) é invisível - não desenha nada, apenas marca posição de interação
         }
     }
 }
@@ -331,9 +340,13 @@ bool isTileSolido(const Mapa* mapa, int linhaGrid, int colunaGrid) {
     }
 
     int tipoTile = mapa->tiles[linhaGrid][colunaGrid];
-    // Tiles walkable: TILE_CHAO (0), TILE_CHAO_MERCADO (6) e TILE_CHAO_LAB (9)
+    // Tiles walkable: TILE_CHAO (0), TILE_CHAO_MERCADO (6), TILE_CHAO_LAB (9), TILE_PORTA_MERCADO (10), TILE_PORTA_LAB (11)
     // Todos os outros são sólidos (paredes, prédios, obstáculos)
-    return (tipoTile != TILE_CHAO && tipoTile != TILE_CHAO_MERCADO && tipoTile != TILE_CHAO_LAB);
+    return (tipoTile != TILE_CHAO &&
+            tipoTile != TILE_CHAO_MERCADO &&
+            tipoTile != TILE_CHAO_LAB &&
+            tipoTile != TILE_PORTA_MERCADO &&
+            tipoTile != TILE_PORTA_LAB);
 }
 
 bool verificarColisaoMapa(const Mapa* mapa, Vector2 posicao, float raio) {

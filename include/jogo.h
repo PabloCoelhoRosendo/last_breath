@@ -204,7 +204,7 @@ void criarItem(Item *item, TipoItem tipo, Vector2 posicao);
 void desenharItem(Item *item);
 bool verificarColetaItem(Item *item, Player *jogador);
 void criarPorta(Porta *porta, Vector2 posicao, int faseDestino);
-void desenharPorta(Porta *porta);
+void desenharPorta(Porta *porta, Texture2D texturaPorta);
 bool verificarInteracaoPorta(Porta *porta, Player *jogador);
 
 // Protótipos do Módulo de Balas ( - Pablo)
