@@ -203,7 +203,7 @@ void verificarColisoesBossJogador(struct Boss *bosses, Player *jogador);
 
 // Protótipos do Sistema de Itens e Interação
 void criarItem(Item *item, TipoItem tipo, Vector2 posicao);
-void desenharItem(Item *item);
+void desenharItem(Item *item, Recursos *recursos);
 bool verificarColetaItem(Item *item, Player *jogador);
 void criarPorta(Porta *porta, Vector2 posicao, int faseDestino);
 void desenharPorta(Porta *porta, Texture2D texturaPorta);

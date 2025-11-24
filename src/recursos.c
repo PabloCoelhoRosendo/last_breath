@@ -40,6 +40,9 @@ Recursos* criarRecursos(void) {
     recursos->chaoRua.id = 0;
     recursos->chaoLab.id = 0;
     recursos->texturaBala.id = 0;
+    recursos->texturaChave.id = 0;
+    recursos->texturaShotgun.id = 0;
+    recursos->texturaSMG.id = 0;
 
     return recursos;
 }
@@ -283,6 +286,35 @@ void carregarRecursos(Recursos* recursos) {
         printf("    * Bala: carregado\n");
     } else {
         printf("    ! Bala: nao encontrado (usando circulo)\n");
+    }
+
+    // =====================================================================
+    // TEXTURA DA CHAVE
+    // =====================================================================
+    printf("  - Carregando textura da chave...\n");
+    if (FileExists("assets/chave/chave.png")) {
+        recursos->texturaChave = LoadTexture("assets/chave/chave.png");
+        printf("    * Chave: carregado\n");
+    } else {
+        printf("    ! Chave: nao encontrado (usando circulo)\n");
+    }
+
+    // =====================================================================
+    // TEXTURAS DAS ARMAS (ITENS)
+    // =====================================================================
+    printf("  - Carregando texturas das armas...\n");
+    if (FileExists("assets/armas/shotgun.png")) {
+        recursos->texturaShotgun = LoadTexture("assets/armas/shotgun.png");
+        printf("    * Shotgun: carregado\n");
+    } else {
+        printf("    ! Shotgun: nao encontrado (usando circulo)\n");
+    }
+
+    if (FileExists("assets/armas/smg.png")) {
+        recursos->texturaSMG = LoadTexture("assets/armas/smg.png");
+        printf("    * SMG: carregado\n");
+    } else {
+        printf("    ! SMG: nao encontrado (usando circulo)\n");
     }
 
     printf("Recursos carregados com sucesso!\n\n");

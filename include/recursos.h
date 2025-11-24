@@ -32,6 +32,13 @@ typedef struct {
     // Textura da bala
     Texture2D texturaBala;
 
+    // Textura da chave
+    Texture2D texturaChave;
+
+    // Texturas de armas (itens coletáveis)
+    Texture2D texturaShotgun;
+    Texture2D texturaSMG;
+
 } Recursos;
 
 // Funções de gerenciamento de recursos

@@ -3,6 +3,7 @@
 #include "raylib.h"
 #include "jogo.h"
 #include "arquivo.h"
+#include "recursos.h"
 
 #include <stdlib.h> // Para malloc e free (Requisito: Alocação Dinâmica de Memória)
 #include <stdio.h>
@@ -209,8 +210,8 @@ void iniciarJogo(Player *jogador) {
     jogador->posicao = (Vector2){512, 384};
     jogador->vida = 100;
     jogador->tempoTotal = 0.0f;
-    jogador->fase = 1;
-    jogador->velocidadeBase = 3.0f;
+    jogador->fase = 1;  // Começar na Fase 1
+    jogador->velocidadeBase = 3.0f;  // Velocidade da Fase 1
     jogador->direcaoVertical = 0;
     jogador->direcaoHorizontal = 1;
     jogador->estaRecarregando = false;
@@ -1510,14 +1511,14 @@ void criarItem(Item *item, TipoItem tipo, Vector2 posicao) {
 }
 
 // Função para desenhar um item
-void desenharItem(Item *item) {
+void desenharItem(Item *item, Recursos *recursos) {
     if (!item->ativo || item->coletado) {
         return;
     }
-    
+
     Color corItem;
     const char *nomeItem;
-    
+
     switch (item->tipo) {
         case ITEM_CHAVE:
             corItem = GOLD;
@@ -1544,12 +1545,54 @@ void desenharItem(Item *item) {
             nomeItem = "???";
             break;
     }
-    
-    // Desenhar círculo do item (efeito de "pulsar")
+
+    // Efeito de "pulsar"
     float pulso = sinf(GetTime() * 3.0f) * 3.0f;
-    DrawCircleV(item->posicao, 15.0f + pulso, corItem);
-    DrawCircleLines((int)item->posicao.x, (int)item->posicao.y, 15.0f + pulso, BLACK);
-    
+
+    // Tentar desenhar textura do item se disponível
+    bool texturadoDesenhado = false;
+    Texture2D texturaItem = {0};
+    float escalaBase = 0.05f; // Escala padrão
+
+    // Selecionar textura baseado no tipo de item
+    if (recursos != NULL) {
+        if (item->tipo == ITEM_CHAVE && texturaValida(recursos->texturaChave)) {
+            texturaItem = recursos->texturaChave;
+            escalaBase = 0.05f;
+            texturadoDesenhado = true;
+        } else if (item->tipo == ITEM_SHOTGUN && texturaValida(recursos->texturaShotgun)) {
+            texturaItem = recursos->texturaShotgun;
+            escalaBase = 0.12f; // Shotgun 1.2x
+            texturadoDesenhado = true;
+        } else if (item->tipo == ITEM_SMG && texturaValida(recursos->texturaSMG)) {
+            texturaItem = recursos->texturaSMG;
+            escalaBase = 0.12f; // SMG 1.2x
+            texturadoDesenhado = true;
+        }
+    }
+
+    // Desenhar textura ou fallback
+    if (texturadoDesenhado) {
+        float escala = escalaBase + (pulso * 0.001f); // Escala com pulso sutil
+        float largura = texturaItem.width * escala;
+        float altura = texturaItem.height * escala;
+
+        Rectangle origem = {0, 0, (float)texturaItem.width, (float)texturaItem.height};
+        Rectangle destino = {
+            item->posicao.x - largura / 2,
+            item->posicao.y - altura / 2,
+            largura,
+            altura
+        };
+        Vector2 pivo = {0, 0};
+
+        DrawTexturePro(texturaItem, origem, destino, pivo, 0.0f, WHITE);
+    } else {
+        // Fallback: desenhar círculo do item (efeito de "pulsar")
+        DrawCircleV(item->posicao, 15.0f + pulso, corItem);
+        DrawCircleLines((int)item->posicao.x, (int)item->posicao.y, 15.0f + pulso, BLACK);
+    }
+
     // Desenhar nome do item acima
     int larguraTexto = MeasureText(nomeItem, 14);
     DrawText(nomeItem, (int)item->posicao.x - larguraTexto / 2, (int)item->posicao.y - 30, 14, BLACK);

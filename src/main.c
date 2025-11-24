@@ -72,6 +72,7 @@ int main(void) {
 
     // ===== NOVO SISTEMA DE MAPA =====
     Mapa* mapaAtual = criarMapa();
+    // Carregar mapa da Fase 1
     if (!carregarMapaDeArquivo(mapaAtual, "assets/maps/fase1.txt")) {
         printf("Aviso: Nao foi possivel carregar fase1.txt. Usando mapa padrao.\n");
         inicializarMapaPadrao(mapaAtual);
@@ -578,10 +579,10 @@ int main(void) {
             
             // Desenhar itens coletáveis
             if (itemProgresso.ativo) {
-                desenharItem(&itemProgresso);
+                desenharItem(&itemProgresso, recursos);
             }
             if (itemArma.ativo) {
-                desenharItem(&itemArma);
+                desenharItem(&itemArma, recursos);
             }
             
             // HUD adicional - Itens coletados (canto superior direito)
