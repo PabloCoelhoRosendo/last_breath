@@ -217,11 +217,11 @@ void iniciarJogo(Player *jogador) {
     jogador->tempoRecargaAtual = 0.0f;
     jogador->tempoJaSalvo = false;
     jogador->estadoJogo = ESTADO_JOGANDO;
-    
+
     // Inicializar sistema de boss
     jogador->timerBoss = 0.0f;
     jogador->bossSpawnado = false;
-    
+
     // Inicializar sistema de itens
     jogador->temChave = false;
     jogador->temMapa = false;
@@ -1654,12 +1654,12 @@ bool verificarInteracaoPorta(Porta *porta, Player *jogador) {
     if (!porta->ativa) {
         return false;
     }
-    
+
     // Calcular distância entre jogador e porta
     float dx = jogador->posicao.x - porta->posicao.x;
     float dy = jogador->posicao.y - porta->posicao.y;
     float distancia = sqrtf(dx * dx + dy * dy);
-    
+
     // Verificar se está próximo (50 pixels)
     if (distancia <= 50.0f) {
         // Verificar se a porta está trancada
@@ -1670,9 +1670,9 @@ bool verificarInteracaoPorta(Porta *porta, Player *jogador) {
                 return false;
             }
 
-            // Porta Fase 2 -> Fase 3 requer MAPA
-            if (porta->faseDestino == 3 && !jogador->temMapa) {
-                DrawText("Precisa do MAPA", (int)porta->posicao.x - 60, (int)porta->posicao.y - 50, 14, RED);
+            // Porta Fase 2 -> Fase 3 requer CHAVE
+            if (porta->faseDestino == 3 && !jogador->temChave) {
+                DrawText("Precisa da CHAVE", (int)porta->posicao.x - 60, (int)porta->posicao.y - 50, 14, RED);
                 return false;
             }
         }
@@ -1684,12 +1684,9 @@ bool verificarInteracaoPorta(Porta *porta, Player *jogador) {
         if (IsKeyPressed(KEY_E)) {
             if (porta->trancada) {
                 // Destrancar porta e consumir o item necessário
-                if (porta->faseDestino == 2) {
+                if (porta->faseDestino == 2 || porta->faseDestino == 3) {
                     jogador->temChave = false;  // Remover chave do inventário
                     printf("Chave usada! Porta destrancada!\n");
-                } else if (porta->faseDestino == 3) {
-                    jogador->temMapa = false;  // Remover mapa do inventário
-                    printf("Mapa usado! Porta destrancada!\n");
                 }
 
                 porta->trancada = false;
