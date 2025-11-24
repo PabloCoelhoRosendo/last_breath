@@ -90,6 +90,7 @@ typedef struct {
 // 2. Estrutura para Zumbis (Victor - Requisito: Structs, Lista Encadeada)
 typedef struct Zumbi {
     Vector2 posicao;
+    Vector2 posicaoAnterior;  // Posição do frame anterior (para reverter colisões)
     Vector2 velocidade;
     int vida;
     float raio;
@@ -132,6 +133,7 @@ typedef enum {
 typedef struct Boss {
     TipoBoss tipo;
     Vector2 posicao;
+    Vector2 posicaoAnterior;  // Posição do frame anterior (para reverter colisões)
     int vida;
     int vidaMax;
     float velocidade;

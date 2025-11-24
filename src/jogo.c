@@ -600,6 +600,7 @@ void adicionarZumbi(Zumbi **cabeca, Vector2 posInicial, Texture2D sprites[][4]) 
 
     // 3. Inicializar o novo zumbi com comportamento aleatório
     novoZumbi->posicao = posInicial;
+    novoZumbi->posicaoAnterior = posInicial;  // Inicializar posição anterior
     novoZumbi->velocidade = (Vector2){0, 0};
     novoZumbi->vida = 20; // GDD: 20 HP
     novoZumbi->raio = 20.0f;
@@ -636,8 +637,11 @@ void adicionarZumbi(Zumbi **cabeca, Vector2 posInicial, Texture2D sprites[][4]) 
 void atualizarZumbis(Zumbi **cabeca, Vector2 posicaoJogador, float deltaTime) {
     Zumbi *atual = *cabeca;
     Zumbi *anterior = NULL;
-    
+
     while (atual != NULL) {
+        // Salvar posição anterior antes de mover
+        atual->posicaoAnterior = atual->posicao;
+
         // Calcular direção base para o jogador
         Vector2 direcao = {
             posicaoJogador.x - atual->posicao.x,
@@ -1023,6 +1027,7 @@ void criarBoss(Boss **bosses, TipoBoss tipo, Vector2 posicao, Texture2D spriteFr
 
     novoBoss->tipo = tipo;
     novoBoss->posicao = posicao;
+    novoBoss->posicaoAnterior = posicao;  // Inicializar posição anterior
     novoBoss->ativo = true;
     novoBoss->atacando = false;
     novoBoss->tempoAtaque = 0.0f;
@@ -1081,13 +1086,16 @@ void criarBoss(Boss **bosses, TipoBoss tipo, Vector2 posicao, Texture2D spriteFr
 // Função para atualizar lógica dos bosses
 void atualizarBoss(Boss **bosses, Player *jogador, Bala **balas, float deltaTime) {
     Boss *bossAtual = *bosses;
-    
+
     while (bossAtual != NULL) {
         if (!bossAtual->ativo) {
             bossAtual = bossAtual->proximo;
             continue;
         }
-        
+
+        // Salvar posição anterior antes de mover
+        bossAtual->posicaoAnterior = bossAtual->posicao;
+
         // Atualizar timer de ataque
         bossAtual->tempoAtaque += deltaTime;
         

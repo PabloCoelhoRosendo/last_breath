@@ -142,23 +142,6 @@ int main(void) {
     // NÃO spawnar zumbis inicialmente - o sistema de hordas irá gerenciar isso
     // O sistema de hordas começará automaticamente quando o jogo iniciar
 
-    // Definir structs para rastreamento de posições (antes do loop)
-    typedef struct PosicaoZumbi {
-        Zumbi *zumbi;
-        Vector2 posicaoAnterior;
-        struct PosicaoZumbi *proximo;
-    } PosicaoZumbi;
-
-    typedef struct PosicaoBoss {
-        Boss *boss;
-        Vector2 posicaoAnterior;
-        struct PosicaoBoss *proximo;
-    } PosicaoBoss;
-
-    // Listas temporárias para rastreamento de posições (declaradas antes do loop)
-    PosicaoZumbi *listaPosicoesAnteriores = NULL;
-    PosicaoBoss *listaPosicoesBosses = NULL;
-
     // Loop principal do jogo
     while (!WindowShouldClose()) {
         // ===== TELA DE MENU =====
@@ -274,17 +257,6 @@ int main(void) {
                 free(temp);
             }
 
-            // CORREÇÃO: Limpar listas temporárias de rastreamento de posições (memory leak fix)
-            while (listaPosicoesAnteriores != NULL) {
-                PosicaoZumbi *temp = listaPosicoesAnteriores;
-                listaPosicoesAnteriores = listaPosicoesAnteriores->proximo;
-                free(temp);
-            }
-            while (listaPosicoesBosses != NULL) {
-                PosicaoBoss *temp = listaPosicoesBosses;
-                listaPosicoesBosses = listaPosicoesBosses->proximo;
-                free(temp);
-            }
 
             // Recarregar mapa da Fase 1
             if (!carregarMapaDeArquivo(mapaAtual, "assets/maps/fase1.txt")) {
@@ -303,44 +275,8 @@ int main(void) {
             printf("Voltando ao menu principal...\n");
         }
         
-        // Salvar posição anterior do jogador e zumbis para colisão
+        // Salvar posição anterior do jogador para colisão
         Vector2 posicaoAnteriorJogador = jogador.posicao;
-
-        // Salvar posições anteriores dos zumbis
-        // Limpar lista anterior (se houver)
-        while (listaPosicoesAnteriores != NULL) {
-            PosicaoZumbi *temp = listaPosicoesAnteriores;
-            listaPosicoesAnteriores = listaPosicoesAnteriores->proximo;
-            free(temp);
-        }
-        listaPosicoesAnteriores = NULL;
-        Zumbi *zTemp = listaZumbis;
-        while (zTemp != NULL) {
-            PosicaoZumbi *novaPosicao = (PosicaoZumbi*)malloc(sizeof(PosicaoZumbi));
-            novaPosicao->zumbi = zTemp;
-            novaPosicao->posicaoAnterior = zTemp->posicao;
-            novaPosicao->proximo = listaPosicoesAnteriores;
-            listaPosicoesAnteriores = novaPosicao;
-            zTemp = zTemp->proximo;
-        }
-
-        // Salvar posições anteriores dos bosses
-        // Limpar lista anterior (se houver)
-        while (listaPosicoesBosses != NULL) {
-            PosicaoBoss *temp = listaPosicoesBosses;
-            listaPosicoesBosses = listaPosicoesBosses->proximo;
-            free(temp);
-        }
-        listaPosicoesBosses = NULL;
-        Boss *bTemp = listaBosses;
-        while (bTemp != NULL) {
-            PosicaoBoss *novaPosicao = (PosicaoBoss*)malloc(sizeof(PosicaoBoss));
-            novaPosicao->boss = bTemp;
-            novaPosicao->posicaoAnterior = bTemp->posicao;
-            novaPosicao->proximo = listaPosicoesBosses;
-            listaPosicoesBosses = novaPosicao;
-            bTemp = bTemp->proximo;
-        }
 
         // Atualizar a lógica do jogo
         atualizarJogo(&jogador, &listaZumbis, &listaBalas);
@@ -403,20 +339,13 @@ int main(void) {
         }
 
         // Verificar colisão dos zumbis com o mapa e reverter se necessário
-        PosicaoZumbi *posAtual = listaPosicoesAnteriores;
-        while (posAtual != NULL) {
-            if (verificarColisaoMapa(mapaAtual, posAtual->zumbi->posicao, 20.0f)) {
-                // Reverter para posição anterior
-                posAtual->zumbi->posicao = posAtual->posicaoAnterior;
+        Zumbi *zumbiAtual = listaZumbis;
+        while (zumbiAtual != NULL) {
+            if (verificarColisaoMapa(mapaAtual, zumbiAtual->posicao, 20.0f)) {
+                // Reverter para posição anterior (usando campo da struct)
+                zumbiAtual->posicao = zumbiAtual->posicaoAnterior;
             }
-            posAtual = posAtual->proximo;
-        }
-
-        // Liberar lista de posições anteriores dos zumbis
-        while (listaPosicoesAnteriores != NULL) {
-            PosicaoZumbi *temp = listaPosicoesAnteriores;
-            listaPosicoesAnteriores = listaPosicoesAnteriores->proximo;
-            free(temp);
+            zumbiAtual = zumbiAtual->proximo;
         }
 
         // Atualizar timer de boss e spawnar quando necessário
@@ -459,22 +388,15 @@ int main(void) {
         
         // Atualizar bosses
         atualizarBoss(&listaBosses, &jogador, &listaBalas, GetFrameTime());
-        
-        // Verificar colisão dos bosses com o mapa e reverter se necessário
-        PosicaoBoss *posAtualBoss = listaPosicoesBosses;
-        while (posAtualBoss != NULL) {
-            if (verificarColisaoMapa(mapaAtual, posAtualBoss->boss->posicao, posAtualBoss->boss->raio)) {
-                // Reverter para posição anterior
-                posAtualBoss->boss->posicao = posAtualBoss->posicaoAnterior;
-            }
-            posAtualBoss = posAtualBoss->proximo;
-        }
 
-        // Liberar lista de posições anteriores dos bosses
-        while (listaPosicoesBosses != NULL) {
-            PosicaoBoss *temp = listaPosicoesBosses;
-            listaPosicoesBosses = listaPosicoesBosses->proximo;
-            free(temp);
+        // Verificar colisão dos bosses com o mapa e reverter se necessário
+        Boss *bossAtual = listaBosses;
+        while (bossAtual != NULL) {
+            if (verificarColisaoMapa(mapaAtual, bossAtual->posicao, bossAtual->raio)) {
+                // Reverter para posição anterior (usando campo da struct)
+                bossAtual->posicao = bossAtual->posicaoAnterior;
+            }
+            bossAtual = bossAtual->proximo;
         }
         
         // Verificar colisões boss vs balas (passa os 2 itens para dropar e o jogador) e boss vs jogador
