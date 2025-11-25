@@ -9,6 +9,7 @@
 #include "arquivo.h"
 #include "mapa.h"
 #include "recursos.h"
+#include "pathfinding.h"
 
 // Função auxiliar para detectar porta no mapa atual
 // Procura tiles 10 (TILE_PORTA_MERCADO) ou 11 (TILE_PORTA_LAB)
@@ -121,6 +122,11 @@ int main(void) {
     itemProgresso.ativo = false;      // Começa sem item no mapa
     Item itemArma;                    // Item de arma (Shotgun, SMG)
     itemArma.ativo = false;           // Começa sem arma no mapa
+
+    // Sistema de Pathfinding A*
+    PathfindingGrid pathfindingGrid;
+    inicializarPathfinding(&pathfindingGrid);
+    printf("Sistema de Pathfinding A* inicializado!\n");
 
     // Detectar porta no mapa (tile 10 = TILE_PORTA_MERCADO, tile 11 = TILE_PORTA_LAB)
     // A função detectarPortaNoMapa() será chamada sempre que o mapa for carregado
@@ -279,8 +285,8 @@ int main(void) {
         // Salvar posição anterior do jogador para colisão
         Vector2 posicaoAnteriorJogador = jogador.posicao;
 
-        // Atualizar a lógica do jogo
-        atualizarJogo(&jogador, &listaZumbis, &listaBalas);
+        // Atualizar a lógica do jogo com pathfinding A* para zumbis
+        atualizarJogoComPathfinding(&jogador, &listaZumbis, &listaBalas, mapaAtual, &pathfindingGrid);
         
         // ===== SISTEMA DE HORDAS =====
         // Atualizar sistema de hordas (Fase 1 e Fase 2)
@@ -339,12 +345,64 @@ int main(void) {
             jogador.posicao = posicaoAnteriorJogador;
         }
 
-        // Verificar colisão dos zumbis com o mapa e reverter se necessário
+        // Verificar colisão dos zumbis com o mapa e tentar deslizar/contornar
         Zumbi *zumbiAtual = listaZumbis;
         while (zumbiAtual != NULL) {
             if (verificarColisaoMapa(mapaAtual, zumbiAtual->posicao, 20.0f)) {
-                // Reverter para posição anterior (usando campo da struct)
-                zumbiAtual->posicao = zumbiAtual->posicaoAnterior;
+                // Tentar deslizar ao longo do obstáculo em vez de simplesmente reverter
+                Vector2 posOriginal = zumbiAtual->posicaoAnterior;
+                Vector2 movimento = {
+                    zumbiAtual->posicao.x - posOriginal.x,
+                    zumbiAtual->posicao.y - posOriginal.y
+                };
+
+                bool encontrouCaminho = false;
+
+                // Tentar mover apenas no eixo X
+                Vector2 tentativaX = {posOriginal.x + movimento.x, posOriginal.y};
+                if (!verificarColisaoMapa(mapaAtual, tentativaX, 20.0f)) {
+                    zumbiAtual->posicao = tentativaX;
+                    encontrouCaminho = true;
+                }
+
+                // Tentar mover apenas no eixo Y
+                if (!encontrouCaminho) {
+                    Vector2 tentativaY = {posOriginal.x, posOriginal.y + movimento.y};
+                    if (!verificarColisaoMapa(mapaAtual, tentativaY, 20.0f)) {
+                        zumbiAtual->posicao = tentativaY;
+                        encontrouCaminho = true;
+                    }
+                }
+
+                // Se não conseguiu deslizar, tentar desviar perpendicular
+                if (!encontrouCaminho) {
+                    float velocidade = sqrtf(movimento.x * movimento.x + movimento.y * movimento.y);
+                    if (velocidade > 0.1f) {
+                        // Tentar desviar para a direita perpendicular
+                        Vector2 desvioDir = {posOriginal.x - movimento.y * 0.5f, posOriginal.y + movimento.x * 0.5f};
+                        if (!verificarColisaoMapa(mapaAtual, desvioDir, 20.0f)) {
+                            zumbiAtual->posicao = desvioDir;
+                            encontrouCaminho = true;
+                        }
+
+                        // Tentar desviar para a esquerda perpendicular
+                        if (!encontrouCaminho) {
+                            Vector2 desvioEsq = {posOriginal.x + movimento.y * 0.5f, posOriginal.y - movimento.x * 0.5f};
+                            if (!verificarColisaoMapa(mapaAtual, desvioEsq, 20.0f)) {
+                                zumbiAtual->posicao = desvioEsq;
+                                encontrouCaminho = true;
+                            }
+                        }
+                    }
+                }
+
+                // Se ainda não encontrou caminho, reverter e forçar recálculo do pathfinding
+                if (!encontrouCaminho) {
+                    zumbiAtual->posicao = posOriginal;
+                    // Invalidar caminho para forçar recálculo
+                    zumbiAtual->caminho.valido = false;
+                    zumbiAtual->caminho.tempoRecalculo = 1.0f; // Forçar recálculo imediato
+                }
             }
             zumbiAtual = zumbiAtual->proximo;
         }
@@ -387,15 +445,44 @@ int main(void) {
             }
         }
         
-        // Atualizar bosses
-        atualizarBoss(&listaBosses, &jogador, &listaBalas, GetFrameTime());
+        // Atualizar bosses COM PATHFINDING A*
+        atualizarBossComPathfinding(&listaBosses, &jogador, &listaBalas, GetFrameTime(), mapaAtual, &pathfindingGrid);
 
-        // Verificar colisão dos bosses com o mapa e reverter se necessário
+        // Verificar colisão dos bosses com o mapa com deslizamento
         Boss *bossAtual = listaBosses;
         while (bossAtual != NULL) {
             if (verificarColisaoMapa(mapaAtual, bossAtual->posicao, bossAtual->raio)) {
-                // Reverter para posição anterior (usando campo da struct)
-                bossAtual->posicao = bossAtual->posicaoAnterior;
+                // Tentar deslizar ao longo do obstáculo
+                Vector2 posOriginal = bossAtual->posicaoAnterior;
+                Vector2 movimento = {
+                    bossAtual->posicao.x - posOriginal.x,
+                    bossAtual->posicao.y - posOriginal.y
+                };
+
+                bool encontrouCaminho = false;
+
+                // Tentar mover apenas no eixo X
+                Vector2 tentativaX = {posOriginal.x + movimento.x, posOriginal.y};
+                if (!verificarColisaoMapa(mapaAtual, tentativaX, bossAtual->raio)) {
+                    bossAtual->posicao = tentativaX;
+                    encontrouCaminho = true;
+                }
+
+                // Tentar mover apenas no eixo Y
+                if (!encontrouCaminho) {
+                    Vector2 tentativaY = {posOriginal.x, posOriginal.y + movimento.y};
+                    if (!verificarColisaoMapa(mapaAtual, tentativaY, bossAtual->raio)) {
+                        bossAtual->posicao = tentativaY;
+                        encontrouCaminho = true;
+                    }
+                }
+
+                // Se não conseguiu deslizar, reverter e forçar recálculo do pathfinding
+                if (!encontrouCaminho) {
+                    bossAtual->posicao = posOriginal;
+                    bossAtual->caminho.valido = false;
+                    bossAtual->caminho.tempoRecalculo = 1.0f;
+                }
             }
             bossAtual = bossAtual->proximo;
         }

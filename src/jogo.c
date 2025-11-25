@@ -4,10 +4,12 @@
 #include "jogo.h"
 #include "arquivo.h"
 #include "recursos.h"
+#include "pathfinding.h"
 
 #include <stdlib.h> // Para malloc e free (Requisito: Alocação Dinâmica de Memória)
 #include <stdio.h>
 #include <math.h>   // Para sqrtf
+#include <stdint.h> // Para uintptr_t
 
 // --- Funções Auxiliares de Colisão ---
 
@@ -365,6 +367,114 @@ void atualizarJogo(Player *jogador, Zumbi **zumbis, Bala **balas) {
     }
 }
 
+// Função para atualizar o jogo com pathfinding A* para zumbis
+void atualizarJogoComPathfinding(Player *jogador, Zumbi **zumbis, Bala **balas, const Mapa *mapa, PathfindingGrid *grid) {
+    float deltaTime = GetFrameTime();
+
+    // Se jogador está morto ou venceu, não atualizar nada (tempo para)
+    if (jogador->vida <= 0 || jogador->jogoVencido) {
+        return; // Parar aqui - não processar movimento, ações nem tempo
+    }
+
+    Arma *armaAtual = &jogador->slots[jogador->slotAtivo];
+
+    // Atualizar cooldown da arma
+    if (armaAtual->cooldown > 0.0f) {
+        armaAtual->cooldown -= deltaTime;
+    }
+
+    // Sistema de Recarga
+    if (jogador->estaRecarregando) {
+        jogador->tempoRecargaAtual -= deltaTime;
+
+        if (jogador->tempoRecargaAtual <= 0.0f) {
+            // Recarga completa
+            int municaoNecessaria = armaAtual->penteMax - armaAtual->penteAtual;
+            if (armaAtual->municaoTotal >= municaoNecessaria) {
+                armaAtual->penteAtual = armaAtual->penteMax;
+                armaAtual->municaoTotal -= municaoNecessaria;
+            } else {
+                armaAtual->penteAtual += armaAtual->municaoTotal;
+                armaAtual->municaoTotal = 0;
+            }
+            jogador->estaRecarregando = false;
+            jogador->tempoRecargaAtual = 0.0f;
+        }
+    }
+
+    // Processar entrada de teclado para trocar de arma
+    if (IsKeyPressed(KEY_ONE)) {
+        equiparArma(jogador, 0);
+    } else if (IsKeyPressed(KEY_TWO)) {
+        equiparArma(jogador, 1);
+    } else if (IsKeyPressed(KEY_THREE)) {
+        equiparArma(jogador, 2);
+    }
+
+    // Processar tecla R para recarregar
+    if (IsKeyPressed(KEY_R)) {
+        recarregarArma(jogador);
+    }
+
+    // Processar entrada de movimento do jogador
+    Vector2 movimento = {0, 0};
+
+    if (IsKeyDown(KEY_W) || IsKeyDown(KEY_UP)) {
+        movimento.y = -1;
+        jogador->direcaoVertical = 1;  // Costas
+    }
+    if (IsKeyDown(KEY_S) || IsKeyDown(KEY_DOWN)) {
+        movimento.y = 1;
+        jogador->direcaoVertical = 0;  // Frente
+    }
+    if (IsKeyDown(KEY_A) || IsKeyDown(KEY_LEFT)) {
+        movimento.x = -1;
+        jogador->direcaoHorizontal = 0;  // Esquerda
+    }
+    if (IsKeyDown(KEY_D) || IsKeyDown(KEY_RIGHT)) {
+        movimento.x = 1;
+        jogador->direcaoHorizontal = 1;  // Direita
+    }
+
+    // Normalizar movimento diagonal
+    if (movimento.x != 0 && movimento.y != 0) {
+        float norma = 1.0f / sqrtf(2.0f);
+        movimento.x *= norma;
+        movimento.y *= norma;
+    }
+
+    // Aplicar movimento
+    jogador->posicao.x += movimento.x * jogador->velocidadeBase;
+    jogador->posicao.y += movimento.y * jogador->velocidadeBase;
+
+    // Manter o jogador dentro dos limites do mapa
+    if (jogador->posicao.x < 20) jogador->posicao.x = 20;
+    if (jogador->posicao.x > 1004) jogador->posicao.x = 1004;
+    if (jogador->posicao.y < 20) jogador->posicao.y = 20;
+    if (jogador->posicao.y > 748) jogador->posicao.y = 748;
+
+    // Atirar com o botão esquerdo do mouse
+    if (IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) {
+        Vector2 mousePos = GetMousePosition();
+        atirarArma(jogador, balas, mousePos);
+    }
+
+    // Atualizar zumbis COM PATHFINDING A*
+    atualizarZumbisComPathfinding(zumbis, jogador->posicao, deltaTime, mapa, grid);
+
+    // Verificar colisões
+    verificarColisoesBalaZumbi(balas, zumbis, jogador);
+    verificarColisoesBalaJogador(balas, jogador);
+    if (zumbis != NULL && *zumbis != NULL) {
+        verificarColisoesJogadorZumbi(jogador, *zumbis);
+    }
+
+    // Atualizar o tempo total se o jogador estiver vivo
+    if (jogador->vida > 0) {
+        jogador->tempoTotal += GetFrameTime();
+    }
+}
+
 // Função para desenhar todos os elementos do jogo
 void desenharJogo(Player *jogador, Zumbi *zumbis, Bala *balas, Texture2D texturaMapa, Recursos *recursos) {
     // NOTA: O mapa é desenhado no main.c com o novo sistema de tiles
@@ -609,8 +719,9 @@ void adicionarZumbi(Zumbi **cabeca, Vector2 posInicial, Texture2D sprites[][4]) 
     // Atribuir tipo de movimento aleatório (0-3)
     novoZumbi->tipoMovimento = GetRandomValue(0, 3);
 
-    // Velocidade base: 3.0 m/s = 180 pixels/s (GDD)
-    novoZumbi->velocidadeBase = 180.0f; // 3.0 m/s conforme GDD
+    // Velocidade base: mais lenta que o jogador (jogador = ~180 pixels/s com 3.0 * 60fps)
+    // Zumbi anda a 70-80% da velocidade do jogador para dar chance de fugir
+    novoZumbi->velocidadeBase = 120.0f + (float)GetRandomValue(0, 20); // 120-140 pixels/s
 
     // Inicializar timers e ângulos aleatórios
     novoZumbi->tempoDesvio = 0.0f;
@@ -629,6 +740,12 @@ void adicionarZumbi(Zumbi **cabeca, Vector2 posInicial, Texture2D sprites[][4]) 
     novoZumbi->direcaoVertical = 0;
     novoZumbi->direcaoHorizontal = 1;
     novoZumbi->spriteAtual = novoZumbi->spriteFrenteDireita;
+
+    // Inicializar pathfinding
+    novoZumbi->caminho.valido = false;
+    novoZumbi->caminho.tamanho = 0;
+    novoZumbi->caminho.indiceAtual = 0;
+    novoZumbi->caminho.tempoRecalculo = 0.0f;
 
     // 4. Inserir no início da lista
     novoZumbi->proximo = *cabeca;
@@ -778,6 +895,172 @@ void atualizarZumbis(Zumbi **cabeca, Vector2 posicaoJogador, float deltaTime) {
         }
     }
 }
+
+// Função para atualizar zumbis com pathfinding A*
+void atualizarZumbisComPathfinding(Zumbi **cabeca, Vector2 posicaoJogador, float deltaTime, const Mapa *mapa, PathfindingGrid *grid) {
+    Zumbi *atual = *cabeca;
+    Zumbi *anterior = NULL;
+
+    while (atual != NULL) {
+        // Salvar posição anterior antes de mover
+        atual->posicaoAnterior = atual->posicao;
+
+        // Calcular distância até o jogador
+        float dx = posicaoJogador.x - atual->posicao.x;
+        float dy = posicaoJogador.y - atual->posicao.y;
+        float distancia = sqrtf(dx * dx + dy * dy);
+
+        Vector2 direcaoFinal = {0.0f, 0.0f};
+        float velocidadeFinal = atual->velocidadeBase;
+
+        // Sempre usar pathfinding quando disponível
+        // Isso garante que zumbis desviem de obstáculos corretamente
+        bool usarPathfinding = (mapa != NULL && grid != NULL);
+
+        // Se está muito perto do jogador (menos de 1.5 tiles), usar movimento direto
+        // para evitar comportamento estranho no combate corpo a corpo
+        if (distancia < TAMANHO_TILE * 1.5f) {
+            usarPathfinding = false;
+        }
+
+        if (usarPathfinding) {
+            // Verificar se precisa recalcular o caminho
+            if (precisaRecalcularCaminho(&atual->caminho, posicaoJogador, deltaTime)) {
+                // Cada zumbi mira em uma posição ligeiramente diferente ao redor do jogador
+                // Isso cria múltiplos caminhos e evita engarrafamento
+                Vector2 alvoVariado = posicaoJogador;
+
+                // Usar o endereço do ponteiro como "ID único" para criar variação consistente
+                // Cada zumbi terá um offset diferente e permanente
+                uintptr_t zumbiId = (uintptr_t)atual;
+                float hashAngulo = (float)((zumbiId / 137) % 360); // Hash simples baseado no ponteiro
+
+                // Adicionar variação temporal lenta para criar movimento mais orgânico
+                // Cada zumbi roda em velocidade diferente ao redor do jogador
+                float velocidadeRotacao = 0.3f + (float)((zumbiId % 5) * 0.2f); // 0.3-1.1 rad/s
+                float anguloTemporal = atual->tempoDesvio * velocidadeRotacao;
+
+                // Combinar hash permanente + tipo de movimento + variação temporal
+                float variacaoAngulo = hashAngulo + (float)(atual->tipoMovimento * 45) + anguloTemporal;
+                float raioVariacao = 24.0f + (float)((zumbiId % 4) * 12); // 24-60 pixels de variação
+
+                // Adicionar offset circular ao redor do jogador
+                alvoVariado.x += cosf(variacaoAngulo) * raioVariacao;
+                alvoVariado.y += sinf(variacaoAngulo) * raioVariacao;
+
+                // Garantir que o alvo está dentro dos limites do mapa
+                if (alvoVariado.x < 32) alvoVariado.x = 32;
+                if (alvoVariado.x > 992) alvoVariado.x = 992;
+                if (alvoVariado.y < 32) alvoVariado.y = 32;
+                if (alvoVariado.y > 736) alvoVariado.y = 736;
+
+                calcularCaminho(grid, mapa, atual->posicao, alvoVariado, &atual->caminho);
+            }
+
+            // Se tem caminho válido, seguir
+            if (atual->caminho.valido && atual->caminho.tamanho > 0) {
+                // Atualizar seguimento do caminho
+                atualizarSeguimentoCaminho(&atual->caminho, atual->posicao, TAMANHO_TILE * 0.4f);
+
+                // Obter direção do caminho
+                direcaoFinal = obterDirecaoCaminho(&atual->caminho, atual->posicao);
+            } else {
+                // Fallback: movimento direto se não encontrou caminho
+                if (distancia > 0) {
+                    direcaoFinal.x = dx / distancia;
+                    direcaoFinal.y = dy / distancia;
+                }
+            }
+        } else {
+            // Movimento direto quando está perto do jogador
+            if (distancia > 0) {
+                direcaoFinal.x = dx / distancia;
+                direcaoFinal.y = dy / distancia;
+            }
+        }
+
+        // Aplicar pequena variação baseada no tipo de movimento para manter diversidade
+        switch (atual->tipoMovimento % 4) {
+            case 1: // ZIGZAG leve
+                atual->tempoDesvio += deltaTime * 2.0f;
+                {
+                    float desvio = sinf(atual->tempoDesvio) * 0.2f;
+                    direcaoFinal.x += -direcaoFinal.y * desvio;
+                    direcaoFinal.y += direcaoFinal.x * desvio;
+                }
+                break;
+            case 2: // Ligeiramente mais rápido
+                velocidadeFinal *= 1.1f;
+                break;
+            case 3: // Ligeiramente mais lento mas constante
+                velocidadeFinal *= 0.9f;
+                break;
+            default:
+                // Movimento normal
+                break;
+        }
+
+        // Normalizar direção final
+        float mag = sqrtf(direcaoFinal.x * direcaoFinal.x + direcaoFinal.y * direcaoFinal.y);
+        if (mag > 0) {
+            direcaoFinal.x /= mag;
+            direcaoFinal.y /= mag;
+        }
+
+        // Calcular velocidade final
+        atual->velocidade.x = direcaoFinal.x * velocidadeFinal;
+        atual->velocidade.y = direcaoFinal.y * velocidadeFinal;
+
+        // Atualizar direções do sprite baseado no movimento
+        if (atual->velocidade.y < -5.0f) {
+            atual->direcaoVertical = 1; // Costas (indo para cima)
+        } else if (atual->velocidade.y > 5.0f) {
+            atual->direcaoVertical = 0; // Frente (indo para baixo)
+        }
+
+        if (atual->velocidade.x < -5.0f) {
+            atual->direcaoHorizontal = 0; // Esquerda
+        } else if (atual->velocidade.x > 5.0f) {
+            atual->direcaoHorizontal = 1; // Direita
+        }
+
+        // Selecionar sprite correto baseado nas direções
+        if (atual->direcaoVertical == 0) { // Frente
+            if (atual->direcaoHorizontal == 0) {
+                atual->spriteAtual = atual->spriteFrenteEsquerda;
+            } else {
+                atual->spriteAtual = atual->spriteFrenteDireita;
+            }
+        } else { // Costas
+            if (atual->direcaoHorizontal == 0) {
+                atual->spriteAtual = atual->spriteCostasEsquerda;
+            } else {
+                atual->spriteAtual = atual->spriteCostasDireita;
+            }
+        }
+
+        // Atualizar posição
+        atual->posicao.x += atual->velocidade.x * deltaTime;
+        atual->posicao.y += atual->velocidade.y * deltaTime;
+
+        // Verificar se o zumbi morreu
+        if (atual->vida <= 0) {
+            // Remover da lista
+            Zumbi *removido = atual;
+            if (anterior == NULL) {
+                *cabeca = atual->proximo;
+            } else {
+                anterior->proximo = atual->proximo;
+            }
+            atual = atual->proximo;
+            free(removido);
+        } else {
+            anterior = atual;
+            atual = atual->proximo;
+        }
+    }
+}
+
 // Função para desenhar todos os zumbis
 void desenharZumbis(Zumbi *cabeca) {
     Zumbi *atual = cabeca;
@@ -946,19 +1229,45 @@ void verificarColisoesJogadorZumbi(Player *jogador, Zumbi *zumbis) {
 
     // Atualizar cooldown (agora parte da struct Player)
     jogador->cooldownDanoZumbi -= GetFrameTime();
-    
+
     Zumbi *zumbiAtual = zumbis;
+    const float raioJogador = 15.0f;
 
     while (zumbiAtual != NULL) {
         // Verificar colisão (raio do jogador = 15, raio do zumbi = 20)
-        if (verificarColisaoCirculos(jogador->posicao, 15.0f, zumbiAtual->posicao, zumbiAtual->raio)) {
+        if (verificarColisaoCirculos(jogador->posicao, raioJogador, zumbiAtual->posicao, zumbiAtual->raio)) {
+
+            // SEPARAR o zumbi do jogador para evitar sobreposição
+            float dx = zumbiAtual->posicao.x - jogador->posicao.x;
+            float dy = zumbiAtual->posicao.y - jogador->posicao.y;
+            float distancia = sqrtf(dx * dx + dy * dy);
+
+            if (distancia > 0.1f) {
+                // Calcular quanto estão sobrepostos
+                float sobreposicao = (raioJogador + zumbiAtual->raio) - distancia;
+
+                if (sobreposicao > 0) {
+                    // Normalizar direção
+                    float dirX = dx / distancia;
+                    float dirY = dy / distancia;
+
+                    // Empurrar o zumbi para fora (adicionar pequena margem)
+                    zumbiAtual->posicao.x += dirX * (sobreposicao + 2.0f);
+                    zumbiAtual->posicao.y += dirY * (sobreposicao + 2.0f);
+                }
+            } else {
+                // Se estão exatamente na mesma posição, empurrar em direção aleatória
+                float angulo = (float)GetRandomValue(0, 360) * DEG2RAD;
+                zumbiAtual->posicao.x += cosf(angulo) * (raioJogador + zumbiAtual->raio + 5.0f);
+                zumbiAtual->posicao.y += sinf(angulo) * (raioJogador + zumbiAtual->raio + 5.0f);
+            }
 
             // Aplicar dano apenas se o cooldown acabou (a cada 0.5 segundos)
             if (jogador->cooldownDanoZumbi <= 0.0f) {
                 int dano = 5; // GDD: 5 HP de dano por contato
                 jogador->vida -= dano;
                 jogador->cooldownDanoZumbi = 0.5f; // Esperar 0.5 segundos para próximo dano
-                
+
                 printf("OUCH! Jogador recebeu %d de dano. Vida: %d\n", dano, jogador->vida);
             }
 
@@ -1078,7 +1387,13 @@ void criarBoss(Boss **bosses, TipoBoss tipo, Vector2 posicao, Texture2D spriteFr
             novoBoss->cooldownAtaque = 2.0f;
             break;
     }
-    
+
+    // Inicializar pathfinding
+    novoBoss->caminho.valido = false;
+    novoBoss->caminho.tamanho = 0;
+    novoBoss->caminho.indiceAtual = 0;
+    novoBoss->caminho.tempoRecalculo = 0.0f;
+
     // Adicionar à lista encadeada
     novoBoss->proximo = *bosses;
     *bosses = novoBoss;
@@ -1235,6 +1550,207 @@ void atualizarBoss(Boss **bosses, Player *jogador, Bala **balas, float deltaTime
                 break;
         }
         
+        bossAtual = bossAtual->proximo;
+    }
+}
+
+// Função para atualizar bosses com pathfinding A*
+void atualizarBossComPathfinding(Boss **bosses, Player *jogador, Bala **balas, float deltaTime, const Mapa *mapa, PathfindingGrid *grid) {
+    Boss *bossAtual = *bosses;
+
+    while (bossAtual != NULL) {
+        if (!bossAtual->ativo) {
+            bossAtual = bossAtual->proximo;
+            continue;
+        }
+
+        // Salvar posição anterior antes de mover
+        bossAtual->posicaoAnterior = bossAtual->posicao;
+
+        // Atualizar timer de ataque
+        bossAtual->tempoAtaque += deltaTime;
+
+        // Comportamento específico por tipo
+        switch (bossAtual->tipo) {
+            case BOSS_PROWLER: {
+                // Perseguir o jogador COM PATHFINDING
+                float dx = jogador->posicao.x - bossAtual->posicao.x;
+                float dy = jogador->posicao.y - bossAtual->posicao.y;
+                float distancia = sqrtf(dx * dx + dy * dy);
+
+                // Usar pathfinding quando está longe ou há obstáculos
+                bool usarPathfinding = (mapa != NULL && grid != NULL && distancia > TAMANHO_TILE * 2.0f);
+
+                if (usarPathfinding) {
+                    // Calcular caminho com pathfinding
+                    if (precisaRecalcularCaminho(&bossAtual->caminho, jogador->posicao, deltaTime)) {
+                        calcularCaminho(grid, mapa, bossAtual->posicao, jogador->posicao, &bossAtual->caminho);
+                    }
+
+                    if (bossAtual->caminho.valido && bossAtual->caminho.tamanho > 0) {
+                        atualizarSeguimentoCaminho(&bossAtual->caminho, bossAtual->posicao, TAMANHO_TILE * 0.5f);
+                        Vector2 direcao = obterDirecaoCaminho(&bossAtual->caminho, bossAtual->posicao);
+
+                        if (distancia > 0) {
+                            bossAtual->posicao.x += direcao.x * bossAtual->velocidade;
+                            bossAtual->posicao.y += direcao.y * bossAtual->velocidade;
+                        }
+                    } else {
+                        // Fallback: movimento direto
+                        if (distancia > 0) {
+                            bossAtual->posicao.x += (dx / distancia) * bossAtual->velocidade;
+                            bossAtual->posicao.y += (dy / distancia) * bossAtual->velocidade;
+                        }
+                    }
+                } else {
+                    // Movimento direto quando perto
+                    if (distancia > 0) {
+                        bossAtual->posicao.x += (dx / distancia) * bossAtual->velocidade;
+                        bossAtual->posicao.y += (dy / distancia) * bossAtual->velocidade;
+                    }
+                }
+
+                // Atualizar direção do sprite baseado no movimento
+                float absDx = fabsf(dx);
+                float absDy = fabsf(dy);
+
+                if (absDx > absDy) {
+                    if (dx > 0) {
+                        bossAtual->spriteAtual = bossAtual->spriteDireita;
+                    } else {
+                        bossAtual->spriteAtual = bossAtual->spriteEsquerda;
+                    }
+                } else {
+                    if (dy > 0) {
+                        bossAtual->spriteAtual = bossAtual->spriteFrente;
+                    } else {
+                        bossAtual->spriteAtual = bossAtual->spriteCostas;
+                    }
+                }
+
+                // Ataque Slam (área de efeito)
+                if (bossAtual->tempoAtaque >= bossAtual->cooldownAtaque) {
+                    bossAtual->atacando = true;
+
+                    // Verificar se jogador está na área de efeito (raio de 80 pixels)
+                    if (distancia <= 80.0f) {
+                        jogador->vida -= 15; // Dano de área
+                    }
+
+                    bossAtual->tempoAtaque = 0.0f;
+                    bossAtual->atacando = false;
+                }
+                break;
+            }
+
+            case BOSS_HUNTER: {
+                // Perseguição agressiva e rápida COM PATHFINDING
+                float dx = jogador->posicao.x - bossAtual->posicao.x;
+                float dy = jogador->posicao.y - bossAtual->posicao.y;
+                float distancia = sqrtf(dx * dx + dy * dy);
+
+                // Hunter sempre usa pathfinding exceto quando muito perto
+                bool usarPathfinding = (mapa != NULL && grid != NULL && distancia > TAMANHO_TILE * 1.5f);
+
+                if (usarPathfinding) {
+                    // Calcular caminho com pathfinding
+                    if (precisaRecalcularCaminho(&bossAtual->caminho, jogador->posicao, deltaTime)) {
+                        // Hunter mira diretamente no jogador (sem variação)
+                        calcularCaminho(grid, mapa, bossAtual->posicao, jogador->posicao, &bossAtual->caminho);
+                    }
+
+                    if (bossAtual->caminho.valido && bossAtual->caminho.tamanho > 0) {
+                        atualizarSeguimentoCaminho(&bossAtual->caminho, bossAtual->posicao, TAMANHO_TILE * 0.3f);
+                        Vector2 direcao = obterDirecaoCaminho(&bossAtual->caminho, bossAtual->posicao);
+
+                        if (distancia > 0) {
+                            bossAtual->posicao.x += direcao.x * bossAtual->velocidade;
+                            bossAtual->posicao.y += direcao.y * bossAtual->velocidade;
+                        }
+                    } else {
+                        // Fallback: movimento direto
+                        if (distancia > 0) {
+                            bossAtual->posicao.x += (dx / distancia) * bossAtual->velocidade;
+                            bossAtual->posicao.y += (dy / distancia) * bossAtual->velocidade;
+                        }
+                    }
+                } else {
+                    // Movimento direto quando muito perto
+                    if (distancia > 0) {
+                        bossAtual->posicao.x += (dx / distancia) * bossAtual->velocidade;
+                        bossAtual->posicao.y += (dy / distancia) * bossAtual->velocidade;
+                    }
+                }
+
+                // Atualizar direção do sprite baseado no movimento
+                float absDx = fabsf(dx);
+                float absDy = fabsf(dy);
+
+                if (absDx > absDy) {
+                    if (dx > 0) {
+                        bossAtual->spriteAtual = bossAtual->spriteDireita;
+                    } else {
+                        bossAtual->spriteAtual = bossAtual->spriteEsquerda;
+                    }
+                } else {
+                    if (dy > 0) {
+                        bossAtual->spriteAtual = bossAtual->spriteFrente;
+                    } else {
+                        bossAtual->spriteAtual = bossAtual->spriteCostas;
+                    }
+                }
+
+                // Dano por contato (20 HP)
+                if (distancia <= (bossAtual->raio + 20.0f)) {
+                    if (bossAtual->tempoAtaque >= 1.0f) { // Cooldown de 1s entre danos
+                        jogador->vida -= 20;
+                        bossAtual->tempoAtaque = 0.0f;
+                    }
+                }
+                break;
+            }
+
+            case BOSS_ABOMINATION: {
+                // Boss estático com ataques de projéteis estilo bullet-hell
+                // Abomination não precisa de pathfinding pois é estático
+                if (bossAtual->tempoAtaque >= bossAtual->cooldownAtaque) {
+                    // Bullet-Hell - Spray circular rotativo (16 projéteis)
+                    int numProjeteis = 16;
+                    float anguloBase = bossAtual->anguloRotacao;
+
+                    for (int i = 0; i < numProjeteis; i++) {
+                        float angulo = (anguloBase + (360.0f / numProjeteis) * i) * DEG2RAD;
+
+                        Bala *novaBala = (Bala *)malloc(sizeof(Bala));
+                        if (novaBala != NULL) {
+                            novaBala->posicao = bossAtual->posicao;
+                            novaBala->velocidade.x = cosf(angulo) * 250.0f;
+                            novaBala->velocidade.y = sinf(angulo) * 250.0f;
+                            novaBala->tipo = 1;
+                            novaBala->dano = 20.0f;
+                            novaBala->raio = 6.0f;
+                            novaBala->tempoVida = 0.0f;
+                            novaBala->angulo = angulo * RAD2DEG + 90.0f;
+                            novaBala->proximo = *balas;
+                            *balas = novaBala;
+                        }
+                    }
+
+                    // Incrementar rotação acumulativa (+25 graus a cada rajada)
+                    bossAtual->anguloRotacao += 25.0f;
+                    if (bossAtual->anguloRotacao >= 360.0f) {
+                        bossAtual->anguloRotacao -= 360.0f;
+                    }
+
+                    bossAtual->tempoAtaque = 0.0f;
+                }
+                break;
+            }
+
+            default:
+                break;
+        }
+
         bossAtual = bossAtual->proximo;
     }
 }

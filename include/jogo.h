@@ -6,6 +6,7 @@
 #include "raylib.h"
 #include "mapa.h"
 #include "recursos.h"
+#include "pathfinding.h"
 
 // NOTA: As constantes de mapa agora estão definidas em mapa.h:
 // - LARGURA_MAPA 32
@@ -97,7 +98,7 @@ typedef struct Zumbi {
     float velocidadeBase;     // Velocidade original do zumbi
     float tempoDesvio;        // Timer para mudança de direção
     float anguloDesvio;       // Ângulo de desvio aleatório
-    int tipoMovimento;        // 0=direto, 1=zigzag, 2=circular, 3=imprevisível
+    int tipoMovimento;        // 0=direto, 1=zigzag, 2=circular, 3=imprevisível, 4=pathfinding
     int direcaoVertical;      // 0 = frente, 1 = costas
     int direcaoHorizontal;    // 0 = esquerda, 1 = direita
     int tipoSkin;             // 0-4 (qual dos 5 tipos de zumbi)
@@ -106,6 +107,7 @@ typedef struct Zumbi {
     Texture2D spriteCostasDireita;
     Texture2D spriteCostasEsquerda;
     Texture2D spriteAtual;    // Sprite sendo renderizado
+    Caminho caminho;          // Caminho calculado pelo A* (pathfinding)
     struct Zumbi *proximo;    // Ponteiro para o próximo zumbi
 } Zumbi;
 
@@ -151,6 +153,7 @@ typedef struct Boss {
     Texture2D spriteDireita;
     Texture2D spriteEsquerda;
     Texture2D spriteAtual;   // Sprite atual sendo renderizado
+    Caminho caminho;         // Caminho calculado pelo A* (pathfinding)
     struct Boss *proximo;    // Ponteiro para próximo boss (lista encadeada)
 } Boss;
 
@@ -186,6 +189,7 @@ typedef struct {
 // Protótipos das funções principais (a serem implementadas em src/jogo.c)
 void iniciarJogo(Player *jogador);
 void atualizarJogo(Player *jogador, struct Zumbi **zumbis, struct Bala **balas);
+void atualizarJogoComPathfinding(Player *jogador, struct Zumbi **zumbis, struct Bala **balas, const Mapa *mapa, PathfindingGrid *grid);
 void desenharJogo(Player *jogador, struct Zumbi *zumbis, struct Bala *balas, Texture2D texturaMapa, Recursos *recursos);
 
 // Protótipos do Sistema de Armas
@@ -197,6 +201,7 @@ void atirarArma(Player *jogador, struct Bala **balas, Vector2 alvo);
 // Protótipos do Sistema de Boss
 void criarBoss(struct Boss **bosses, TipoBoss tipo, Vector2 posicao, Texture2D spriteFrente, Texture2D spriteCostas, Texture2D spriteDireita, Texture2D spriteEsquerda);
 void atualizarBoss(struct Boss **bosses, Player *jogador, struct Bala **balas, float deltaTime);
+void atualizarBossComPathfinding(struct Boss **bosses, Player *jogador, struct Bala **balas, float deltaTime, const Mapa *mapa, PathfindingGrid *grid);
 void desenharBoss(struct Boss *bosses);
 void verificarColisoesBossBala(struct Boss **bosses, struct Bala **balas, Item *itemProgresso, Item *itemArma, Player *jogador);
 void verificarColisoesBossJogador(struct Boss *bosses, Player *jogador);
@@ -216,6 +221,7 @@ void atualizarBalas(struct Bala **cabeca, Mapa *mapa);
 // Protótipos do Módulo de Zumbis ( - Victor)
 void adicionarZumbi(struct Zumbi **cabeca, Vector2 posInicial, Texture2D sprites[][4]);
 void atualizarZumbis(struct Zumbi **cabeca, Vector2 posicaoJogador, float deltaTime);
+void atualizarZumbisComPathfinding(struct Zumbi **cabeca, Vector2 posicaoJogador, float deltaTime, const Mapa *mapa, PathfindingGrid *grid);
 void desenharZumbis(struct Zumbi *cabeca);
 void liberarZumbis(struct Zumbi **cabeca);
 
