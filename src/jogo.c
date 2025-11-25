@@ -1067,7 +1067,7 @@ void criarBoss(Boss **bosses, TipoBoss tipo, Vector2 posicao, Texture2D spriteFr
             novoBoss->vida = 250;
             novoBoss->velocidade = 0.0f; // Estático
             novoBoss->raio = 60.0f;
-            novoBoss->cooldownAtaque = 2.0f; // Ataque de projéteis a cada 2s
+            novoBoss->cooldownAtaque = 0.4f; // Rajadas rápidas de bullet-hell
             break;
             
         default:
@@ -1192,81 +1192,38 @@ void atualizarBoss(Boss **bosses, Player *jogador, Bala **balas, float deltaTime
             }
             
             case BOSS_ABOMINATION: {
-                // Boss estático com ataques de projéteis
+                // Boss estático com ataques de projéteis estilo bullet-hell
                 if (bossAtual->tempoAtaque >= bossAtual->cooldownAtaque) {
-                    // Alternar entre 3 padrões de ataque
-                    bossAtual->padraoAtaque = (bossAtual->padraoAtaque + 1) % 3;
+                    // Bullet-Hell - Spray circular rotativo (16 projéteis)
+                    // Rotação progressiva: a cada rajada, o ângulo base gira 25 graus
+                    // Isso cria o padrão de "flor" rotacionando característico de bullet-hell
+                    int numProjeteis = 16;
+                    float anguloBase = bossAtual->anguloRotacao; // Ângulo acumulativo
                     
-                    switch (bossAtual->padraoAtaque) {
-                        case 0: { // Padrão 1: Rajada direta ao jogador
-                            float dx = jogador->posicao.x - bossAtual->posicao.x;
-                            float dy = jogador->posicao.y - bossAtual->posicao.y;
-                            float distancia = sqrtf(dx * dx + dy * dy);
-                            
-                            if (distancia > 0) {
-                                Bala *novaBala = (Bala *)malloc(sizeof(Bala));
-                                if (novaBala != NULL) {
-                                    novaBala->posicao = bossAtual->posicao;
-                                    novaBala->velocidade.x = (dx / distancia) * 200.0f;
-                                    novaBala->velocidade.y = (dy / distancia) * 200.0f;
-                                    novaBala->tipo = 1; // Projétil de boss
-                                    novaBala->dano = 25.0f;
-                                    novaBala->raio = 8.0f;
-                                    novaBala->tempoVida = 0.0f;
-                                    novaBala->angulo = atan2f(dy, dx) * RAD2DEG + 90.0f;
-                                    novaBala->proximo = *balas;
-                                    *balas = novaBala;
-                                }
-                            }
-                            break;
-                        }
-                        
-                        case 1: { // Padrão 2: Spray circular (8 projéteis)
-                            for (int i = 0; i < 8; i++) {
-                                float angulo = (360.0f / 8.0f) * i * DEG2RAD;
+                    for (int i = 0; i < numProjeteis; i++) {
+                        // Distribuir projéteis em 360 graus + offset de rotação acumulativa
+                        float angulo = (anguloBase + (360.0f / numProjeteis) * i) * DEG2RAD;
 
-                                Bala *novaBala = (Bala *)malloc(sizeof(Bala));
-                                if (novaBala != NULL) {
-                                    novaBala->posicao = bossAtual->posicao;
-                                    novaBala->velocidade.x = cosf(angulo) * 180.0f;
-                                    novaBala->velocidade.y = sinf(angulo) * 180.0f;
-                                    novaBala->tipo = 1;
-                                    novaBala->dano = 20.0f;
-                                    novaBala->raio = 6.0f;
-                                    novaBala->tempoVida = 0.0f;
-                                    novaBala->angulo = angulo * RAD2DEG + 90.0f;
-                                    novaBala->proximo = *balas;
-                                    *balas = novaBala;
-                                }
-                            }
-                            break;
+                        Bala *novaBala = (Bala *)malloc(sizeof(Bala));
+                        if (novaBala != NULL) {
+                            novaBala->posicao = bossAtual->posicao;
+                            novaBala->velocidade.x = cosf(angulo) * 250.0f;
+                            novaBala->velocidade.y = sinf(angulo) * 250.0f;
+                            novaBala->tipo = 1;
+                            novaBala->dano = 20.0f;
+                            novaBala->raio = 6.0f;
+                            novaBala->tempoVida = 0.0f;
+                            novaBala->angulo = angulo * RAD2DEG + 90.0f;
+                            novaBala->proximo = *balas;
+                            *balas = novaBala;
                         }
-                        
-                        case 2: { // Padrão 3: Espiral rotativa (3 projéteis)
-                            for (int i = 0; i < 3; i++) {
-                                float angulo = (bossAtual->anguloRotacao + (120.0f * i)) * DEG2RAD;
-
-                                Bala *novaBala = (Bala *)malloc(sizeof(Bala));
-                                if (novaBala != NULL) {
-                                    novaBala->posicao = bossAtual->posicao;
-                                    novaBala->velocidade.x = cosf(angulo) * 150.0f;
-                                    novaBala->velocidade.y = sinf(angulo) * 150.0f;
-                                    novaBala->tipo = 1;
-                                    novaBala->dano = 15.0f;
-                                    novaBala->raio = 7.0f;
-                                    novaBala->tempoVida = 0.0f;
-                                    novaBala->angulo = angulo * RAD2DEG + 90.0f;
-                                    novaBala->proximo = *balas;
-                                    *balas = novaBala;
-                                }
-                            }
-                            
-                            bossAtual->anguloRotacao += 15.0f; // Incrementar rotação
-                            if (bossAtual->anguloRotacao >= 360.0f) {
-                                bossAtual->anguloRotacao = 0.0f;
-                            }
-                            break;
-                        }
+                    }
+                    
+                    // Incrementar rotação acumulativa (+25 graus a cada rajada)
+                    // Isso faz a "flor" girar continuamente entre rajadas
+                    bossAtual->anguloRotacao += 25.0f;
+                    if (bossAtual->anguloRotacao >= 360.0f) {
+                        bossAtual->anguloRotacao -= 360.0f;
                     }
                     
                     bossAtual->tempoAtaque = 0.0f;
