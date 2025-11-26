@@ -154,3 +154,7 @@ make help     # Mostra ajuda com todos os comandos
 - Top 5 melhores tempos
 - Arquivo salvo em: `scores.txt`
 - Formato: Minutos:Segundos.Milissegundos
+
+## Screencast 
+https://youtu.be/kDgh7o8J_L0
+<video controls src="Last Breath - Zumbi Survival Game (Ubuntu-24.04) 2025-11-26 13-11-50.mp4" title="Title"></video>
