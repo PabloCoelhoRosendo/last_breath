@@ -1,12 +1,15 @@
-# 🧟 LAST BREATH
+# 🧟 LAST BREATH - Zombie Survival Game
+
+Last Breath é um jogo de sobrevivência desenvolvido por alunos de Ciência da Computação do segundo período, programado em C com o auxílio da biblioteca Raylib. O jogo se passa em um apocalipse zumbi, onde você precisa sobreviver a hordas de mortos-vivos, enfrentar chefões temíveis e descobrir a cura que pode salvar a humanidade. Junte-se a nós nessa missão que envolve muita ação, estratégia e sobrevivência! 🧟‍♂️💀🔫
 
 **Projeto da disciplina: Programação Imperativa e Funcional**  
-**Semestre:** 2025.2  
+**Semestre:** 2025.2
 
+---
 
 ## 📖 Sobre o Jogo
 
-Last Breath é um jogo de sobrevivência contra zumbis desenvolvido em C utilizando a biblioteca Raylib. O jogador precisa sobreviver a hordas de zumbis cada vez mais difíceis, coletar itens, enfrentar chefões e descobrir a cura que pode salvar a humanidade!
+Last Breath é um jogo de sobrevivência contra zumbis onde o jogador precisa atravessar três fases distintas, enfrentando hordas progressivas de inimigos e chefões poderosos. Com sistema de armas, pathfinding inteligente e mecânicas de bullet-hell, cada fase oferece um desafio único até a descoberta da cura.
 
 ---
 
@@ -35,8 +38,6 @@ Last Breath é um jogo de sobrevivência contra zumbis desenvolvido em C utiliza
 
 ## 🎯 Conceitos de Programação Aplicados
 
-Este projeto foi desenvolvido para demonstrar diversos conceitos da disciplina:
-
 - ✅ **Structs** - Player, Zombie, Bala, Boss, Item
 - ✅ **Ponteiros** - Manipulação de listas encadeadas
 - ✅ **Alocação Dinâmica** - malloc() e free() para gerenciar inimigos
@@ -47,90 +48,82 @@ Este projeto foi desenvolvido para demonstrar diversos conceitos da disciplina:
 
 ---
 
-## 🛠️ Requisitos
+## 👑 Requisitos
 
-### Windows
-- **Compilador:** GCC (recomendado: w64devkit ou MinGW)
-- **Biblioteca:** Raylib 5.0+
-
-### Linux
-- **Compilador:** GCC
-- **Biblioteca:** Raylib 5.0+
-- **Dependências:** OpenGL, X11
+- [Raylib](https://www.raylib.com/) 5.0+
+- Compilador C (gcc)
+- Make
+- Git
 
 ---
 
-## 🚀 Como Compilar e Executar
+## 👑 Instalação das Dependências
 
-### Windows (com w64devkit)
+#### Linux (Ubuntu/Debian)
+```bash
+sudo apt-get update
+sudo apt-get install build-essential git libraylib-dev libgl1-mesa-dev libx11-dev
+```
 
-1. Baixe e extraia o [w64devkit](https://github.com/skeeto/w64devkit/releases)
-2. Adicione ao PATH: `C:\caminho\para\w64devkit\bin`
-3. No terminal, na pasta do projeto:
+#### macOS
+
+Instale o [Homebrew](https://brew.sh/) e depois:
+```bash
+brew install raylib git
+```
+
+#### Windows
+
+Recomenda-se usar o [w64devkit](https://github.com/skeeto/w64devkit/releases):
+
+1. Baixe o w64devkit mais recente
+2. Extraia em uma pasta (ex: `C:\w64devkit`)
+3. Adicione ao PATH do sistema: `C:\w64devkit\bin`
+4. A Raylib já está incluída no w64devkit
+
+---
+
+## 🚀 Instalação e Execução
+
+### Passo 1: Clonar o Repositório
+```bash
+git clone https://github.com/seu-usuario/Last_Breath.git
+cd Last_Breath
+```
+
+### Passo 2: Compilação
+
+Para compilar o jogo, execute:
 ```bash
 make
-.\last_breath.exe
 ```
 
-### Linux
+### Passo 3: Executando o Jogo
 
-1. Instale as dependências:
+Após compilar, rode:
 ```bash
-sudo apt-get install build-essential libraylib-dev
+make run
 ```
 
-2. Compile e execute:
+ou execute diretamente:
 ```bash
-make
-./last_breath
+./last_breath          # Linux/macOS
+.\last_breath.exe      # Windows
 ```
 
-### Compilação Manual (sem Makefile)
-
-**Windows:**
+### Limpeza dos Arquivos de Build
 ```bash
-gcc src/main.c src/jogo.c src/arquivo.c src/mapa.c src/recursos.c src/pathfinding.c -o last_breath.exe -Iinclude -lraylib -lopengl32 -lgdi32 -lwinmm
-```
-
-**Linux:**
-```bash
-gcc src/main.c src/jogo.c src/arquivo.c src/mapa.c src/recursos.c src/pathfinding.c -o last_breath -Iinclude -lraylib -lGL -lm -lpthread -ldl -lrt -lX11
+make clean
 ```
 
 ---
 
-## 🎮 Controles
-
-| Tecla | Ação |
-|-------|------|
-| **W, A, S, D** | Movimentar o jogador |
-| **Mouse** | Mirar |
-| **Click Esquerdo** | Atirar |
-| **R** | Recarregar arma |
-| **1, 2, 3** | Trocar de arma |
-| **E** | Interagir (coletar itens/usar portas) |
-| **ESC** | Sair do jogo |
-
----
-
-## 📁 Estrutura do Projeto
-```
-Last_Breath/
-├── assets/               # Recursos visuais
-│   ├── avatar/          # Sprites do jogador
-│   ├── zumbis/          # Sprites dos zumbis (5 tipos)
-│   ├── bosses/          # Sprites dos chefões
-│   ├── tiles/           # Texturas do mapa
-│   ├── maps/            # Arquivos de mapa (.txt)
-│   ├── armas/           # Sprites das armas
-│   ├── bala/            # Sprite da bala
-│   ├── chave/           # Sprite da chave
-│   ├── logo/            # Logo do jogo
-│   └── background/      # Background do menu
-├── include/             # Headers (.h)
-├── src/                 # Código fonte (.c)
-├── Makefile            # Automação de compilação
-└── README.md           # Este arquivo
+## 🔧 Comandos do Makefile
+```bash
+make          # Compila o jogo
+make run      # Compila e executa
+make clean    # Remove arquivos compilados
+make help     # Mostra ajuda com todos os comandos
 ```
 
 ---
