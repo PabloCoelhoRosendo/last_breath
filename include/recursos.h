@@ -13,6 +13,7 @@ typedef struct {
 
     Texture2D jogadorFrente;
     Texture2D jogadorTras;
+    Texture2D jogadorTrasCostasEsquerda;
     Texture2D jogadorEsquerda;
     Texture2D jogadorDireita;
 

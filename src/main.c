@@ -64,7 +64,7 @@ int main(void) {
     Texture2D spriteFrenteDireita = recursos->jogadorDireita;
     Texture2D spriteFrenteEsquerda = recursos->jogadorEsquerda;
     Texture2D spriteCostasDireita = recursos->jogadorTras;
-    Texture2D spriteCostasEsquerda = recursos->jogadorTras;
+    Texture2D spriteCostasEsquerda = recursos->jogadorTrasCostasEsquerda;
 
     Texture2D prowlerFrente = recursos->bosses[0][0];
     Texture2D prowlerCostas = recursos->bosses[0][1];
