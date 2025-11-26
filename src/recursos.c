@@ -73,9 +73,9 @@ void carregarRecursos(Recursos* recursos) {
     recursos->chaoLab = recursos->texturasTiles[TILE_CHAO_LAB];
 
     carregarTextura(&recursos->texturasTiles[TILE_PAREDE], "assets/tiles/parede.png", NULL, "Parede");
-    carregarTextura(&recursos->texturasTiles[TILE_PREDIO_VERMELHO], "assets/tiles/Mercado.png", "assets/tiles/predio_vermelho.png", "Mercado");
-    carregarTextura(&recursos->texturasTiles[TILE_PREDIO_AZUL], "assets/tiles/Posto.png", "assets/tiles/predio_azul.png", "Posto");
-    carregarTextura(&recursos->texturasTiles[TILE_PREDIO_VERDE], "assets/tiles/Laboratorio.png", "assets/tiles/predio_verde.png", "Laboratorio");
+    carregarTextura(&recursos->texturasTiles[TILE_MERCADO], "assets/tiles/Mercado.png", "assets/tiles/predio_vermelho.png", "Mercado");
+    carregarTextura(&recursos->texturasTiles[TILE_POSTO], "assets/tiles/Posto.png", "assets/tiles/predio_azul.png", "Posto");
+    carregarTextura(&recursos->texturasTiles[TILE_LABORATORIO], "assets/tiles/Laboratorio.png", "assets/tiles/predio_verde.png", "Laboratorio");
     carregarTextura(&recursos->texturasTiles[TILE_PREDIO_AMARELO], "assets/tiles/predio_amarelo.png", NULL, "Predio Amarelo");
 
     carregarTextura(&recursos->texturasTiles[TILE_CHAO_MERCADO], "assets/tiles/chao mercado.png", NULL, "Chao Mercado");

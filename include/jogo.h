@@ -198,7 +198,6 @@ void atualizarBalas(struct Bala **cabeca, Mapa *mapa);
 
 
 void adicionarZumbi(struct Zumbi **cabeca, Vector2 posInicial, Texture2D sprites[][4]);
-void atualizarZumbis(struct Zumbi **cabeca, Vector2 posicaoJogador, float deltaTime);
 void atualizarZumbisComPathfinding(struct Zumbi **cabeca, Vector2 posicaoJogador, float deltaTime, const Mapa *mapa, PathfindingGrid *grid);
 void desenharZumbis(struct Zumbi *cabeca);
 void liberarZumbis(struct Zumbi **cabeca);

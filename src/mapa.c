@@ -90,13 +90,13 @@ void inicializarMapaPadrao(Mapa* mapa) {
                 mapa->tiles[i][j] = TILE_PAREDE;
             }
             else if (i >= 2 && i <= 5 && j >= 2 && j <= 6) {
-                mapa->tiles[i][j] = TILE_PREDIO_VERMELHO;
+                mapa->tiles[i][j] = TILE_MERCADO;
             }
             else if (i >= 2 && i <= 5 && j >= 25 && j <= 29) {
-                mapa->tiles[i][j] = TILE_PREDIO_AZUL;
+                mapa->tiles[i][j] = TILE_POSTO;
             }
             else if (i >= 18 && i <= 21 && j >= 2 && j <= 6) {
-                mapa->tiles[i][j] = TILE_PREDIO_VERDE;
+                mapa->tiles[i][j] = TILE_LABORATORIO;
             }
             else if (i >= 18 && i <= 21 && j >= 25 && j <= 29) {
                 mapa->tiles[i][j] = TILE_PREDIO_AMARELO;
@@ -190,7 +190,7 @@ void desenharMapaTiles(const Mapa* mapa, Texture2D texturasTiles[]) {
 
             int tipoTile = mapa->tiles[i][j];
 
-            if (tipoTile >= TILE_PREDIO_VERMELHO && tipoTile <= TILE_PREDIO_AMARELO) {
+            if (tipoTile >= TILE_MERCADO && tipoTile <= TILE_PREDIO_AMARELO) {
                 Predio predio;
                 detectarPredio(mapa, i, j, &predio);
 
@@ -207,13 +207,13 @@ void desenharMapaTiles(const Mapa* mapa, Texture2D texturasTiles[]) {
                     } else {
                         Color cor;
                         switch (tipoTile) {
-                            case TILE_PREDIO_VERMELHO:
+                            case TILE_MERCADO:
                                 cor = (Color){180, 50, 50, 255};
                                 break;
-                            case TILE_PREDIO_AZUL:
+                            case TILE_POSTO:
                                 cor = (Color){50, 100, 180, 255};
                                 break;
-                            case TILE_PREDIO_VERDE:
+                            case TILE_LABORATORIO:
                                 cor = (Color){50, 150, 50, 255};
                                 break;
                             case TILE_PREDIO_AMARELO:
