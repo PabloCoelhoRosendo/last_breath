@@ -1,7 +1,5 @@
 # 🧟 LAST BREATH - Zombie Survival Game
 
-Last Breath é um jogo de sobrevivência desenvolvido por alunos de Ciência da Computação do segundo período, programado em C com o auxílio da biblioteca Raylib. O jogo se passa em um apocalipse zumbi, onde você precisa sobreviver a hordas de mortos-vivos, enfrentar chefões temíveis e descobrir a cura que pode salvar a humanidade. Junte-se a nós nessa missão que envolve muita ação, estratégia e sobrevivência! 🧟‍♂️💀🔫
-
 **Projeto da disciplina: Programação Imperativa e Funcional**  
 **Semestre:** 2025.2
 
