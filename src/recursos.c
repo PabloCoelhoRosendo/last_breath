@@ -284,7 +284,6 @@ void descarregarRecursos(Recursos* recursos) {
         }
     }
 
-    // Descarrega texturas do jogador e zera IDs
     if (texturaValida(recursos->jogadorFrente)) {
         UnloadTexture(recursos->jogadorFrente);
         recursos->jogadorFrente.id = 0;
@@ -302,7 +301,6 @@ void descarregarRecursos(Recursos* recursos) {
         recursos->jogadorDireita.id = 0;
     }
 
-    // Descarrega texturas de zumbis e zera IDs
     for (int i = 0; i < 5; i++) {
         for (int j = 0; j < 4; j++) {
             if (texturaValida(recursos->zumbis[i][j])) {
@@ -312,16 +310,12 @@ void descarregarRecursos(Recursos* recursos) {
         }
     }
 
-    // Descarrega texturas de bosses e zera IDs
-    // IMPORTANTE: Evitar double-free nas texturas compartilhadas (Abomination usa mesma textura para múltiplas direções)
-    // Rastrear quais texture IDs já foram descarregados
-    unsigned int idsDescarregados[12] = {0}; // Máximo de 12 texturas (3 bosses x 4 direções)
+    unsigned int idsDescarregados[12] = {0};
     int numDescarregados = 0;
 
     for (int i = 0; i < 3; i++) {
         for (int j = 0; j < 4; j++) {
             if (texturaValida(recursos->bosses[i][j])) {
-                // Verificar se este ID já foi descarregado
                 bool jaDescarregado = false;
                 for (int k = 0; k < numDescarregados; k++) {
                     if (idsDescarregados[k] == recursos->bosses[i][j].id) {
@@ -339,19 +333,16 @@ void descarregarRecursos(Recursos* recursos) {
         }
     }
 
-    // Descarrega textura de fundo e zera ID
     if (texturaValida(recursos->fundoMapa)) {
         UnloadTexture(recursos->fundoMapa);
         recursos->fundoMapa.id = 0;
     }
 
-    // Descarrega textura da bala
     if (texturaValida(recursos->texturaBala)) {
         UnloadTexture(recursos->texturaBala);
         recursos->texturaBala.id = 0;
     }
 
-    // Zera IDs das referências de chão (já descarregadas via texturasTiles[])
     recursos->chaoMercado.id = 0;
     recursos->chaoRua.id = 0;
     recursos->chaoLab.id = 0;
@@ -364,10 +355,6 @@ void destruirRecursos(Recursos* recursos) {
         free(recursos);
     }
 }
-
-// =====================================================================
-// FUNÇÕES AUXILIARES
-// =====================================================================
 
 Texture2D obterTexturaTile(Recursos* recursos, int tipoTile) {
     if (recursos == NULL || tipoTile < 0 || tipoTile >= MAX_TIPOS_TILE) {

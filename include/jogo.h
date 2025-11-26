@@ -159,24 +159,24 @@ typedef struct {
     Vector2 posicao;
     float largura;
     float altura;
-    bool ativa;           // Se a porta está no mapa
-    bool trancada;        // Se a porta requer chave
-    int faseDestino;      // Qual fase a porta leva (1->2, 2->3)
+    bool ativa;           
+    bool trancada;        
+    int faseDestino;      
 } Porta;
 
-// Protótipos das funções principais (a serem implementadas em src/jogo.c)
+
 void iniciarJogo(Player *jogador);
 void atualizarJogo(Player *jogador, struct Zumbi **zumbis, struct Bala **balas);
 void atualizarJogoComPathfinding(Player *jogador, struct Zumbi **zumbis, struct Bala **balas, const Mapa *mapa, PathfindingGrid *grid);
 void desenharJogo(Player *jogador, struct Zumbi *zumbis, struct Bala *balas, Texture2D texturaMapa, Recursos *recursos);
 
-// Protótipos do Sistema de Armas
+
 void inicializarArma(Arma *arma, TipoArma tipo);
 void equiparArma(Player *jogador, int slot);
 void recarregarArma(Player *jogador);
 void atirarArma(Player *jogador, struct Bala **balas, Vector2 alvo);
 
-// Protótipos do Sistema de Boss
+
 void criarBoss(struct Boss **bosses, TipoBoss tipo, Vector2 posicao, Texture2D spriteFrente, Texture2D spriteCostas, Texture2D spriteDireita, Texture2D spriteEsquerda);
 void atualizarBoss(struct Boss **bosses, Player *jogador, struct Bala **balas, float deltaTime);
 void atualizarBossComPathfinding(struct Boss **bosses, Player *jogador, struct Bala **balas, float deltaTime, const Mapa *mapa, PathfindingGrid *grid);
@@ -184,7 +184,7 @@ void desenharBoss(struct Boss *bosses);
 void verificarColisoesBossBala(struct Boss **bosses, struct Bala **balas, Item *itemProgresso, Item *itemArma, Player *jogador);
 void verificarColisoesBossJogador(struct Boss *bosses, Player *jogador);
 
-// Protótipos do Sistema de Itens e Interação
+
 void criarItem(Item *item, TipoItem tipo, Vector2 posicao);
 void desenharItem(Item *item, Recursos *recursos);
 bool verificarColetaItem(Item *item, Player *jogador);
@@ -192,23 +192,23 @@ void criarPorta(Porta *porta, Vector2 posicao, int faseDestino);
 void desenharPorta(Porta *porta, Texture2D texturaPorta);
 bool verificarInteracaoPorta(Porta *porta, Player *jogador);
 
-// Protótipos do Módulo de Balas ( - Pablo)
+
 void adicionarBala(struct Bala **cabeca, Vector2 posInicial, Vector2 alvo, int tipo, float dano);
 void atualizarBalas(struct Bala **cabeca, Mapa *mapa);
 
-// Protótipos do Módulo de Zumbis ( - Victor)
+
 void adicionarZumbi(struct Zumbi **cabeca, Vector2 posInicial, Texture2D sprites[][4]);
 void atualizarZumbis(struct Zumbi **cabeca, Vector2 posicaoJogador, float deltaTime);
 void atualizarZumbisComPathfinding(struct Zumbi **cabeca, Vector2 posicaoJogador, float deltaTime, const Mapa *mapa, PathfindingGrid *grid);
 void desenharZumbis(struct Zumbi *cabeca);
 void liberarZumbis(struct Zumbi **cabeca);
 
-// Protótipos do Sistema de Hordas
+
 void iniciarHorda(Player *jogador, int numeroHorda);
 void atualizarHorda(Player *jogador, struct Zumbi **zumbis, struct Boss **bosses, float deltaTime);
 int contarBossesVivos(struct Boss *bosses);
 
-// Protótipos das Funções de Colisão
+
 int verificarColisaoCirculos(Vector2 pos1, float raio1, Vector2 pos2, float raio2);
 void verificarColisoesBalaZumbi(struct Bala **balas, struct Zumbi **zumbis, Player *jogador);
 void verificarColisoesBalaJogador(struct Bala **balas, Player *jogador);

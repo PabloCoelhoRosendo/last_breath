@@ -1,4 +1,3 @@
-// src/jogo.c
 
 #include "raylib.h"
 #include "jogo.h"
@@ -6,14 +5,11 @@
 #include "recursos.h"
 #include "pathfinding.h"
 
-#include <stdlib.h> // Para malloc e free (Requisito: Alocação Dinâmica de Memória)
+#include <stdlib.h> 
 #include <stdio.h>
-#include <math.h>   // Para sqrtf
-#include <stdint.h> // Para uintptr_t
+#include <math.h>   
+#include <stdint.h> 
 
-// --- Funções Auxiliares de Colisão ---
-
-// Função para verificar colisão entre dois círculos
 int verificarColisaoCirculos(Vector2 pos1, float raio1, Vector2 pos2, float raio2) {
     float dx = pos2.x - pos1.x;
     float dy = pos2.y - pos1.y;
@@ -22,12 +18,9 @@ int verificarColisaoCirculos(Vector2 pos1, float raio1, Vector2 pos2, float raio
     return distanciaAoQuadrado < (raiosCombinados * raiosCombinados);
 }
 
-// --- Funções do Módulo de Balas (- Pablo) ---
-
-// Função para Alocação Dinâmica e inserção de uma nova Bala na Lista Encadeada
 void adicionarBala(Bala **cabeca, Vector2 posInicial, Vector2 alvo, int tipo, float dano) {
     
-    // 1. Alocação Dinâmica de Memória (Requisito: Alocação Dinâmica)
+
     Bala *novaBala = (Bala *)malloc(sizeof(Bala));
 
     if (novaBala == NULL) {
@@ -35,26 +28,20 @@ void adicionarBala(Bala **cabeca, Vector2 posInicial, Vector2 alvo, int tipo, fl
         return;
     }
 
-    // 2. Inicializar a nova bala
     novaBala->posicao = posInicial;
     novaBala->tipo = tipo;
     novaBala->dano = dano;
-    novaBala->raio = (tipo == 0) ? 3.0f : 5.0f;  // Balas do boss são maiores
-    novaBala->tempoVida = 0.0f;  // Começa em 0 e incrementa
+    novaBala->raio = (tipo == 0) ? 3.0f : 5.0f;  
+    novaBala->tempoVida = 0.0f;  
 
-    // Calcular a direção da bala (do atirador para o alvo)
     Vector2 direcao = {alvo.x - posInicial.x, alvo.y - posInicial.y};
 
-    // Normalizar a direção e aplicar velocidade
     float comprimento = sqrtf(direcao.x * direcao.x + direcao.y * direcao.y);
     if (comprimento > 0) {
-        float velocidadeBase = (tipo == 0) ? 500.0f : 300.0f; // Boss tem projéteis mais lentos
+        float velocidadeBase = (tipo == 0) ? 500.0f : 300.0f; 
         novaBala->velocidade.x = (direcao.x / comprimento) * velocidadeBase;
         novaBala->velocidade.y = (direcao.y / comprimento) * velocidadeBase;
 
-        // Calcular o ângulo de rotação da bala (em graus)
-        // atan2 retorna radianos, então convertemos para graus e adicionamos 90°
-        // porque a sprite está em pé (orientada verticalmente)
         novaBala->angulo = atan2f(direcao.y, direcao.x) * RAD2DEG + 90.0f;
     } else {
         novaBala->velocidade.x = 0;
@@ -62,12 +49,10 @@ void adicionarBala(Bala **cabeca, Vector2 posInicial, Vector2 alvo, int tipo, fl
         novaBala->angulo = 0;
     }
 
-    // 3. Inserir a bala no início da lista (Requisito: Ponteiros e Lista Encadeada)
     novaBala->proximo = *cabeca;
     *cabeca = novaBala;
 }
 
-// Função para atualizar todas as balas e remover as que saíram da tela
 void atualizarBalas(Bala **cabeca, Mapa *mapa) {
     if (cabeca == NULL || *cabeca == NULL) return;
     
@@ -76,25 +61,25 @@ void atualizarBalas(Bala **cabeca, Mapa *mapa) {
     float deltaTime = GetFrameTime();
     
     while (atual != NULL) {
-        // Atualizar posição da bala
+
         atual->posicao.x += atual->velocidade.x * deltaTime;
         atual->posicao.y += atual->velocidade.y * deltaTime;
         
-        // Atualizar tempo de vida
+
         atual->tempoVida += deltaTime;
         
-        // Tempo máximo de vida: 2 segundos para balas normais, 3 para boss
+
         float tempoMaximo = (atual->tipo == 0) ? 2.0f : 3.0f;
         
-        // Verificar se a bala colidiu com o mapa
+
         int colidiuMapa = (mapa != NULL) ? verificarColisaoMapa(mapa, atual->posicao, atual->raio) : 0;
         
-        // Verificar se a bala saiu da tela, expirou ou colidiu com parede - Ajustado para 1024x768
+
         if (atual->posicao.x < 0 || atual->posicao.x > 1024 ||
             atual->posicao.y < 0 || atual->posicao.y > 768 ||
             atual->tempoVida >= tempoMaximo || colidiuMapa) {
             
-            // Remover a bala da lista
+
             Bala *temp = atual;
             Bala *proximaBala = atual->proximo;
             
@@ -104,7 +89,7 @@ void atualizarBalas(Bala **cabeca, Mapa *mapa) {
                 anterior->proximo = proximaBala;
             }
             
-            free(temp); // Liberar memória
+            free(temp); 
             atual = proximaBala;
         } else {
             anterior = atual;
@@ -113,9 +98,6 @@ void atualizarBalas(Bala **cabeca, Mapa *mapa) {
     }
 }
 
-// --- Funções do Sistema de Armas ---
-
-// Função para inicializar uma arma com base no tipo
 void inicializarArma(Arma *arma, TipoArma tipo) {
     arma->tipo = tipo;
     arma->cooldown = 0.0f;
@@ -126,7 +108,7 @@ void inicializarArma(Arma *arma, TipoArma tipo) {
             arma->taxaTiroMS = 400;
             arma->penteMax = 12;
             arma->penteAtual = 12;
-            arma->municaoTotal = 60;  // 5 pentes extras
+            arma->municaoTotal = 60;  
             arma->tempoRecarga = 2.0f;
             break;
             
@@ -135,7 +117,7 @@ void inicializarArma(Arma *arma, TipoArma tipo) {
             arma->taxaTiroMS = 1000;
             arma->penteMax = 6;
             arma->penteAtual = 6;
-            arma->municaoTotal = 24;  // 4 pentes extras
+            arma->municaoTotal = 24;  
             arma->tempoRecarga = 3.0f;
             break;
             
@@ -144,7 +126,7 @@ void inicializarArma(Arma *arma, TipoArma tipo) {
             arma->taxaTiroMS = 100;
             arma->penteMax = 30;
             arma->penteAtual = 30;
-            arma->municaoTotal = 120;  // 4 pentes extras
+            arma->municaoTotal = 120;  
             arma->tempoRecarga = 2.5f;
             break;
             
@@ -160,60 +142,56 @@ void inicializarArma(Arma *arma, TipoArma tipo) {
     }
 }
 
-// Função para equipar uma arma de um slot específico
 void equiparArma(Player *jogador, int slot) {
-    // Verificar se o slot é válido (0, 1 ou 2)
+
     if (slot < 0 || slot > 2) return;
     
-    // Verificar se o slot tem uma arma
+
     if (jogador->slots[slot].tipo == ARMA_NENHUMA) return;
     
-    // Equipar a arma
+
     jogador->slotAtivo = slot;
 }
 
-// Função para recarregar a arma equipada
 void recarregarArma(Player *jogador) {
     if (jogador->estaRecarregando) return;
     
     Arma *armaAtual = &jogador->slots[jogador->slotAtivo];
     
-    // Verificar se precisa recarregar
+
     if (armaAtual->penteAtual >= armaAtual->penteMax) return;
     if (armaAtual->municaoTotal <= 0) return;
     
-    // Iniciar recarga
+
     jogador->estaRecarregando = true;
     jogador->tempoRecargaAtual = armaAtual->tempoRecarga;
 }
 
-// Função para atirar com a arma equipada
 void atirarArma(Player *jogador, Bala **balas, Vector2 alvo) {
     Arma *armaAtual = &jogador->slots[jogador->slotAtivo];
     
-    // Verificar se pode atirar
+
     if (armaAtual->penteAtual <= 0) return;
     if (armaAtual->cooldown > 0.0f) return;
     if (jogador->estaRecarregando) return;
     
-    // Adicionar bala
+
     adicionarBala(balas, jogador->posicao, alvo, 0, (float)armaAtual->dano);
     
-    // Reduzir munição
+
     armaAtual->penteAtual--;
     
-    // Aplicar cooldown (converter MS para segundos)
+
     armaAtual->cooldown = armaAtual->taxaTiroMS / 1000.0f;
 }
 
-// Função para inicializar o jogador
 void iniciarJogo(Player *jogador) {
-    // Posição inicial do jogador (centro do mapa 1024x768)
+
     jogador->posicao = (Vector2){512, 384};
     jogador->vida = 100;
     jogador->tempoTotal = 0.0f;
-    jogador->fase = 1;  // Começar na Fase 1
-    jogador->velocidadeBase = 3.0f;  // Velocidade da Fase 1
+    jogador->fase = 1;  
+    jogador->velocidadeBase = 3.0f;  
     jogador->direcaoVertical = 0;
     jogador->direcaoHorizontal = 1;
     jogador->estaRecarregando = false;
@@ -221,17 +199,15 @@ void iniciarJogo(Player *jogador) {
     jogador->tempoJaSalvo = false;
     jogador->estadoJogo = ESTADO_JOGANDO;
 
-    // Inicializar sistema de boss
     jogador->timerBoss = 0.0f;
     jogador->bossSpawnado = false;
 
-    // Inicializar sistema de itens
     jogador->temChave = false;
     jogador->temMapa = false;
     jogador->temCure = false;
     jogador->jogoVencido = false;
     
-    // Inicializar sistema de hordas
+
     jogador->hordaAtual = 0;
     jogador->estadoHorda = HORDA_NAO_INICIADA;
     jogador->zumbisRestantes = 0;
@@ -243,39 +219,36 @@ void iniciarJogo(Player *jogador) {
     jogador->tempoSpawn = 0.0f;
     jogador->tempoSpawnBoss = 0.0f;
 
-    // Inicializar cooldowns de dano
     jogador->cooldownDanoBala = 0.0f;
     jogador->cooldownDanoZumbi = 0.0f;
 
-    // Inicializar slots de arma
-    inicializarArma(&jogador->slots[0], ARMA_PISTOL);   // Slot 1: Pistol (inicial)
-    inicializarArma(&jogador->slots[1], ARMA_NENHUMA);  // Slot 2: Vazio
-    inicializarArma(&jogador->slots[2], ARMA_NENHUMA);  // Slot 3: Vazio
-    jogador->slotAtivo = 0;  // Começa com a Pistol equipada
+    inicializarArma(&jogador->slots[0], ARMA_PISTOL);   
+    inicializarArma(&jogador->slots[1], ARMA_NENHUMA);  
+    inicializarArma(&jogador->slots[2], ARMA_NENHUMA);  
+    jogador->slotAtivo = 0;  
 }
 
-// Função para atualizar a lógica do jogo
 void atualizarJogo(Player *jogador, Zumbi **zumbis, Bala **balas) {
     float deltaTime = GetFrameTime();
     
-    // Se jogador está morto ou venceu, não atualizar nada (tempo para)
+
     if (jogador->vida <= 0 || jogador->jogoVencido) {
-        return; // Parar aqui - não processar movimento, ações nem tempo
+        return; 
     }
     
     Arma *armaAtual = &jogador->slots[jogador->slotAtivo];
     
-    // Atualizar cooldown da arma
+
     if (armaAtual->cooldown > 0.0f) {
         armaAtual->cooldown -= deltaTime;
     }
     
-    // Sistema de Recarga
+
     if (jogador->estaRecarregando) {
         jogador->tempoRecargaAtual -= deltaTime;
         
         if (jogador->tempoRecargaAtual <= 0.0f) {
-            // Recarga completa
+
             int municaoNecessaria = armaAtual->penteMax - armaAtual->penteAtual;
             int municaoDisponivel = armaAtual->municaoTotal;
             int municaoRecarregar = (municaoNecessaria <= municaoDisponivel) ? municaoNecessaria : municaoDisponivel;
@@ -288,12 +261,12 @@ void atualizarJogo(Player *jogador, Zumbi **zumbis, Bala **balas) {
         }
     }
     
-    // Tecla R para recarregar
+
     if (IsKeyPressed(KEY_R) && !jogador->estaRecarregando) {
         recarregarArma(jogador);
     }
     
-    // Teclas 1, 2, 3 para trocar de arma
+
     if (IsKeyPressed(KEY_ONE)) {
         equiparArma(jogador, 0);
     }
@@ -304,91 +277,78 @@ void atualizarJogo(Player *jogador, Zumbi **zumbis, Bala **balas) {
         equiparArma(jogador, 2);
     }
     
-    // Calcular velocidade baseada no estado
+
     float velocidadeAtual = jogador->velocidadeBase;
     if (jogador->estaRecarregando) {
-        velocidadeAtual = 2.0f;  // Reduz para 2.0 m/s durante recarga
+        velocidadeAtual = 2.0f;  
     }
     
-    // Converter m/s para pixels/frame (assumindo 60 FPS e 1 pixel = 1 metro)
+
     float velocidade = velocidadeAtual * 60.0f * deltaTime;
 
-    // Atualizar direção vertical baseado no movimento
     if (IsKeyDown(KEY_W)) {
         jogador->posicao.y -= velocidade;
-        jogador->direcaoVertical = 1; // Costas (indo para cima)
+        jogador->direcaoVertical = 1; 
     }
     if (IsKeyDown(KEY_S)) {
         jogador->posicao.y += velocidade;
-        jogador->direcaoVertical = 0; // Frente (indo para baixo)
+        jogador->direcaoVertical = 0; 
     }
 
-    // Atualizar direção horizontal baseado no movimento
     if (IsKeyDown(KEY_A)) {
         jogador->posicao.x -= velocidade;
-        jogador->direcaoHorizontal = 0; // Esquerda
+        jogador->direcaoHorizontal = 0; 
     }
     if (IsKeyDown(KEY_D)) {
         jogador->posicao.x += velocidade;
-        jogador->direcaoHorizontal = 1; // Direita
+        jogador->direcaoHorizontal = 1; 
     }
 
-    // NOTA: Colisão com mapa agora é tratada no main.c com o novo sistema
-
-    // Limitar o jogador dentro da tela (1024x768)
     if (jogador->posicao.x < 20) jogador->posicao.x = 20;
     if (jogador->posicao.x > 1004) jogador->posicao.x = 1004;
     if (jogador->posicao.y < 20) jogador->posicao.y = 20;
     if (jogador->posicao.y > 748) jogador->posicao.y = 748;
     
-    // Atirar com o botão esquerdo do mouse
+
     if (IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) {
         Vector2 mousePos = GetMousePosition();
         atirarArma(jogador, balas, mousePos);
     }
     
-    // Atualizar balas (sem mapa por enquanto, será passado do main.c)
-    // atualizarBalas(balas, NULL);
 
-    // Atualizar zumbis
     atualizarZumbis(zumbis, jogador->posicao, deltaTime);
 
-    // Verificar colisões
     verificarColisoesBalaZumbi(balas, zumbis, jogador);
-    verificarColisoesBalaJogador(balas, jogador); // Verificar balas do boss atingindo o jogador
+    verificarColisoesBalaJogador(balas, jogador); 
     if (zumbis != NULL && *zumbis != NULL) {
         verificarColisoesJogadorZumbi(jogador, *zumbis);
-        // verificarColisoesZumbiZumbi(*zumbis); // DESABILITADO - Otimização de performance (O(n²) custoso)
+
     }
     
-    // Atualizar o tempo total se o jogador estiver vivo
+
     if (jogador->vida > 0) {
         jogador->tempoTotal += GetFrameTime();
     }
 }
 
-// Função para atualizar o jogo com pathfinding A* para zumbis
 void atualizarJogoComPathfinding(Player *jogador, Zumbi **zumbis, Bala **balas, const Mapa *mapa, PathfindingGrid *grid) {
     float deltaTime = GetFrameTime();
 
-    // Se jogador está morto ou venceu, não atualizar nada (tempo para)
     if (jogador->vida <= 0 || jogador->jogoVencido) {
-        return; // Parar aqui - não processar movimento, ações nem tempo
+        return; 
     }
 
     Arma *armaAtual = &jogador->slots[jogador->slotAtivo];
 
-    // Atualizar cooldown da arma
     if (armaAtual->cooldown > 0.0f) {
         armaAtual->cooldown -= deltaTime;
     }
 
-    // Sistema de Recarga
     if (jogador->estaRecarregando) {
         jogador->tempoRecargaAtual -= deltaTime;
 
         if (jogador->tempoRecargaAtual <= 0.0f) {
-            // Recarga completa
+
             int municaoNecessaria = armaAtual->penteMax - armaAtual->penteAtual;
             if (armaAtual->municaoTotal >= municaoNecessaria) {
                 armaAtual->penteAtual = armaAtual->penteMax;
@@ -402,7 +362,6 @@ void atualizarJogoComPathfinding(Player *jogador, Zumbi **zumbis, Bala **balas, 
         }
     }
 
-    // Processar entrada de teclado para trocar de arma
     if (IsKeyPressed(KEY_ONE)) {
         equiparArma(jogador, 0);
     } else if (IsKeyPressed(KEY_TWO)) {
@@ -411,81 +370,68 @@ void atualizarJogoComPathfinding(Player *jogador, Zumbi **zumbis, Bala **balas, 
         equiparArma(jogador, 2);
     }
 
-    // Processar tecla R para recarregar
     if (IsKeyPressed(KEY_R)) {
         recarregarArma(jogador);
     }
 
-    // Processar entrada de movimento do jogador
     Vector2 movimento = {0, 0};
 
     if (IsKeyDown(KEY_W) || IsKeyDown(KEY_UP)) {
         movimento.y = -1;
-        jogador->direcaoVertical = 1;  // Costas
+        jogador->direcaoVertical = 1;  
     }
     if (IsKeyDown(KEY_S) || IsKeyDown(KEY_DOWN)) {
         movimento.y = 1;
-        jogador->direcaoVertical = 0;  // Frente
+        jogador->direcaoVertical = 0;  
     }
     if (IsKeyDown(KEY_A) || IsKeyDown(KEY_LEFT)) {
         movimento.x = -1;
-        jogador->direcaoHorizontal = 0;  // Esquerda
+        jogador->direcaoHorizontal = 0;  
     }
     if (IsKeyDown(KEY_D) || IsKeyDown(KEY_RIGHT)) {
         movimento.x = 1;
-        jogador->direcaoHorizontal = 1;  // Direita
+        jogador->direcaoHorizontal = 1;  
     }
 
-    // Normalizar movimento diagonal
     if (movimento.x != 0 && movimento.y != 0) {
         float norma = 1.0f / sqrtf(2.0f);
         movimento.x *= norma;
         movimento.y *= norma;
     }
 
-    // Aplicar movimento
     jogador->posicao.x += movimento.x * jogador->velocidadeBase;
     jogador->posicao.y += movimento.y * jogador->velocidadeBase;
 
-    // Manter o jogador dentro dos limites do mapa
     if (jogador->posicao.x < 20) jogador->posicao.x = 20;
     if (jogador->posicao.x > 1004) jogador->posicao.x = 1004;
     if (jogador->posicao.y < 20) jogador->posicao.y = 20;
     if (jogador->posicao.y > 748) jogador->posicao.y = 748;
 
-    // Atirar com o botão esquerdo do mouse
     if (IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) {
         Vector2 mousePos = GetMousePosition();
         atirarArma(jogador, balas, mousePos);
     }
 
-    // Atualizar zumbis COM PATHFINDING A*
     atualizarZumbisComPathfinding(zumbis, jogador->posicao, deltaTime, mapa, grid);
 
-    // Verificar colisões
     verificarColisoesBalaZumbi(balas, zumbis, jogador);
     verificarColisoesBalaJogador(balas, jogador);
     if (zumbis != NULL && *zumbis != NULL) {
         verificarColisoesJogadorZumbi(jogador, *zumbis);
     }
 
-    // Atualizar o tempo total se o jogador estiver vivo
     if (jogador->vida > 0) {
         jogador->tempoTotal += GetFrameTime();
     }
 }
 
-// Função para desenhar todos os elementos do jogo
 void desenharJogo(Player *jogador, Zumbi *zumbis, Bala *balas, Texture2D texturaMapa, Recursos *recursos) {
-    // NOTA: O mapa é desenhado no main.c com o novo sistema de tiles
 
-    // Desenhar os zumbis
     desenharZumbis(zumbis);
 
-    // Desenhar o jogador
     if (jogador->spriteAtual.id > 0) {
-        // Desenhar sprite centralizado na posição do jogador
-        float escala = 0.06f; // Ajuste conforme o tamanho do seu sprite
+
+        float escala = 0.06f; 
         float largura = jogador->spriteAtual.width * escala;
         float altura = jogador->spriteAtual.height * escala;
 
@@ -500,17 +446,16 @@ void desenharJogo(Player *jogador, Zumbi *zumbis, Bala *balas, Texture2D textura
 
         DrawTexturePro(jogador->spriteAtual, origem, destino, (Vector2){0, 0}, 0.0f, WHITE);
     } else {
-        // Fallback: desenhar círculo se sprite não carregou
+
         DrawCircleV(jogador->posicao, 15, BLUE);
     }
 
-    // Desenhar as balas
     Bala *balaAtual = balas;
     while (balaAtual != NULL) {
-        // Verificar se há textura de bala disponível
+
         if (recursos != NULL && texturaValida(recursos->texturaBala)) {
-            // Desenhar bala com textura rotacionada
-            float escala = 0.020f; // Reduzido em 70% (0.05 -> 0.015)
+
+            float escala = 0.020f; 
             float largura = recursos->texturaBala.width * escala;
             float altura = recursos->texturaBala.height * escala;
 
@@ -522,26 +467,23 @@ void desenharJogo(Player *jogador, Zumbi *zumbis, Bala *balas, Texture2D textura
                 altura
             };
 
-            Vector2 pivo = {largura / 2, altura / 2}; // Rotacionar em torno do centro
+            Vector2 pivo = {largura / 2, altura / 2}; 
 
             DrawTexturePro(recursos->texturaBala, origem, destino, pivo, balaAtual->angulo, WHITE);
         } else {
-            // Fallback: desenhar círculo amarelo se textura não disponível
+
             DrawCircleV(balaAtual->posicao, 5, YELLOW);
         }
         balaAtual = balaAtual->proximo;
     }
 
-    // --- HUD MELHORADO ---
     
     Arma *armaAtual = &jogador->slots[jogador->slotAtivo];
 
-    // HUD Superior Esquerdo - Espaçamento de 30 pixels entre linhas
     int hudEsquerdoX = 10;
     int linhaY = 10;
     int espacamentoLinha = 30;
 
-    // Linha 1: Barra de Vida (com cores baseadas na vida)
     Color corVida = GREEN;
     if (jogador->vida <= 30) {
         corVida = RED;
@@ -549,52 +491,48 @@ void desenharJogo(Player *jogador, Zumbi *zumbis, Bala *balas, Texture2D textura
         corVida = ORANGE;
     }
 
-    DrawRectangle(hudEsquerdoX, linhaY, 200, 20, DARKGRAY);  // Fundo
-    DrawRectangle(hudEsquerdoX, linhaY, (int)(200 * (jogador->vida / 100.0f)), 20, corVida);  // Barra atual
-    DrawRectangleLines(hudEsquerdoX, linhaY, 200, 20, WHITE);  // Contorno
+    DrawRectangle(hudEsquerdoX, linhaY, 200, 20, DARKGRAY);  
+    DrawRectangle(hudEsquerdoX, linhaY, (int)(200 * (jogador->vida / 100.0f)), 20, corVida);  
+    DrawRectangleLines(hudEsquerdoX, linhaY, 200, 20, WHITE);  
     DrawText(TextFormat("Vida: %d/100", jogador->vida), hudEsquerdoX + 5, linhaY + 2, 18, WHITE);
     linhaY += espacamentoLinha;
 
-    // Linha 2: Munição ou Estado de Recarga
     Color corMunicao = WHITE;
     if (armaAtual->penteAtual <= 5) {
         corMunicao = RED;
-        // Piscar quando munição está baixa
+
         if ((int)(GetTime() * 2) % 2 == 0 && !jogador->estaRecarregando) {
             const char *avisoRecarga = "RECARREGUE!";
             int larguraTexto = MeasureText(avisoRecarga, 20);
-            DrawText(avisoRecarga, 512 - larguraTexto / 2, 120, 20, RED);  // Centralizado
+            DrawText(avisoRecarga, 512 - larguraTexto / 2, 120, 20, RED);  
         }
     }
 
     if (jogador->estaRecarregando) {
         DrawText("RECARREGANDO...", hudEsquerdoX, linhaY, 20, YELLOW);
         linhaY += espacamentoLinha;
-        // Barra de progresso da recarga
+
         float progresso = 1.0f - (jogador->tempoRecargaAtual / armaAtual->tempoRecarga);
         DrawRectangle(hudEsquerdoX, linhaY, 200, 10, DARKGRAY);
         DrawRectangle(hudEsquerdoX, linhaY, (int)(200 * progresso), 10, YELLOW);
         DrawRectangleLines(hudEsquerdoX, linhaY, 200, 10, WHITE);
-        linhaY += 20;  // Barra menor, espaço menor
+        linhaY += 20;  
     } else {
         DrawText(TextFormat("Municao: [%d] / %d", armaAtual->penteAtual, armaAtual->municaoTotal), hudEsquerdoX, linhaY, 20, corMunicao);
         linhaY += espacamentoLinha;
     }
 
-    // Linha 3: Tempo
     int minutos = (int)jogador->tempoTotal / 60;
     float segundos = fmod(jogador->tempoTotal, 60.0f);
     DrawText(TextFormat("Tempo: %02d:%05.2f", minutos, segundos), hudEsquerdoX, linhaY, 20, GOLD);
     linhaY += espacamentoLinha;
 
-    // Linha 4: Fase
     DrawText(TextFormat("Fase: %d/3", jogador->fase), hudEsquerdoX, linhaY, 20, WHITE);
     
-    // HUD de Slots de Arma (Inferior Direito) - Ajustado para 1024x768
-    int hudX = 800;  // Canto inferior direito (1024 - 224)
-    int hudY = 690;  // Parte inferior (768 - 78)
 
-    // Instruções (diretamente acima dos slots de arma)
+    int hudX = 800;  
+    int hudY = 690;  
+
     DrawText("WASD - Mover | 1,2,3 - Armas", hudX, 640, 15, LIGHTGRAY);
     DrawText("R - Recarregar | Click - Atirar", hudX, 660, 15, LIGHTGRAY);
     int slotWidth = 60;
@@ -608,21 +546,17 @@ void desenharJogo(Player *jogador, Zumbi *zumbis, Bala *balas, Texture2D textura
         Color corSlot = DARKGRAY;
         Color corTexto = LIGHTGRAY;
 
-        // Destaque para slot ativo
         if (i == jogador->slotAtivo) {
             corSlot = GREEN;
             corTexto = WHITE;
             DrawRectangle(posX - 2, hudY - 2, slotWidth + 4, slotHeight + 4, LIME);
         }
 
-        // Desenhar slot
         DrawRectangle(posX, hudY, slotWidth, slotHeight, corSlot);
         DrawRectangleLines(posX, hudY, slotWidth, slotHeight, WHITE);
 
-        // Número do slot
         DrawText(TextFormat("%d", i + 1), posX + 5, hudY + 5, 20, corTexto);
 
-        // Nome da arma (se tiver)
         if (jogador->slots[i].tipo != ARMA_NENHUMA) {
             const char* nomeArma = nomesArmas[jogador->slots[i].tipo];
             DrawText(nomeArma, posX + 5, hudY + 30, 15, corTexto);
@@ -631,26 +565,24 @@ void desenharJogo(Player *jogador, Zumbi *zumbis, Bala *balas, Texture2D textura
         }
     }
     
-    // Tela de Vitória (coletou CURE na Fase 3)
+
     if (jogador->jogoVencido) {
-        // Salvar tempo apenas uma vez
+
         if (!jogador->tempoJaSalvo) {
             checkAndSaveTime(jogador->tempoTotal);
             jogador->tempoJaSalvo = true;
         }
         
-        // Fundo escuro completo - Ajustado para 1024x768
+
         DrawRectangle(0, 0, 1024, 768, BLACK);
 
-        // Título de vitória
         DrawText("VITORIA!", 380, 80, 60, GREEN);
         
-        // Formatar o tempo final
+
         int minutos = (int)jogador->tempoTotal / 60;
         float segundos = fmod(jogador->tempoTotal, 60.0f);
         DrawText(TextFormat("Seu tempo: %02d:%05.2f", minutos, segundos), 350, 170, 30, WHITE);
 
-        // Carregar e mostrar o pódio dos melhores tempos
         float tempos[MAX_SCORES];
         loadTimes(tempos, MAX_SCORES);
 
@@ -661,7 +593,6 @@ void desenharJogo(Player *jogador, Zumbi *zumbis, Bala *balas, Texture2D textura
             int min = (int)tempos[i] / 60;
             float seg = fmod(tempos[i], 60.0f);
 
-            // Destacar o tempo do jogador se for o mesmo
             Color cor = (fabs(tempos[i] - jogador->tempoTotal) < 0.01f) ? YELLOW : WHITE;
 
             DrawText(TextFormat("%dº - %02d:%05.2f", i + 1, min, seg), 400, posY, 24, cor);
@@ -670,20 +601,16 @@ void desenharJogo(Player *jogador, Zumbi *zumbis, Bala *balas, Texture2D textura
 
         DrawText("Pressione R para tentar novamente", 320, 630, 22, GREEN);
         DrawText("Pressione ESC para sair", 380, 670, 20, LIGHTGRAY);
-        return; // Não desenhar mais nada
+        return; 
     }
     
-    // Tela de Game Over (morreu)
-    if (jogador->vida <= 0) {
-        // NÃO salvar tempo quando morrer - apenas vitórias contam no ranking
 
-        // Fundo preto completo (sem jogo de fundo) - Ajustado para 1024x768
+    if (jogador->vida <= 0) {
+
         DrawRectangle(0, 0, 1024, 768, BLACK);
 
-        // Título Game Over
         DrawText("GAME OVER", 330, 250, 60, RED);
 
-        // Formatar e mostrar o tempo de sobrevivência
         int minutos = (int)jogador->tempoTotal / 60;
         float segundos = fmod(jogador->tempoTotal, 60.0f);
         DrawText(TextFormat("Tempo de sobrevivencia:", minutos, segundos), 300, 350, 26, WHITE);
@@ -691,15 +618,12 @@ void desenharJogo(Player *jogador, Zumbi *zumbis, Bala *balas, Texture2D textura
 
         DrawText("Pressione R para tentar novamente", 320, 500, 22, GREEN);
         DrawText("Pressione ESC para sair", 260, 430, 20, LIGHTGRAY);
-        return; // Não desenhar mais nada
+        return; 
     }
 }
-// --- Funções do Módulo de Zumbis ---
 
-// Função para adicionar um novo Zumbi na Lista Encadeada
 void adicionarZumbi(Zumbi **cabeca, Vector2 posInicial, Texture2D sprites[][4]) {
 
-    // 1. Alocação Dinâmica de Memória
     Zumbi *novoZumbi = (Zumbi *)malloc(sizeof(Zumbi));
 
     if (novoZumbi == NULL) {
@@ -707,90 +631,77 @@ void adicionarZumbi(Zumbi **cabeca, Vector2 posInicial, Texture2D sprites[][4]) 
         return;
     }
 
-    // NOTA: Validação de spawn agora é feita no main.c com o novo sistema
-
-    // 3. Inicializar o novo zumbi com comportamento aleatório
     novoZumbi->posicao = posInicial;
-    novoZumbi->posicaoAnterior = posInicial;  // Inicializar posição anterior
+    novoZumbi->posicaoAnterior = posInicial;  
     novoZumbi->velocidade = (Vector2){0, 0};
-    novoZumbi->vida = 20; // GDD: 20 HP
+    novoZumbi->vida = 20; 
     novoZumbi->raio = 20.0f;
 
-    // Atribuir tipo de movimento aleatório (0-3)
     novoZumbi->tipoMovimento = GetRandomValue(0, 3);
 
-    // Velocidade base: mais lenta que o jogador (jogador = ~180 pixels/s com 3.0 * 60fps)
-    // Zumbi anda a 70-80% da velocidade do jogador para dar chance de fugir
-    novoZumbi->velocidadeBase = 120.0f + (float)GetRandomValue(0, 20); // 120-140 pixels/s
+    novoZumbi->velocidadeBase = 120.0f + (float)GetRandomValue(0, 20); 
 
-    // Inicializar timers e ângulos aleatórios
     novoZumbi->tempoDesvio = 0.0f;
     novoZumbi->anguloDesvio = (float)GetRandomValue(0, 360) * DEG2RAD;
 
-    // Atribuir skin aleatória (0-4 = 5 tipos diferentes)
     novoZumbi->tipoSkin = GetRandomValue(0, 4);
 
-    // Atribuir sprites baseado na skin escolhida
     novoZumbi->spriteFrenteDireita = sprites[novoZumbi->tipoSkin][0];
     novoZumbi->spriteFrenteEsquerda = sprites[novoZumbi->tipoSkin][1];
     novoZumbi->spriteCostasDireita = sprites[novoZumbi->tipoSkin][2];
     novoZumbi->spriteCostasEsquerda = sprites[novoZumbi->tipoSkin][3];
 
-    // Inicializar direções (começa olhando para frente/direita)
     novoZumbi->direcaoVertical = 0;
     novoZumbi->direcaoHorizontal = 1;
     novoZumbi->spriteAtual = novoZumbi->spriteFrenteDireita;
 
-    // Inicializar pathfinding
     novoZumbi->caminho.valido = false;
     novoZumbi->caminho.tamanho = 0;
     novoZumbi->caminho.indiceAtual = 0;
     novoZumbi->caminho.tempoRecalculo = 0.0f;
 
-    // 4. Inserir no início da lista
     novoZumbi->proximo = *cabeca;
     *cabeca = novoZumbi;
 }
-// Função para atualizar todos os zumbis com diferentes comportamentos
+
 void atualizarZumbis(Zumbi **cabeca, Vector2 posicaoJogador, float deltaTime) {
     Zumbi *atual = *cabeca;
     Zumbi *anterior = NULL;
 
     while (atual != NULL) {
-        // Salvar posição anterior antes de mover
+
         atual->posicaoAnterior = atual->posicao;
 
-        // Calcular direção base para o jogador
         Vector2 direcao = {
             posicaoJogador.x - atual->posicao.x,
             posicaoJogador.y - atual->posicao.y
         };
         
-        // Normalizar direção
+
         float magnitude = sqrtf(direcao.x * direcao.x + direcao.y * direcao.y);
         if (magnitude > 0) {
             direcao.x /= magnitude;
             direcao.y /= magnitude;
         }
         
-        // Aplicar comportamento baseado no tipo
+
         Vector2 direcaoFinal = direcao;
         float velocidadeFinal = atual->velocidadeBase;
         
         switch (atual->tipoMovimento) {
-            case 0: // DIRETO - vai reto pro jogador
-                // Usa direção e velocidade padrão
+            case 0: 
+
                 break;
                 
-            case 1: // ZIGZAG - movimento em onda
+            case 1: 
                 atual->tempoDesvio += deltaTime * 3.0f;
                 {
                     float desvio = sinf(atual->tempoDesvio) * 0.5f;
-                    // Adiciona movimento perpendicular
+
                     direcaoFinal.x += -direcao.y * desvio;
                     direcaoFinal.y += direcao.x * desvio;
                     
-                    // Renormalizar
+
                     float mag = sqrtf(direcaoFinal.x * direcaoFinal.x + 
                                      direcaoFinal.y * direcaoFinal.y);
                     if (mag > 0) {
@@ -800,17 +711,17 @@ void atualizarZumbis(Zumbi **cabeca, Vector2 posicaoJogador, float deltaTime) {
                 }
                 break;
                 
-            case 2: // CIRCULAR - faz círculos enquanto se aproxima
+            case 2: 
                 atual->tempoDesvio += deltaTime * 2.0f;
                 atual->anguloDesvio += deltaTime * 2.0f;
                 {
                     float cosA = cosf(atual->anguloDesvio);
                     float sinA = sinf(atual->anguloDesvio);
-                    // Mistura movimento circular com aproximação
+
                     direcaoFinal.x = direcao.x * 0.7f + (-direcao.y * cosA) * 0.3f;
                     direcaoFinal.y = direcao.y * 0.7f + (direcao.x * sinA) * 0.3f;
                     
-                    // Renormalizar
+
                     float mag = sqrtf(direcaoFinal.x * direcaoFinal.x + 
                                      direcaoFinal.y * direcaoFinal.y);
                     if (mag > 0) {
@@ -820,16 +731,16 @@ void atualizarZumbis(Zumbi **cabeca, Vector2 posicaoJogador, float deltaTime) {
                 }
                 break;
                 
-            case 3: // IMPREVISÍVEL - muda de direção aleatoriamente
+            case 3: 
                 atual->tempoDesvio += deltaTime;
-                if (atual->tempoDesvio > 1.0f) { // Muda direção a cada 1 segundo
+                if (atual->tempoDesvio > 1.0f) { 
                     atual->tempoDesvio = 0.0f;
                     atual->anguloDesvio = (float)GetRandomValue(-45, 45) * DEG2RAD;
                 }
                 {
                     float cosA = cosf(atual->anguloDesvio);
                     float sinA = sinf(atual->anguloDesvio);
-                    // Aplica rotação à direção
+
                     float tempX = direcao.x * cosA - direcao.y * sinA;
                     float tempY = direcao.x * sinA + direcao.y * cosA;
                     direcaoFinal.x = tempX;
@@ -838,33 +749,29 @@ void atualizarZumbis(Zumbi **cabeca, Vector2 posicaoJogador, float deltaTime) {
                 break;
         }
         
-        // Calcular velocidade final
+
         atual->velocidade.x = direcaoFinal.x * velocidadeFinal;
         atual->velocidade.y = direcaoFinal.y * velocidadeFinal;
 
-        // Atualizar direções do sprite baseado no movimento
-        // Direção vertical: se está indo mais para cima (velocidade.y negativa) = costas, senão = frente
         if (atual->velocidade.y < -5.0f) {
-            atual->direcaoVertical = 1; // Costas (indo para cima)
+            atual->direcaoVertical = 1; 
         } else if (atual->velocidade.y > 5.0f) {
-            atual->direcaoVertical = 0; // Frente (indo para baixo)
+            atual->direcaoVertical = 0; 
         }
 
-        // Direção horizontal: se está indo mais para esquerda (velocidade.x negativa) = esquerda, senão = direita
         if (atual->velocidade.x < -5.0f) {
-            atual->direcaoHorizontal = 0; // Esquerda
+            atual->direcaoHorizontal = 0; 
         } else if (atual->velocidade.x > 5.0f) {
-            atual->direcaoHorizontal = 1; // Direita
+            atual->direcaoHorizontal = 1; 
         }
 
-        // Selecionar sprite correto baseado nas direções
-        if (atual->direcaoVertical == 0) { // Frente
+        if (atual->direcaoVertical == 0) { 
             if (atual->direcaoHorizontal == 0) {
                 atual->spriteAtual = atual->spriteFrenteEsquerda;
             } else {
                 atual->spriteAtual = atual->spriteFrenteDireita;
             }
-        } else { // Costas
+        } else { 
             if (atual->direcaoHorizontal == 0) {
                 atual->spriteAtual = atual->spriteCostasEsquerda;
             } else {
@@ -872,15 +779,11 @@ void atualizarZumbis(Zumbi **cabeca, Vector2 posicaoJogador, float deltaTime) {
             }
         }
 
-        // Atualizar posição
         atual->posicao.x += atual->velocidade.x * deltaTime;
         atual->posicao.y += atual->velocidade.y * deltaTime;
 
-        // NOTA: Colisão de zumbis com mapa agora tratada no main.c
-
-        // Verificar se o zumbi morreu
         if (atual->vida <= 0) {
-            // Remover da lista
+
             Zumbi *removido = atual;
             if (anterior == NULL) {
                 *cabeca = atual->proximo;
@@ -888,7 +791,7 @@ void atualizarZumbis(Zumbi **cabeca, Vector2 posicaoJogador, float deltaTime) {
                 anterior->proximo = atual->proximo;
             }
             atual = atual->proximo;
-            free(removido); // Liberar memória
+            free(removido); 
         } else {
             anterior = atual;
             atual = atual->proximo;
@@ -896,16 +799,14 @@ void atualizarZumbis(Zumbi **cabeca, Vector2 posicaoJogador, float deltaTime) {
     }
 }
 
-// Função para atualizar zumbis com pathfinding A*
 void atualizarZumbisComPathfinding(Zumbi **cabeca, Vector2 posicaoJogador, float deltaTime, const Mapa *mapa, PathfindingGrid *grid) {
     Zumbi *atual = *cabeca;
     Zumbi *anterior = NULL;
 
     while (atual != NULL) {
-        // Salvar posição anterior antes de mover
+
         atual->posicaoAnterior = atual->posicao;
 
-        // Calcular distância até o jogador
         float dx = posicaoJogador.x - atual->posicao.x;
         float dy = posicaoJogador.y - atual->posicao.y;
         float distancia = sqrtf(dx * dx + dy * dy);
@@ -913,42 +814,30 @@ void atualizarZumbisComPathfinding(Zumbi **cabeca, Vector2 posicaoJogador, float
         Vector2 direcaoFinal = {0.0f, 0.0f};
         float velocidadeFinal = atual->velocidadeBase;
 
-        // Sempre usar pathfinding quando disponível
-        // Isso garante que zumbis desviem de obstáculos corretamente
         bool usarPathfinding = (mapa != NULL && grid != NULL);
 
-        // Se está muito perto do jogador (menos de 1.5 tiles), usar movimento direto
-        // para evitar comportamento estranho no combate corpo a corpo
         if (distancia < TAMANHO_TILE * 1.5f) {
             usarPathfinding = false;
         }
 
         if (usarPathfinding) {
-            // Verificar se precisa recalcular o caminho
+
             if (precisaRecalcularCaminho(&atual->caminho, posicaoJogador, deltaTime)) {
-                // Cada zumbi mira em uma posição ligeiramente diferente ao redor do jogador
-                // Isso cria múltiplos caminhos e evita engarrafamento
+
                 Vector2 alvoVariado = posicaoJogador;
 
-                // Usar o endereço do ponteiro como "ID único" para criar variação consistente
-                // Cada zumbi terá um offset diferente e permanente
                 uintptr_t zumbiId = (uintptr_t)atual;
-                float hashAngulo = (float)((zumbiId / 137) % 360); // Hash simples baseado no ponteiro
+                float hashAngulo = (float)((zumbiId / 137) % 360); 
 
-                // Adicionar variação temporal lenta para criar movimento mais orgânico
-                // Cada zumbi roda em velocidade diferente ao redor do jogador
-                float velocidadeRotacao = 0.3f + (float)((zumbiId % 5) * 0.2f); // 0.3-1.1 rad/s
+                float velocidadeRotacao = 0.3f + (float)((zumbiId % 5) * 0.2f); 
                 float anguloTemporal = atual->tempoDesvio * velocidadeRotacao;
 
-                // Combinar hash permanente + tipo de movimento + variação temporal
                 float variacaoAngulo = hashAngulo + (float)(atual->tipoMovimento * 45) + anguloTemporal;
-                float raioVariacao = 24.0f + (float)((zumbiId % 4) * 12); // 24-60 pixels de variação
+                float raioVariacao = 24.0f + (float)((zumbiId % 4) * 12); 
 
-                // Adicionar offset circular ao redor do jogador
                 alvoVariado.x += cosf(variacaoAngulo) * raioVariacao;
                 alvoVariado.y += sinf(variacaoAngulo) * raioVariacao;
 
-                // Garantir que o alvo está dentro dos limites do mapa
                 if (alvoVariado.x < 32) alvoVariado.x = 32;
                 if (alvoVariado.x > 992) alvoVariado.x = 992;
                 if (alvoVariado.y < 32) alvoVariado.y = 32;
@@ -957,31 +846,28 @@ void atualizarZumbisComPathfinding(Zumbi **cabeca, Vector2 posicaoJogador, float
                 calcularCaminho(grid, mapa, atual->posicao, alvoVariado, &atual->caminho);
             }
 
-            // Se tem caminho válido, seguir
             if (atual->caminho.valido && atual->caminho.tamanho > 0) {
-                // Atualizar seguimento do caminho
+
                 atualizarSeguimentoCaminho(&atual->caminho, atual->posicao, TAMANHO_TILE * 0.4f);
 
-                // Obter direção do caminho
                 direcaoFinal = obterDirecaoCaminho(&atual->caminho, atual->posicao);
             } else {
-                // Fallback: movimento direto se não encontrou caminho
+
                 if (distancia > 0) {
                     direcaoFinal.x = dx / distancia;
                     direcaoFinal.y = dy / distancia;
                 }
             }
         } else {
-            // Movimento direto quando está perto do jogador
+
             if (distancia > 0) {
                 direcaoFinal.x = dx / distancia;
                 direcaoFinal.y = dy / distancia;
             }
         }
 
-        // Aplicar pequena variação baseada no tipo de movimento para manter diversidade
         switch (atual->tipoMovimento % 4) {
-            case 1: // ZIGZAG leve
+            case 1: 
                 atual->tempoDesvio += deltaTime * 2.0f;
                 {
                     float desvio = sinf(atual->tempoDesvio) * 0.2f;
@@ -989,49 +875,45 @@ void atualizarZumbisComPathfinding(Zumbi **cabeca, Vector2 posicaoJogador, float
                     direcaoFinal.y += direcaoFinal.x * desvio;
                 }
                 break;
-            case 2: // Ligeiramente mais rápido
+            case 2: 
                 velocidadeFinal *= 1.1f;
                 break;
-            case 3: // Ligeiramente mais lento mas constante
+            case 3: 
                 velocidadeFinal *= 0.9f;
                 break;
             default:
-                // Movimento normal
+
                 break;
         }
 
-        // Normalizar direção final
         float mag = sqrtf(direcaoFinal.x * direcaoFinal.x + direcaoFinal.y * direcaoFinal.y);
         if (mag > 0) {
             direcaoFinal.x /= mag;
             direcaoFinal.y /= mag;
         }
 
-        // Calcular velocidade final
         atual->velocidade.x = direcaoFinal.x * velocidadeFinal;
         atual->velocidade.y = direcaoFinal.y * velocidadeFinal;
 
-        // Atualizar direções do sprite baseado no movimento
         if (atual->velocidade.y < -5.0f) {
-            atual->direcaoVertical = 1; // Costas (indo para cima)
+            atual->direcaoVertical = 1; 
         } else if (atual->velocidade.y > 5.0f) {
-            atual->direcaoVertical = 0; // Frente (indo para baixo)
+            atual->direcaoVertical = 0; 
         }
 
         if (atual->velocidade.x < -5.0f) {
-            atual->direcaoHorizontal = 0; // Esquerda
+            atual->direcaoHorizontal = 0; 
         } else if (atual->velocidade.x > 5.0f) {
-            atual->direcaoHorizontal = 1; // Direita
+            atual->direcaoHorizontal = 1; 
         }
 
-        // Selecionar sprite correto baseado nas direções
-        if (atual->direcaoVertical == 0) { // Frente
+        if (atual->direcaoVertical == 0) { 
             if (atual->direcaoHorizontal == 0) {
                 atual->spriteAtual = atual->spriteFrenteEsquerda;
             } else {
                 atual->spriteAtual = atual->spriteFrenteDireita;
             }
-        } else { // Costas
+        } else { 
             if (atual->direcaoHorizontal == 0) {
                 atual->spriteAtual = atual->spriteCostasEsquerda;
             } else {
@@ -1039,13 +921,11 @@ void atualizarZumbisComPathfinding(Zumbi **cabeca, Vector2 posicaoJogador, float
             }
         }
 
-        // Atualizar posição
         atual->posicao.x += atual->velocidade.x * deltaTime;
         atual->posicao.y += atual->velocidade.y * deltaTime;
 
-        // Verificar se o zumbi morreu
         if (atual->vida <= 0) {
-            // Remover da lista
+
             Zumbi *removido = atual;
             if (anterior == NULL) {
                 *cabeca = atual->proximo;
@@ -1061,15 +941,14 @@ void atualizarZumbisComPathfinding(Zumbi **cabeca, Vector2 posicaoJogador, float
     }
 }
 
-// Função para desenhar todos os zumbis
 void desenharZumbis(Zumbi *cabeca) {
     Zumbi *atual = cabeca;
 
     while (atual != NULL) {
-        // Desenhar sprite do zumbi
+
         if (atual->spriteAtual.id > 0) {
-            // Desenhar sprite centralizado na posição do zumbi
-            float escala = 0.07f; // Zumbis ligeiramente maiores que o jogador
+
+            float escala = 0.07f; 
             float largura = atual->spriteAtual.width * escala;
             float altura = atual->spriteAtual.height * escala;
 
@@ -1084,13 +963,12 @@ void desenharZumbis(Zumbi *cabeca) {
 
             DrawTexturePro(atual->spriteAtual, origem, destino, (Vector2){0, 0}, 0.0f, WHITE);
         } else {
-            // Fallback: desenhar círculo verde se sprite não carregou
+
             DrawCircleV(atual->posicao, atual->raio, GREEN);
         }
 
-        // Desenhar barra de vida
         float barraLargura = 40.0f;
-        float porcentagemVida = atual->vida / 20.0f; // GDD: vida máxima = 20 HP
+        float porcentagemVida = atual->vida / 20.0f; 
         DrawRectangle(
             atual->posicao.x - barraLargura/2,
             atual->posicao.y - atual->raio - 10,
@@ -1102,7 +980,7 @@ void desenharZumbis(Zumbi *cabeca) {
         atual = atual->proximo;
     }
 }
-// Função para liberar toda a lista de zumbis (chamar ao finalizar o jogo)
+
 void liberarZumbis(Zumbi **cabeca) {
     Zumbi *atual = *cabeca;
 
@@ -1115,18 +993,14 @@ void liberarZumbis(Zumbi **cabeca) {
     *cabeca = NULL;
 }
 
-// --- Funções de Verificação de Colisão ---
-
-// Função para verificar colisões entre balas e zumbis
 void verificarColisoesBalaZumbi(Bala **balas, Zumbi **zumbis, Player *jogador) {
     if (balas == NULL || *balas == NULL || zumbis == NULL || *zumbis == NULL) return;
     
     Bala *balaAtual = *balas;
     Bala *balaAnterior = NULL;
 
-    // Iterar sobre todas as balas
     while (balaAtual != NULL) {
-        // Verificar apenas balas do jogador (tipo 0), ignorar balas do boss (tipo 1)
+
         if (balaAtual->tipo != 0) {
             balaAnterior = balaAtual;
             balaAtual = balaAtual->proximo;
@@ -1136,18 +1010,12 @@ void verificarColisoesBalaZumbi(Bala **balas, Zumbi **zumbis, Player *jogador) {
         Zumbi *zumbiAtual = *zumbis;
         int balaRemovida = 0;
 
-        // Iterar sobre todos os zumbis
         while (zumbiAtual != NULL && !balaRemovida) {
-            // Verificar colisão usando o raio da bala
+
             if (verificarColisaoCirculos(balaAtual->posicao, balaAtual->raio, zumbiAtual->posicao, zumbiAtual->raio)) {
-                // Aplicar dano ao zumbi usando o dano específico da bala
+
                 zumbiAtual->vida -= (int)balaAtual->dano;
 
-                // IMPORTANTE: NÃO remover o zumbi aqui mesmo se ele morreu (vida <= 0)
-                // A função atualizarZumbis() é responsável por remover zumbis mortos
-                // Isso evita double-free quando o zumbi é freed em dois lugares diferentes
-
-                // Remover a bala da lista
                 Bala *balaRemover = balaAtual;
                 Bala *proximaBala = balaAtual->proximo;
                 
@@ -1165,7 +1033,6 @@ void verificarColisoesBalaZumbi(Bala **balas, Zumbi **zumbis, Player *jogador) {
             }
         }
 
-        // Se a bala não foi removida, avançar para a próxima
         if (!balaRemovida) {
             balaAnterior = balaAtual;
             balaAtual = balaAtual->proximo;
@@ -1173,36 +1040,34 @@ void verificarColisoesBalaZumbi(Bala **balas, Zumbi **zumbis, Player *jogador) {
     }
 }
 
-// Função para verificar colisões entre balas do boss e o jogador
 void verificarColisoesBalaJogador(Bala **balas, Player *jogador) {
     if (balas == NULL || *balas == NULL || jogador == NULL) return;
 
-    // Atualizar cooldown (agora parte da struct Player)
     jogador->cooldownDanoBala -= GetFrameTime();
     
     Bala *balaAtual = *balas;
     Bala *balaAnterior = NULL;
     
     while (balaAtual != NULL) {
-        // Verificar apenas balas do boss (tipo 1)
+
         if (balaAtual->tipo == 1) {
-            // Verificar colisão com o jogador (raio do jogador = 15.0f)
+
             if (verificarColisaoCirculos(balaAtual->posicao, balaAtual->raio, jogador->posicao, 15.0f)) {
-                // Aplicar dano apenas se o cooldown acabou (evitar múltiplos hits)
+
                 if (jogador->cooldownDanoBala <= 0.0f) {
                     int dano = (int)balaAtual->dano;
                     jogador->vida -= dano;
-                    jogador->cooldownDanoBala = 0.2f; // Cooldown de 0.2 segundos
+                    jogador->cooldownDanoBala = 0.2f; 
                     
                     printf("OUCH! Jogador recebeu %d de dano de projetil do boss. Vida: %d\n", dano, jogador->vida);
                     
-                    // Garantir que a vida não fique negativa
+
                     if (jogador->vida < 0) {
                         jogador->vida = 0;
                     }
                 }
                 
-                // Remover a bala após atingir o jogador
+
                 Bala *balaRemover = balaAtual;
                 Bala *proximaBala = balaAtual->proximo;
                 
@@ -1223,55 +1088,49 @@ void verificarColisoesBalaJogador(Bala **balas, Player *jogador) {
     }
 }
 
-// Função para verificar colisões entre jogador e zumbis
 void verificarColisoesJogadorZumbi(Player *jogador, Zumbi *zumbis) {
     if (jogador == NULL || zumbis == NULL) return;
 
-    // Atualizar cooldown (agora parte da struct Player)
     jogador->cooldownDanoZumbi -= GetFrameTime();
 
     Zumbi *zumbiAtual = zumbis;
     const float raioJogador = 15.0f;
 
     while (zumbiAtual != NULL) {
-        // Verificar colisão (raio do jogador = 15, raio do zumbi = 20)
+
         if (verificarColisaoCirculos(jogador->posicao, raioJogador, zumbiAtual->posicao, zumbiAtual->raio)) {
 
-            // SEPARAR o zumbi do jogador para evitar sobreposição
             float dx = zumbiAtual->posicao.x - jogador->posicao.x;
             float dy = zumbiAtual->posicao.y - jogador->posicao.y;
             float distancia = sqrtf(dx * dx + dy * dy);
 
             if (distancia > 0.1f) {
-                // Calcular quanto estão sobrepostos
+
                 float sobreposicao = (raioJogador + zumbiAtual->raio) - distancia;
 
                 if (sobreposicao > 0) {
-                    // Normalizar direção
+
                     float dirX = dx / distancia;
                     float dirY = dy / distancia;
 
-                    // Empurrar o zumbi para fora (adicionar pequena margem)
                     zumbiAtual->posicao.x += dirX * (sobreposicao + 2.0f);
                     zumbiAtual->posicao.y += dirY * (sobreposicao + 2.0f);
                 }
             } else {
-                // Se estão exatamente na mesma posição, empurrar em direção aleatória
+
                 float angulo = (float)GetRandomValue(0, 360) * DEG2RAD;
                 zumbiAtual->posicao.x += cosf(angulo) * (raioJogador + zumbiAtual->raio + 5.0f);
                 zumbiAtual->posicao.y += sinf(angulo) * (raioJogador + zumbiAtual->raio + 5.0f);
             }
 
-            // Aplicar dano apenas se o cooldown acabou (a cada 0.5 segundos)
             if (jogador->cooldownDanoZumbi <= 0.0f) {
-                int dano = 5; // GDD: 5 HP de dano por contato
+                int dano = 5; 
                 jogador->vida -= dano;
-                jogador->cooldownDanoZumbi = 0.5f; // Esperar 0.5 segundos para próximo dano
+                jogador->cooldownDanoZumbi = 0.5f; 
 
                 printf("OUCH! Jogador recebeu %d de dano. Vida: %d\n", dano, jogador->vida);
             }
 
-            // Garantir que a vida não fique negativa
             if (jogador->vida < 0) {
                 jogador->vida = 0;
             }
@@ -1281,7 +1140,6 @@ void verificarColisoesJogadorZumbi(Player *jogador, Zumbi *zumbis) {
     }
 }
 
-// Função para verificar e resolver colisões entre zumbis
 void verificarColisoesZumbiZumbi(Zumbi *zumbis) {
     if (zumbis == NULL) return;
     
@@ -1291,23 +1149,20 @@ void verificarColisoesZumbiZumbi(Zumbi *zumbis) {
         Zumbi *zumbi2 = zumbi1->proximo;
 
         while (zumbi2 != NULL) {
-            // Verificar colisão entre dois zumbis
+
             if (verificarColisaoCirculos(zumbi1->posicao, zumbi1->raio, zumbi2->posicao, zumbi2->raio)) {
-                // Calcular vetor de separação
+
                 float dx = zumbi2->posicao.x - zumbi1->posicao.x;
                 float dy = zumbi2->posicao.y - zumbi1->posicao.y;
                 float distancia = sqrtf(dx * dx + dy * dy);
 
-                // Evitar divisão por zero
                 if (distancia > 0) {
-                    // Normalizar o vetor de direção
+
                     float nx = dx / distancia;
                     float ny = dy / distancia;
 
-                    // Calcular quanto os zumbis estão sobrepostos
                     float sobreposicao = (zumbi1->raio + zumbi2->raio) - distancia;
 
-                    // Separar os zumbis pela metade da sobreposição cada um
                     float separacao = sobreposicao / 2.0f;
 
                     zumbi1->posicao.x -= nx * separacao;
@@ -1324,9 +1179,6 @@ void verificarColisoesZumbiZumbi(Zumbi *zumbis) {
     }
 }
 
-// ===== SISTEMA DE BOSS =====
-
-// Função para criar um novo boss
 void criarBoss(Boss **bosses, TipoBoss tipo, Vector2 posicao, Texture2D spriteFrente, Texture2D spriteCostas, Texture2D spriteDireita, Texture2D spriteEsquerda) {
     Boss *novoBoss = (Boss *)malloc(sizeof(Boss));
 
@@ -1337,30 +1189,28 @@ void criarBoss(Boss **bosses, TipoBoss tipo, Vector2 posicao, Texture2D spriteFr
 
     novoBoss->tipo = tipo;
     novoBoss->posicao = posicao;
-    novoBoss->posicaoAnterior = posicao;  // Inicializar posição anterior
+    novoBoss->posicaoAnterior = posicao;  
     novoBoss->ativo = true;
     novoBoss->atacando = false;
     novoBoss->tempoAtaque = 0.0f;
     novoBoss->padraoAtaque = 0;
     novoBoss->anguloRotacao = 0.0f;
-    novoBoss->direcaoVertical = 0;    // Começa olhando para frente
-    novoBoss->direcaoHorizontal = 1;  // Começa olhando para direita
+    novoBoss->direcaoVertical = 0;    
+    novoBoss->direcaoHorizontal = 1;  
 
-    // Configurar sprites
     novoBoss->spriteFrente = spriteFrente;
     novoBoss->spriteCostas = spriteCostas;
     novoBoss->spriteDireita = spriteDireita;
     novoBoss->spriteEsquerda = spriteEsquerda;
-    novoBoss->spriteAtual = spriteFrente;  // Começa com sprite de frente
+    novoBoss->spriteAtual = spriteFrente;  
 
-    // Configurar stats específicos por tipo de boss
     switch (tipo) {
         case BOSS_PROWLER:
             novoBoss->vidaMax = 150;
             novoBoss->vida = 150;
             novoBoss->velocidade = 2.5f;
             novoBoss->raio = 25.0f;
-            novoBoss->cooldownAtaque = 3.0f; // Slam a cada 3 segundos
+            novoBoss->cooldownAtaque = 3.0f; 
             break;
             
         case BOSS_HUNTER:
@@ -1368,15 +1218,15 @@ void criarBoss(Boss **bosses, TipoBoss tipo, Vector2 posicao, Texture2D spriteFr
             novoBoss->vida = 80;
             novoBoss->velocidade = 3.0f;
             novoBoss->raio = 20.0f;
-            novoBoss->cooldownAtaque = 0.0f; // Dano por contato contínuo
+            novoBoss->cooldownAtaque = 0.0f; 
             break;
             
         case BOSS_ABOMINATION:
             novoBoss->vidaMax = 250;
             novoBoss->vida = 250;
-            novoBoss->velocidade = 0.0f; // Estático
+            novoBoss->velocidade = 0.0f; 
             novoBoss->raio = 60.0f;
-            novoBoss->cooldownAtaque = 0.4f; // Rajadas rápidas de bullet-hell
+            novoBoss->cooldownAtaque = 0.4f; 
             break;
             
         default:
@@ -1388,18 +1238,15 @@ void criarBoss(Boss **bosses, TipoBoss tipo, Vector2 posicao, Texture2D spriteFr
             break;
     }
 
-    // Inicializar pathfinding
     novoBoss->caminho.valido = false;
     novoBoss->caminho.tamanho = 0;
     novoBoss->caminho.indiceAtual = 0;
     novoBoss->caminho.tempoRecalculo = 0.0f;
 
-    // Adicionar à lista encadeada
     novoBoss->proximo = *bosses;
     *bosses = novoBoss;
 }
 
-// Função para atualizar lógica dos bosses
 void atualizarBoss(Boss **bosses, Player *jogador, Bala **balas, float deltaTime) {
     Boss *bossAtual = *bosses;
 
@@ -1409,16 +1256,14 @@ void atualizarBoss(Boss **bosses, Player *jogador, Bala **balas, float deltaTime
             continue;
         }
 
-        // Salvar posição anterior antes de mover
         bossAtual->posicaoAnterior = bossAtual->posicao;
 
-        // Atualizar timer de ataque
         bossAtual->tempoAtaque += deltaTime;
         
-        // Comportamento específico por tipo
+
         switch (bossAtual->tipo) {
             case BOSS_PROWLER: {
-                // Perseguir o jogador
+
                 float dx = jogador->posicao.x - bossAtual->posicao.x;
                 float dy = jogador->posicao.y - bossAtual->posicao.y;
                 float distancia = sqrtf(dx * dx + dy * dy);
@@ -1427,20 +1272,18 @@ void atualizarBoss(Boss **bosses, Player *jogador, Bala **balas, float deltaTime
                     bossAtual->posicao.x += (dx / distancia) * bossAtual->velocidade;
                     bossAtual->posicao.y += (dy / distancia) * bossAtual->velocidade;
 
-                    // Atualizar direção do sprite baseado no movimento
-                    // Prioridade: direção mais forte define o sprite
                     float absDx = fabsf(dx);
                     float absDy = fabsf(dy);
 
                     if (absDx > absDy) {
-                        // Movimento horizontal é mais forte
+
                         if (dx > 0) {
                             bossAtual->spriteAtual = bossAtual->spriteDireita;
                         } else {
                             bossAtual->spriteAtual = bossAtual->spriteEsquerda;
                         }
                     } else {
-                        // Movimento vertical é mais forte
+
                         if (dy > 0) {
                             bossAtual->spriteAtual = bossAtual->spriteFrente;
                         } else {
@@ -1449,13 +1292,11 @@ void atualizarBoss(Boss **bosses, Player *jogador, Bala **balas, float deltaTime
                     }
                 }
 
-                // Ataque Slam (área de efeito)
                 if (bossAtual->tempoAtaque >= bossAtual->cooldownAtaque) {
                     bossAtual->atacando = true;
 
-                    // Verificar se jogador está na área de efeito (raio de 80 pixels)
                     if (distancia <= 80.0f) {
-                        jogador->vida -= 15; // Dano de área
+                        jogador->vida -= 15; 
                     }
 
                     bossAtual->tempoAtaque = 0.0f;
@@ -1465,7 +1306,7 @@ void atualizarBoss(Boss **bosses, Player *jogador, Bala **balas, float deltaTime
             }
             
             case BOSS_HUNTER: {
-                // Perseguição agressiva e rápida
+
                 float dx = jogador->posicao.x - bossAtual->posicao.x;
                 float dy = jogador->posicao.y - bossAtual->posicao.y;
                 float distancia = sqrtf(dx * dx + dy * dy);
@@ -1474,20 +1315,18 @@ void atualizarBoss(Boss **bosses, Player *jogador, Bala **balas, float deltaTime
                     bossAtual->posicao.x += (dx / distancia) * bossAtual->velocidade;
                     bossAtual->posicao.y += (dy / distancia) * bossAtual->velocidade;
 
-                    // Atualizar direção do sprite baseado no movimento
-                    // Prioridade: direção mais forte define o sprite
                     float absDx = fabsf(dx);
                     float absDy = fabsf(dy);
 
                     if (absDx > absDy) {
-                        // Movimento horizontal é mais forte
+
                         if (dx > 0) {
                             bossAtual->spriteAtual = bossAtual->spriteDireita;
                         } else {
                             bossAtual->spriteAtual = bossAtual->spriteEsquerda;
                         }
                     } else {
-                        // Movimento vertical é mais forte
+
                         if (dy > 0) {
                             bossAtual->spriteAtual = bossAtual->spriteFrente;
                         } else {
@@ -1496,9 +1335,8 @@ void atualizarBoss(Boss **bosses, Player *jogador, Bala **balas, float deltaTime
                     }
                 }
 
-                // Dano por contato (20 HP)
                 if (distancia <= (bossAtual->raio + 20.0f)) {
-                    if (bossAtual->tempoAtaque >= 1.0f) { // Cooldown de 1s entre danos
+                    if (bossAtual->tempoAtaque >= 1.0f) { 
                         jogador->vida -= 20;
                         bossAtual->tempoAtaque = 0.0f;
                     }
@@ -1507,16 +1345,14 @@ void atualizarBoss(Boss **bosses, Player *jogador, Bala **balas, float deltaTime
             }
             
             case BOSS_ABOMINATION: {
-                // Boss estático com ataques de projéteis estilo bullet-hell
+
                 if (bossAtual->tempoAtaque >= bossAtual->cooldownAtaque) {
-                    // Bullet-Hell - Spray circular rotativo (16 projéteis)
-                    // Rotação progressiva: a cada rajada, o ângulo base gira 25 graus
-                    // Isso cria o padrão de "flor" rotacionando característico de bullet-hell
+
                     int numProjeteis = 16;
-                    float anguloBase = bossAtual->anguloRotacao; // Ângulo acumulativo
+                    float anguloBase = bossAtual->anguloRotacao; 
                     
                     for (int i = 0; i < numProjeteis; i++) {
-                        // Distribuir projéteis em 360 graus + offset de rotação acumulativa
+
                         float angulo = (anguloBase + (360.0f / numProjeteis) * i) * DEG2RAD;
 
                         Bala *novaBala = (Bala *)malloc(sizeof(Bala));
@@ -1534,8 +1370,7 @@ void atualizarBoss(Boss **bosses, Player *jogador, Bala **balas, float deltaTime
                         }
                     }
                     
-                    // Incrementar rotação acumulativa (+25 graus a cada rajada)
-                    // Isso faz a "flor" girar continuamente entre rajadas
+
                     bossAtual->anguloRotacao += 25.0f;
                     if (bossAtual->anguloRotacao >= 360.0f) {
                         bossAtual->anguloRotacao -= 360.0f;
@@ -1554,7 +1389,6 @@ void atualizarBoss(Boss **bosses, Player *jogador, Bala **balas, float deltaTime
     }
 }
 
-// Função para atualizar bosses com pathfinding A*
 void atualizarBossComPathfinding(Boss **bosses, Player *jogador, Bala **balas, float deltaTime, const Mapa *mapa, PathfindingGrid *grid) {
     Boss *bossAtual = *bosses;
 
@@ -1564,25 +1398,21 @@ void atualizarBossComPathfinding(Boss **bosses, Player *jogador, Bala **balas, f
             continue;
         }
 
-        // Salvar posição anterior antes de mover
         bossAtual->posicaoAnterior = bossAtual->posicao;
 
-        // Atualizar timer de ataque
         bossAtual->tempoAtaque += deltaTime;
 
-        // Comportamento específico por tipo
         switch (bossAtual->tipo) {
             case BOSS_PROWLER: {
-                // Perseguir o jogador COM PATHFINDING
+
                 float dx = jogador->posicao.x - bossAtual->posicao.x;
                 float dy = jogador->posicao.y - bossAtual->posicao.y;
                 float distancia = sqrtf(dx * dx + dy * dy);
 
-                // Usar pathfinding quando está longe ou há obstáculos
                 bool usarPathfinding = (mapa != NULL && grid != NULL && distancia > TAMANHO_TILE * 2.0f);
 
                 if (usarPathfinding) {
-                    // Calcular caminho com pathfinding
+
                     if (precisaRecalcularCaminho(&bossAtual->caminho, jogador->posicao, deltaTime)) {
                         calcularCaminho(grid, mapa, bossAtual->posicao, jogador->posicao, &bossAtual->caminho);
                     }
@@ -1596,21 +1426,20 @@ void atualizarBossComPathfinding(Boss **bosses, Player *jogador, Bala **balas, f
                             bossAtual->posicao.y += direcao.y * bossAtual->velocidade;
                         }
                     } else {
-                        // Fallback: movimento direto
+
                         if (distancia > 0) {
                             bossAtual->posicao.x += (dx / distancia) * bossAtual->velocidade;
                             bossAtual->posicao.y += (dy / distancia) * bossAtual->velocidade;
                         }
                     }
                 } else {
-                    // Movimento direto quando perto
+
                     if (distancia > 0) {
                         bossAtual->posicao.x += (dx / distancia) * bossAtual->velocidade;
                         bossAtual->posicao.y += (dy / distancia) * bossAtual->velocidade;
                     }
                 }
 
-                // Atualizar direção do sprite baseado no movimento
                 float absDx = fabsf(dx);
                 float absDy = fabsf(dy);
 
@@ -1628,13 +1457,11 @@ void atualizarBossComPathfinding(Boss **bosses, Player *jogador, Bala **balas, f
                     }
                 }
 
-                // Ataque Slam (área de efeito)
                 if (bossAtual->tempoAtaque >= bossAtual->cooldownAtaque) {
                     bossAtual->atacando = true;
 
-                    // Verificar se jogador está na área de efeito (raio de 80 pixels)
                     if (distancia <= 80.0f) {
-                        jogador->vida -= 15; // Dano de área
+                        jogador->vida -= 15; 
                     }
 
                     bossAtual->tempoAtaque = 0.0f;
@@ -1644,18 +1471,17 @@ void atualizarBossComPathfinding(Boss **bosses, Player *jogador, Bala **balas, f
             }
 
             case BOSS_HUNTER: {
-                // Perseguição agressiva e rápida COM PATHFINDING
+
                 float dx = jogador->posicao.x - bossAtual->posicao.x;
                 float dy = jogador->posicao.y - bossAtual->posicao.y;
                 float distancia = sqrtf(dx * dx + dy * dy);
 
-                // Hunter sempre usa pathfinding exceto quando muito perto
                 bool usarPathfinding = (mapa != NULL && grid != NULL && distancia > TAMANHO_TILE * 1.5f);
 
                 if (usarPathfinding) {
-                    // Calcular caminho com pathfinding
+
                     if (precisaRecalcularCaminho(&bossAtual->caminho, jogador->posicao, deltaTime)) {
-                        // Hunter mira diretamente no jogador (sem variação)
+
                         calcularCaminho(grid, mapa, bossAtual->posicao, jogador->posicao, &bossAtual->caminho);
                     }
 
@@ -1668,21 +1494,20 @@ void atualizarBossComPathfinding(Boss **bosses, Player *jogador, Bala **balas, f
                             bossAtual->posicao.y += direcao.y * bossAtual->velocidade;
                         }
                     } else {
-                        // Fallback: movimento direto
+
                         if (distancia > 0) {
                             bossAtual->posicao.x += (dx / distancia) * bossAtual->velocidade;
                             bossAtual->posicao.y += (dy / distancia) * bossAtual->velocidade;
                         }
                     }
                 } else {
-                    // Movimento direto quando muito perto
+
                     if (distancia > 0) {
                         bossAtual->posicao.x += (dx / distancia) * bossAtual->velocidade;
                         bossAtual->posicao.y += (dy / distancia) * bossAtual->velocidade;
                     }
                 }
 
-                // Atualizar direção do sprite baseado no movimento
                 float absDx = fabsf(dx);
                 float absDy = fabsf(dy);
 
@@ -1700,9 +1525,8 @@ void atualizarBossComPathfinding(Boss **bosses, Player *jogador, Bala **balas, f
                     }
                 }
 
-                // Dano por contato (20 HP)
                 if (distancia <= (bossAtual->raio + 20.0f)) {
-                    if (bossAtual->tempoAtaque >= 1.0f) { // Cooldown de 1s entre danos
+                    if (bossAtual->tempoAtaque >= 1.0f) { 
                         jogador->vida -= 20;
                         bossAtual->tempoAtaque = 0.0f;
                     }
@@ -1711,10 +1535,9 @@ void atualizarBossComPathfinding(Boss **bosses, Player *jogador, Bala **balas, f
             }
 
             case BOSS_ABOMINATION: {
-                // Boss estático com ataques de projéteis estilo bullet-hell
-                // Abomination não precisa de pathfinding pois é estático
+
                 if (bossAtual->tempoAtaque >= bossAtual->cooldownAtaque) {
-                    // Bullet-Hell - Spray circular rotativo (16 projéteis)
+
                     int numProjeteis = 16;
                     float anguloBase = bossAtual->anguloRotacao;
 
@@ -1736,7 +1559,6 @@ void atualizarBossComPathfinding(Boss **bosses, Player *jogador, Bala **balas, f
                         }
                     }
 
-                    // Incrementar rotação acumulativa (+25 graus a cada rajada)
                     bossAtual->anguloRotacao += 25.0f;
                     if (bossAtual->anguloRotacao >= 360.0f) {
                         bossAtual->anguloRotacao -= 360.0f;
@@ -1755,7 +1577,6 @@ void atualizarBossComPathfinding(Boss **bosses, Player *jogador, Bala **balas, f
     }
 }
 
-// Função para desenhar bosses
 void desenharBoss(Boss *bosses) {
     Boss *bossAtual = bosses;
     
@@ -1765,14 +1586,13 @@ void desenharBoss(Boss *bosses) {
             continue;
         }
         
-        // Desenhar boss (sprite se disponível, círculo caso contrário)
-        if (bossAtual->spriteAtual.id > 0) {
-            // Desenhar sprite (escala maior para bosses)
-            float escala = 0.15f; // Bosses são maiores que jogador/zumbis
 
-            // Abomination é muito maior que os outros bosses
+        if (bossAtual->spriteAtual.id > 0) {
+
+            float escala = 0.15f; 
+
             if (bossAtual->tipo == BOSS_ABOMINATION) {
-                escala = 0.30f; // Dobro do tamanho dos outros bosses
+                escala = 0.30f; 
             }
 
             float largura = bossAtual->spriteAtual.width * escala;
@@ -1789,17 +1609,17 @@ void desenharBoss(Boss *bosses) {
 
             DrawTexturePro(bossAtual->spriteAtual, origem, destino, (Vector2){0, 0}, 0.0f, WHITE);
         } else {
-            // Fallback: desenhar círculo colorido se sprite não foi carregado
+
             Color corBoss;
             switch (bossAtual->tipo) {
                 case BOSS_PROWLER:
-                    corBoss = PURPLE; // Roxo para Prowler
+                    corBoss = PURPLE; 
                     break;
                 case BOSS_HUNTER:
-                    corBoss = ORANGE; // Laranja para Hunter
+                    corBoss = ORANGE; 
                     break;
                 case BOSS_ABOMINATION:
-                    corBoss = DARKGREEN; // Verde escuro para Abomination
+                    corBoss = DARKGREEN; 
                     break;
                 default:
                     corBoss = BLACK;
@@ -1810,15 +1630,14 @@ void desenharBoss(Boss *bosses) {
             DrawCircleLines((int)bossAtual->posicao.x, (int)bossAtual->posicao.y, bossAtual->raio, DARKGRAY);
         }
         
-        // Desenhar barra de vida acima do boss
+
         float barraLargura = 60.0f;
         float barraAltura = 8.0f;
         float porcentagemVida = (float)bossAtual->vida / (float)bossAtual->vidaMax;
 
-        // Ajustar posição da barra baseado se tem sprite ou não
         float offsetY;
         if (bossAtual->spriteAtual.id > 0) {
-            // Calcular escala correta baseado no tipo de boss
+
             float escala = (bossAtual->tipo == BOSS_ABOMINATION) ? 0.30f : 0.15f;
             offsetY = bossAtual->spriteAtual.height * escala / 2 + 15.0f;
         } else {
@@ -1827,14 +1646,14 @@ void desenharBoss(Boss *bosses) {
 
         Vector2 barraPos = {bossAtual->posicao.x - barraLargura / 2, bossAtual->posicao.y - offsetY};
         
-        // Fundo da barra (vermelho)
+
         DrawRectangleV(barraPos, (Vector2){barraLargura, barraAltura}, RED);
-        // Vida atual (verde)
+
         DrawRectangleV(barraPos, (Vector2){barraLargura * porcentagemVida, barraAltura}, GREEN);
-        // Contorno
+
         DrawRectangleLinesEx((Rectangle){barraPos.x, barraPos.y, barraLargura, barraAltura}, 1, BLACK);
         
-        // Indicador de ataque para Prowler
+
         if (bossAtual->tipo == BOSS_PROWLER && bossAtual->atacando) {
             DrawCircleLines((int)bossAtual->posicao.x, (int)bossAtual->posicao.y, 80.0f, RED);
         }
@@ -1843,8 +1662,6 @@ void desenharBoss(Boss *bosses) {
     }
 }
 
-// Função para verificar colisões entre boss e balas do jogador
-// Agora também recebe o jogador para saber fase/horda atual
 void verificarColisoesBossBala(Boss **bosses, Bala **balas, Item *itemProgresso, Item *itemArma, Player *jogador) {
     if (bosses == NULL || balas == NULL || *balas == NULL) return;
     
@@ -1860,18 +1677,18 @@ void verificarColisoesBossBala(Boss **bosses, Bala **balas, Item *itemProgresso,
         Bala *balaAnterior = NULL;
         
         while (balaAtual != NULL) {
-            // Verificar apenas balas do jogador (tipo 0)
+
             if (balaAtual->tipo == 0) {
-                // Verificar colisão círculo-círculo
+
                 float dx = bossAtual->posicao.x - balaAtual->posicao.x;
                 float dy = bossAtual->posicao.y - balaAtual->posicao.y;
                 float distancia = sqrtf(dx * dx + dy * dy);
                 
                 if (distancia <= (bossAtual->raio + balaAtual->raio)) {
-                    // Aplicar dano ao boss
+
                     bossAtual->vida -= (int)balaAtual->dano;
                     
-                    // Remover bala
+
                     if (balaAnterior == NULL) {
                         *balas = balaAtual->proximo;
                     } else {
@@ -1888,15 +1705,15 @@ void verificarColisoesBossBala(Boss **bosses, Bala **balas, Item *itemProgresso,
             balaAtual = balaAtual->proximo;
         }
         
-        // Verificar se o boss morreu e dropar itens
+
         if (bossAtual->vida <= 0 && bossAtual->ativo) {
             bossAtual->ativo = false;
             
-            // Calcular posições para os drops (separados)
+
             Vector2 posicaoItem1 = {bossAtual->posicao.x - 30, bossAtual->posicao.y};
             Vector2 posicaoItem2 = {bossAtual->posicao.x + 30, bossAtual->posicao.y};
             
-            // Dropar item de progressão e arma baseado no tipo de boss
+
             switch (bossAtual->tipo) {
                 case BOSS_PROWLER:
                     if (itemProgresso != NULL && !itemProgresso->ativo) {
@@ -1909,20 +1726,20 @@ void verificarColisoesBossBala(Boss **bosses, Bala **balas, Item *itemProgresso,
                     }
                     break;
                 case BOSS_HUNTER:
-                    // LÓGICA ESPECIAL: Só dropar itens na Fase 2, Horda 3, quando for o ÚLTIMO Hunter
+
                     if (jogador != NULL && jogador->fase == 2 && jogador->hordaAtual == 3) {
-                        // Contar quantos Hunters ainda estão vivos (após este morrer)
+
                         int huntersVivos = 0;
                         Boss *b = *bosses;
                         while (b != NULL) {
-                            // Contar apenas Hunters que ainda estão ativos (excluindo o que está morrendo agora)
+
                             if (b->tipo == BOSS_HUNTER && b->ativo && b != bossAtual) {
                                 huntersVivos++;
                             }
                             b = b->proximo;
                         }
                         
-                        // Se este era o último Hunter vivo (agora está morrendo), dropar itens
+
                         if (huntersVivos == 0) {
                             if (itemProgresso != NULL && !itemProgresso->ativo) {
                                 criarItem(itemProgresso, ITEM_CHAVE, posicaoItem1);
@@ -1937,7 +1754,7 @@ void verificarColisoesBossBala(Boss **bosses, Bala **balas, Item *itemProgresso,
                             printf("Hunter morreu! Ainda restam %d Hunter(s).\n", huntersVivos);
                         }
                     } else {
-                        // Hunters de outras fases/hordas NÃO dropam itens
+
                         printf("Hunter morreu (horda %d)! Sem drop.\n", jogador != NULL ? jogador->hordaAtual : 0);
                     }
                     break;
@@ -1956,26 +1773,21 @@ void verificarColisoesBossBala(Boss **bosses, Bala **balas, Item *itemProgresso,
     }
 }
 
-// Função para verificar colisões entre boss e jogador
 void verificarColisoesBossJogador(Boss *bosses, Player *jogador) {
-    // Função mantida por compatibilidade, mas knockback removido
-    // O boss já causa dano através de seus ataques específicos e projéteis
+
     (void)bosses;
     (void)jogador;
 }
 
-// ===== SISTEMA DE ITENS E INTERAÇÃO =====
-
-// Função para criar um item coletável
 void criarItem(Item *item, TipoItem tipo, Vector2 posicao) {
     item->tipo = tipo;
     item->posicao = posicao;
-    item->raio = 30.0f;  // Raio de coleta de 30 pixels
+    item->raio = 30.0f;  
     item->ativo = true;
     item->coletado = false;
-    item->tipoArma = ARMA_NENHUMA; // Padrão para itens não-arma
+    item->tipoArma = ARMA_NENHUMA; 
     
-    // Se for item de arma, definir o tipo de arma correspondente
+
     if (tipo == ITEM_SHOTGUN) {
         item->tipoArma = ARMA_SHOTGUN;
     } else if (tipo == ITEM_SMG) {
@@ -1983,7 +1795,6 @@ void criarItem(Item *item, TipoItem tipo, Vector2 posicao) {
     }
 }
 
-// Função para desenhar um item
 void desenharItem(Item *item, Recursos *recursos) {
     if (!item->ativo || item->coletado) {
         return;
@@ -2019,15 +1830,12 @@ void desenharItem(Item *item, Recursos *recursos) {
             break;
     }
 
-    // Efeito de "pulsar"
     float pulso = sinf(GetTime() * 3.0f) * 3.0f;
 
-    // Tentar desenhar textura do item se disponível
     bool texturadoDesenhado = false;
     Texture2D texturaItem = {0};
-    float escalaBase = 0.05f; // Escala padrão
+    float escalaBase = 0.05f; 
 
-    // Selecionar textura baseado no tipo de item
     if (recursos != NULL) {
         if (item->tipo == ITEM_CHAVE && texturaValida(recursos->texturaChave)) {
             texturaItem = recursos->texturaChave;
@@ -2035,18 +1843,17 @@ void desenharItem(Item *item, Recursos *recursos) {
             texturadoDesenhado = true;
         } else if (item->tipo == ITEM_SHOTGUN && texturaValida(recursos->texturaShotgun)) {
             texturaItem = recursos->texturaShotgun;
-            escalaBase = 0.12f; // Shotgun 1.2x
+            escalaBase = 0.12f; 
             texturadoDesenhado = true;
         } else if (item->tipo == ITEM_SMG && texturaValida(recursos->texturaSMG)) {
             texturaItem = recursos->texturaSMG;
-            escalaBase = 0.12f; // SMG 1.2x
+            escalaBase = 0.12f; 
             texturadoDesenhado = true;
         }
     }
 
-    // Desenhar textura ou fallback
     if (texturadoDesenhado) {
-        float escala = escalaBase + (pulso * 0.001f); // Escala com pulso sutil
+        float escala = escalaBase + (pulso * 0.001f); 
         float largura = texturaItem.width * escala;
         float altura = texturaItem.height * escala;
 
@@ -2061,31 +1868,29 @@ void desenharItem(Item *item, Recursos *recursos) {
 
         DrawTexturePro(texturaItem, origem, destino, pivo, 0.0f, WHITE);
     } else {
-        // Fallback: desenhar círculo do item (efeito de "pulsar")
+
         DrawCircleV(item->posicao, 15.0f + pulso, corItem);
         DrawCircleLines((int)item->posicao.x, (int)item->posicao.y, 15.0f + pulso, BLACK);
     }
 
-    // Desenhar nome do item acima
     int larguraTexto = MeasureText(nomeItem, 14);
     DrawText(nomeItem, (int)item->posicao.x - larguraTexto / 2, (int)item->posicao.y - 30, 14, BLACK);
     DrawText(nomeItem, (int)item->posicao.x - larguraTexto / 2 - 1, (int)item->posicao.y - 31, 14, corItem);
 }
 
-// Função para verificar coleta de item
 bool verificarColetaItem(Item *item, Player *jogador) {
     if (!item->ativo || item->coletado) {
         return false;
     }
     
-    // Calcular distância entre jogador e item
+
     float dx = jogador->posicao.x - item->posicao.x;
     float dy = jogador->posicao.y - item->posicao.y;
     float distancia = sqrtf(dx * dx + dy * dy);
     
-    // Verificar se está próximo e pressionou E
+
     if (distancia <= item->raio && IsKeyPressed(KEY_E)) {
-        // Coletar item baseado no tipo
+
         switch (item->tipo) {
             case ITEM_CHAVE:
                 jogador->temChave = true;
@@ -2097,7 +1902,7 @@ bool verificarColetaItem(Item *item, Player *jogador) {
                 break;
             case ITEM_CURE:
                 jogador->temCure = true;
-                // Se coletou CURE na Fase 3, jogo está vencido
+
                 if (jogador->fase == 3) {
                     jogador->jogoVencido = true;
                 }
@@ -2105,7 +1910,7 @@ bool verificarColetaItem(Item *item, Player *jogador) {
                 break;
             case ITEM_SHOTGUN:
             case ITEM_SMG: {
-                // Encontrar primeiro slot vazio para equipar a arma
+
                 int slotVazio = -1;
                 for (int i = 0; i < 3; i++) {
                     if (jogador->slots[i].tipo == ARMA_NENHUMA) {
@@ -2115,17 +1920,17 @@ bool verificarColetaItem(Item *item, Player *jogador) {
                 }
                 
                 if (slotVazio != -1) {
-                    // Equipar arma no slot vazio
+
                     inicializarArma(&jogador->slots[slotVazio], item->tipoArma);
                     printf("ARMA COLETADA: %s equipada no Slot %d!\n", 
                            item->tipo == ITEM_SHOTGUN ? "SHOTGUN" : "SMG", 
                            slotVazio + 1);
                     
-                    // Trocar automaticamente para a nova arma
+
                     equiparArma(jogador, slotVazio);
                 } else {
                     printf("Todos os slots estao ocupados! Nao foi possivel coletar a arma.\n");
-                    return false; // Não coletar se não houver espaço
+                    return false; 
                 }
                 break;
             }
@@ -2136,7 +1941,7 @@ bool verificarColetaItem(Item *item, Player *jogador) {
         return true;
     }
     
-    // Desenhar prompt "Pressione E" se estiver próximo
+
     if (distancia <= item->raio) {
         const char *prompt = "Pressione E";
         int largura = MeasureText(prompt, 16);
@@ -2146,69 +1951,60 @@ bool verificarColetaItem(Item *item, Player *jogador) {
     return false;
 }
 
-// Função para criar uma porta
 void criarPorta(Porta *porta, Vector2 posicao, int faseDestino) {
     porta->posicao = posicao;
     porta->largura = 60.0f;
     porta->altura = 80.0f;
     porta->ativa = true;
-    porta->trancada = true;  // Por padrão, portas são trancadas
+    porta->trancada = true;  
     porta->faseDestino = faseDestino;
 }
 
-// Função para desenhar uma porta (porta está no mapa como tile, sem UI adicional)
 void desenharPorta(Porta *porta, Texture2D texturaPorta) {
-    (void)texturaPorta;  // Não usado - porta já está renderizada no mapa
-    (void)porta;  // Não precisa desenhar nada - porta está no mapa
+    (void)texturaPorta;  
+    (void)porta;  
 
-    // A porta já está renderizada como tile no mapa (TILE_PORTA_MERCADO)
-    // Não desenhar nenhum elemento adicional (sem cadeado, sem texto)
 }
 
-// Função para verificar interação com porta
 bool verificarInteracaoPorta(Porta *porta, Player *jogador) {
     if (!porta->ativa) {
         return false;
     }
 
-    // Calcular distância entre jogador e porta
     float dx = jogador->posicao.x - porta->posicao.x;
     float dy = jogador->posicao.y - porta->posicao.y;
     float distancia = sqrtf(dx * dx + dy * dy);
 
-    // Verificar se está próximo (50 pixels)
     if (distancia <= 50.0f) {
-        // Verificar se a porta está trancada
+
         if (porta->trancada) {
-            // Porta Fase 1 -> Fase 2 requer CHAVE
+
             if (porta->faseDestino == 2 && !jogador->temChave) {
                 DrawText("Precisa da CHAVE", (int)porta->posicao.x - 60, (int)porta->posicao.y - 50, 14, RED);
                 return false;
             }
 
-            // Porta Fase 2 -> Fase 3 requer CHAVE
             if (porta->faseDestino == 3 && !jogador->temChave) {
                 DrawText("Precisa da CHAVE", (int)porta->posicao.x - 60, (int)porta->posicao.y - 50, 14, RED);
                 return false;
             }
         }
         
-        // Mostrar prompt de interação
+
         DrawText("Pressione E", (int)porta->posicao.x - 45, (int)porta->posicao.y - 50, 16, YELLOW);
         
-        // Verificar se pressionou E
+
         if (IsKeyPressed(KEY_E)) {
             if (porta->trancada) {
-                // Destrancar porta e consumir o item necessário
+
                 if (porta->faseDestino == 2 || porta->faseDestino == 3) {
-                    jogador->temChave = false;  // Remover chave do inventário
+                    jogador->temChave = false;  
                     printf("Chave usada! Porta destrancada!\n");
                 }
 
                 porta->trancada = false;
             }
 
-            // Usar a porta (transição de fase)
             return true;
         }
     }
@@ -2216,50 +2012,47 @@ bool verificarInteracaoPorta(Porta *porta, Player *jogador) {
     return false;
 }
 
-// ===== SISTEMA DE HORDAS =====
-
-// Função para iniciar uma horda específica
 void iniciarHorda(Player *jogador, int numeroHorda) {
     jogador->hordaAtual = numeroHorda;
     jogador->estadoHorda = HORDA_EM_PROGRESSO;
     jogador->zumbisSpawnados = 0;
     jogador->bossesSpawnados = 0;
-    jogador->tempoSpawn = 0.0f;  // Resetar timer de spawn
-    jogador->tempoSpawnBoss = 0.0f;  // Resetar timer de spawn de boss
+    jogador->tempoSpawn = 0.0f;  
+    jogador->tempoSpawnBoss = 0.0f;  
     
-    // Definir quantidade de zumbis e bosses por horda baseado na fase
+
     if (jogador->fase == 1) {
-        // FASE 1: Sistema original com zumbis e boss final
-        jogador->bossesTotaisHorda = 0;  // Sem bosses nas hordas normais
+
+        jogador->bossesTotaisHorda = 0;  
         switch (numeroHorda) {
             case 1:
-                jogador->zumbisTotaisHorda = 5;  // Primeira horda: 5 zumbis
+                jogador->zumbisTotaisHorda = 5;  
                 break;
             case 2:
-                jogador->zumbisTotaisHorda = 7;  // Segunda horda: 7 zumbis
+                jogador->zumbisTotaisHorda = 7;  
                 break;
             case 3:
-                jogador->zumbisTotaisHorda = 2;  // Terceira horda: 2 zumbis + boss (boss spawnado separadamente)
-                jogador->bossesTotaisHorda = 1;  // 1 Prowler
+                jogador->zumbisTotaisHorda = 2;  
+                jogador->bossesTotaisHorda = 1;  
                 break;
             default:
                 jogador->zumbisTotaisHorda = 5;
                 break;
         }
     } else if (jogador->fase == 2) {
-        // FASE 2: Sistema de hordas com Hunters
+
         switch (numeroHorda) {
             case 1:
-                jogador->zumbisTotaisHorda = 2;   // 2 zumbis normais
-                jogador->bossesTotaisHorda = 1;   // 1 Hunter
+                jogador->zumbisTotaisHorda = 2;   
+                jogador->bossesTotaisHorda = 1;   
                 break;
             case 2:
-                jogador->zumbisTotaisHorda = 2;   // 2 zumbis normais
-                jogador->bossesTotaisHorda = 1;   // 1 Hunter
+                jogador->zumbisTotaisHorda = 2;   
+                jogador->bossesTotaisHorda = 1;   
                 break;
             case 3:
-                jogador->zumbisTotaisHorda = 0;   // Sem zumbis normais
-                jogador->bossesTotaisHorda = 2;   // 2 Hunters (HORDA FINAL)
+                jogador->zumbisTotaisHorda = 0;   
+                jogador->bossesTotaisHorda = 2;   
                 break;
             default:
                 jogador->zumbisTotaisHorda = 2;
@@ -2267,7 +2060,7 @@ void iniciarHorda(Player *jogador, int numeroHorda) {
                 break;
         }
     } else {
-        // Outras fases podem ter suas próprias configurações
+
         jogador->zumbisTotaisHorda = 5;
         jogador->bossesTotaisHorda = 0;
     }
@@ -2279,10 +2072,9 @@ void iniciarHorda(Player *jogador, int numeroHorda) {
     printf("Bosses a spawnar: %d\n", jogador->bossesTotaisHorda);
 }
 
-// Função auxiliar para contar quantos bosses estão vivos
 int contarBossesVivos(Boss *bosses) {
     if (bosses == NULL) {
-        return 0;  // Proteção contra NULL
+        return 0;  
     }
     
     int count = 0;
@@ -2296,19 +2088,18 @@ int contarBossesVivos(Boss *bosses) {
     return count;
 }
 
-// Função para atualizar o sistema de hordas
 void atualizarHorda(Player *jogador, Zumbi **zumbis, Boss **bosses, float deltaTime) {
-    // Não atualizar se jogador morreu ou venceu
+
     if (jogador->vida <= 0 || jogador->jogoVencido) {
         return;
     }
     
-    // Proteção contra ponteiros NULL
+
     if (jogador == NULL || zumbis == NULL || bosses == NULL) {
         return;
     }
     
-    // Contar quantos zumbis estão vivos
+
     int zumbisVivos = 0;
     Zumbi *z = *zumbis;
     while (z != NULL) {
@@ -2317,45 +2108,44 @@ void atualizarHorda(Player *jogador, Zumbi **zumbis, Boss **bosses, float deltaT
     }
     jogador->zumbisRestantes = zumbisVivos;
     
-    // Contar quantos bosses estão vivos
+
     int bossesVivos = contarBossesVivos(*bosses);
     
     switch (jogador->estadoHorda) {
         case HORDA_NAO_INICIADA:
-            // Iniciar primeira horda automaticamente nas fases 1 e 2
+
             if ((jogador->fase == 1 || jogador->fase == 2) && jogador->hordaAtual == 0) {
                 iniciarHorda(jogador, 1);
             }
             break;
             
         case HORDA_EM_PROGRESSO:
-            // Verificar se todos os zumbis e bosses foram mortos e spawnados
+
             if (zumbisVivos == 0 && jogador->zumbisSpawnados >= jogador->zumbisTotaisHorda &&
                 bossesVivos == 0 && jogador->bossesSpawnados >= jogador->bossesTotaisHorda) {
                 jogador->estadoHorda = HORDA_COMPLETA;
                 printf("=== HORDA %d COMPLETA! ===\n", jogador->hordaAtual);
                 
-                // Verificar se há mais hordas
-                int maxHordas = 3; // Padrão para fases 1 e 2
+
+                int maxHordas = 3; 
                 if ((jogador->fase == 1 || jogador->fase == 2) && jogador->hordaAtual < maxHordas) {
                     jogador->estadoHorda = HORDA_INTERVALO;
-                    jogador->tempoIntervalo = 10.0f;  // 10 segundos de intervalo
+                    jogador->tempoIntervalo = 10.0f;  
                     printf("Proxima horda em 10 segundos...\n");
                 }
             }
             break;
             
         case HORDA_COMPLETA:
-            // Estado final - todas as hordas foram completadas
-            // Pode-se usar para mostrar mensagem ou spawnar boss final
+
             break;
             
         case HORDA_INTERVALO:
-            // Contar o tempo do intervalo
+
             jogador->tempoIntervalo -= deltaTime;
             
             if (jogador->tempoIntervalo <= 0.0f) {
-                // Iniciar próxima horda
+
                 iniciarHorda(jogador, jogador->hordaAtual + 1);
             }
             break;
