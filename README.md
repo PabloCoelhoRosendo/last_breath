@@ -1,4 +1,4 @@
-# 🧟 LAST BREATH - Zombie Survival Game
+# 🧟 LAST BREATH 
 
 **Projeto da disciplina: Programação Imperativa e Funcional**  
 **Semestre:** 2025.2
