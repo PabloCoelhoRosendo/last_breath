@@ -7,6 +7,9 @@
 #include "mapa.h"
 #include "recursos.h"
 #include "pathfinding.h"
+#include "boss.h"
+#include "item.h"
+#include "horda.h"
 
 void detectarPortaNoMapa(Mapa* mapa, Porta* portaPtr) {
     portaPtr->ativa = false;

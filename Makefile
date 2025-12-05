@@ -21,7 +21,7 @@ SRC_DIR = src
 INCLUDE_DIR = include
 
 # Arquivos fonte
-SOURCES = $(SRC_DIR)/main.c $(SRC_DIR)/jogo.c $(SRC_DIR)/arquivo.c $(SRC_DIR)/mapa.c $(SRC_DIR)/recursos.c $(SRC_DIR)/pathfinding.c
+SOURCES = $(SRC_DIR)/main.c $(SRC_DIR)/jogo.c $(SRC_DIR)/arquivo.c $(SRC_DIR)/mapa.c $(SRC_DIR)/recursos.c $(SRC_DIR)/pathfinding.c $(SRC_DIR)/boss.c $(SRC_DIR)/item.c $(SRC_DIR)/horda.c
 
 # Flags do compilador
 CFLAGS = -Wall -std=c99 -I$(INCLUDE_DIR)

@@ -26,6 +26,21 @@ typedef enum {
     ARMA_SMG = 3
 } TipoArma;
 
+typedef enum {
+    ITEM_CHAVE = 0,
+    ITEM_MAPA = 1,
+    ITEM_CURE = 2,
+    ITEM_SHOTGUN = 3,
+    ITEM_SMG = 4
+} TipoItem;
+
+typedef enum {
+    BOSS_NENHUM = 0,
+    BOSS_PROWLER = 1,
+    BOSS_HUNTER = 2,
+    BOSS_ABOMINATION = 3
+} TipoBoss;
+
 typedef struct {
     TipoArma tipo;
     int dano;
@@ -36,6 +51,10 @@ typedef struct {
     float tempoRecarga;
     float cooldown;
 } Arma;
+
+// Forward declaration para evitar inclusões circulares
+typedef struct Zumbi Zumbi;
+typedef struct Bala Bala;
 
 typedef struct {
     Vector2 posicao;
@@ -74,7 +93,8 @@ typedef struct {
     float cooldownDanoZumbi;
 } Player;
 
-typedef struct Zumbi {
+// Estruturas de Zumbi e Bala (mantidas aqui por serem usadas em jogo.c)
+struct Zumbi {
     Vector2 posicao;
     Vector2 posicaoAnterior;
     Vector2 velocidade;
@@ -93,10 +113,12 @@ typedef struct Zumbi {
     Texture2D spriteCostasEsquerda;
     Texture2D spriteAtual;
     Caminho caminho;
+    float tempoTravado;
+    Vector2 ultimaPosicaoVerificada;
     struct Zumbi *proximo;
-} Zumbi;
+};
 
-typedef struct Bala {
+struct Bala {
     Vector2 posicao;
     Vector2 velocidade;
     int tipo;
@@ -105,113 +127,45 @@ typedef struct Bala {
     float tempoVida;
     float angulo;
     struct Bala *proximo;
-} Bala;
-
-typedef enum {
-    BOSS_NENHUM = 0,
-    BOSS_PROWLER = 1,
-    BOSS_HUNTER = 2,
-    BOSS_ABOMINATION = 3
-} TipoBoss;
-
-typedef struct Boss {
-    TipoBoss tipo;
-    Vector2 posicao;
-    Vector2 posicaoAnterior;
-    int vida;
-    int vidaMax;
-    float velocidade;
-    float raio;
-    bool ativo;
-    bool atacando;
-    float tempoAtaque;
-    float cooldownAtaque;
-    int padraoAtaque;
-    float anguloRotacao;
-    int direcaoVertical;
-    int direcaoHorizontal;
-    Texture2D spriteFrente;
-    Texture2D spriteCostas;
-    Texture2D spriteDireita;
-    Texture2D spriteEsquerda;
-    Texture2D spriteAtual;
-    Caminho caminho;
-    struct Boss *proximo;
-} Boss;
-
-typedef enum {
-    ITEM_CHAVE = 0,
-    ITEM_MAPA = 1,
-    ITEM_CURE = 2,
-    ITEM_SHOTGUN = 3,
-    ITEM_SMG = 4
-} TipoItem;
-
-typedef struct {
-    TipoItem tipo;
-    Vector2 posicao;
-    float raio;
-    bool ativo;
-    bool coletado;
-    TipoArma tipoArma;
-} Item;
-typedef struct {
-    Vector2 posicao;
-    float largura;
-    float altura;
-    bool ativa;           
-    bool trancada;        
-    int faseDestino;      
-} Porta;
+};
 
 
+// Funções principais do jogo
 void iniciarJogo(Player *jogador);
-void atualizarJogo(Player *jogador, struct Zumbi **zumbis, struct Bala **balas);
-void atualizarJogoComPathfinding(Player *jogador, struct Zumbi **zumbis, struct Bala **balas, const Mapa *mapa, PathfindingGrid *grid);
-void desenharJogo(Player *jogador, struct Zumbi *zumbis, struct Bala *balas, Texture2D texturaMapa, Recursos *recursos);
+void atualizarJogoComPathfinding(Player *jogador, Zumbi **zumbis, Bala **balas, const Mapa *mapa, PathfindingGrid *grid);
+void desenharJogo(Player *jogador, Zumbi *zumbis, Bala *balas, Texture2D texturaMapa, Recursos *recursos);
 
 
+// Funções de Arma
 void inicializarArma(Arma *arma, TipoArma tipo);
 void equiparArma(Player *jogador, int slot);
 void recarregarArma(Player *jogador);
-void atirarArma(Player *jogador, struct Bala **balas, Vector2 alvo);
-
-
-void criarBoss(struct Boss **bosses, TipoBoss tipo, Vector2 posicao, Texture2D spriteFrente, Texture2D spriteCostas, Texture2D spriteDireita, Texture2D spriteEsquerda);
-void atualizarBoss(struct Boss **bosses, Player *jogador, struct Bala **balas, float deltaTime);
-void atualizarBossComPathfinding(struct Boss **bosses, Player *jogador, struct Bala **balas, float deltaTime, const Mapa *mapa, PathfindingGrid *grid);
-void desenharBoss(struct Boss *bosses);
-void verificarColisoesBossBala(struct Boss **bosses, struct Bala **balas, Item *itemProgresso, Item *itemArma, Player *jogador);
-void verificarColisoesBossJogador(struct Boss *bosses, Player *jogador);
-
-
-void criarItem(Item *item, TipoItem tipo, Vector2 posicao);
-void desenharItem(Item *item, Recursos *recursos);
-bool verificarColetaItem(Item *item, Player *jogador);
-void criarPorta(Porta *porta, Vector2 posicao, int faseDestino);
-void desenharPorta(Porta *porta, Texture2D texturaPorta);
-bool verificarInteracaoPorta(Porta *porta, Player *jogador);
+void atirarArma(Player *jogador, Bala **balas, Vector2 alvo);
 
 
 void adicionarBala(struct Bala **cabeca, Vector2 posInicial, Vector2 alvo, int tipo, float dano);
 void atualizarBalas(struct Bala **cabeca, Mapa *mapa);
 
+// Funções de Arma
+void inicializarArma(Arma *arma, TipoArma tipo);
+void equiparArma(Player *jogador, int slot);
+void recarregarArma(Player *jogador);
+void atirarArma(Player *jogador, Bala **balas, Vector2 alvo);
 
-void adicionarZumbi(struct Zumbi **cabeca, Vector2 posInicial, Texture2D sprites[][4]);
-void atualizarZumbisComPathfinding(struct Zumbi **cabeca, Vector2 posicaoJogador, float deltaTime, const Mapa *mapa, PathfindingGrid *grid);
-void desenharZumbis(struct Zumbi *cabeca);
-void liberarZumbis(struct Zumbi **cabeca);
+// Funções de Bala
+void adicionarBala(Bala **cabeca, Vector2 posInicial, Vector2 alvo, int tipo, float dano);
+void atualizarBalas(Bala **cabeca, Mapa *mapa);
 
+// Funções de Zumbi
+void adicionarZumbi(Zumbi **cabeca, Vector2 posInicial, Texture2D sprites[][4]);
+void atualizarZumbisComPathfinding(Zumbi **cabeca, Vector2 posicaoJogador, float deltaTime, const Mapa *mapa, PathfindingGrid *grid);
+void desenharZumbis(Zumbi *cabeca);
+void liberarZumbis(Zumbi **cabeca);
 
-void iniciarHorda(Player *jogador, int numeroHorda);
-void atualizarHorda(Player *jogador, struct Zumbi **zumbis, struct Boss **bosses, float deltaTime);
-int contarBossesVivos(struct Boss *bosses);
-
-
+// Funções de Colisão
 int verificarColisaoCirculos(Vector2 pos1, float raio1, Vector2 pos2, float raio2);
-void verificarColisoesBalaZumbi(struct Bala **balas, struct Zumbi **zumbis, Player *jogador);
-void verificarColisoesBalaJogador(struct Bala **balas, Player *jogador);
-void verificarColisoesJogadorZumbi(Player *jogador, struct Zumbi *zumbis);
-void verificarColisoesZumbiZumbi(struct Zumbi *zumbis);
+void verificarColisoesBalaZumbi(Bala **balas, Zumbi **zumbis, Player *jogador);
+void verificarColisoesBalaJogador(Bala **balas, Player *jogador);
+void verificarColisoesJogadorZumbi(Player *jogador, Zumbi *zumbis);
 
 #endif

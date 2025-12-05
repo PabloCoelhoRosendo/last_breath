@@ -59,7 +59,13 @@ static float custoPorProximidade(const Mapa *mapa, int x, int y) {
 
             if (nx >= 0 && nx < LARGURA_MAPA && ny >= 0 && ny < ALTURA_MAPA) {
                 if (isTileSolido(mapa, ny, nx)) {
-                    custoExtra += 2.0f;
+                    // Aumenta o custo para células próximas a obstáculos
+                    // Diagonal tem custo maior
+                    if (abs(dx) + abs(dy) == 2) {
+                        custoExtra += 3.0f; // Diagonal
+                    } else {
+                        custoExtra += 5.0f; // Adjacente direto
+                    }
                 }
             }
         }

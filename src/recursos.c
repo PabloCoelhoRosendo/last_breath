@@ -78,7 +78,7 @@ void carregarRecursos(Recursos* recursos) {
     carregarTextura(&recursos->texturasTiles[TILE_LABORATORIO], "assets/tiles/Laboratorio.png", "assets/tiles/predio_verde.png", "Laboratorio");
     carregarTextura(&recursos->texturasTiles[TILE_PREDIO_AMARELO], "assets/tiles/predio_amarelo.png", NULL, "Predio Amarelo");
 
-    carregarTextura(&recursos->texturasTiles[TILE_CHAO_MERCADO], "assets/tiles/chao mercado.png", NULL, "Chao Mercado");
+    carregarTextura(&recursos->texturasTiles[TILE_CHAO_MERCADO], "assets/tiles/Chao mercado.png", NULL, "Chao Mercado");
     recursos->chaoMercado = recursos->texturasTiles[TILE_CHAO_MERCADO];
 
     carregarTextura(&recursos->texturasTiles[TILE_PRATELEIRA_MERCADO], "assets/tiles/prateleira mercado.png", NULL, "Prateleira Mercado");
