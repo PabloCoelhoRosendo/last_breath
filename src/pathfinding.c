@@ -314,7 +314,7 @@ bool precisaRecalcularCaminho(Caminho *caminho, Vector2 destinoAtual, float delt
 
     caminho->tempoRecalculo += deltaTime;
 
-    if (!caminho->valido || caminho->tempoRecalculo >= 0.5f) {
+    if (!caminho->valido || caminho->tempoRecalculo >= 1.2f) {
         caminho->tempoRecalculo = 0.0f;
         return true;
     }

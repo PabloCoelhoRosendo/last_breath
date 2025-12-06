@@ -30,6 +30,7 @@ typedef struct Boss {
     Texture2D spriteEsquerda;
     Texture2D spriteAtual;
     Caminho caminho;
+    float tempoDano; // Timer para efeito visual de dano
     struct Boss *proximo;
 } Boss;
 
@@ -44,7 +45,7 @@ void atualizarBossComPathfinding(Boss **bosses, Player *jogador, Bala **balas,
 void desenharBoss(Boss *bosses);
 
 void verificarColisoesBossBala(Boss **bosses, struct Bala **balas, 
-                               Item *itemProgresso, Item *itemArma, Player *jogador);
+                               Item *itemProgresso, Item *itemArma, Player *jogador, Moeda **moedas);
 
 void verificarColisoesBossJogador(Boss *bosses, Player *jogador);
 

@@ -1,11 +1,12 @@
-# Mapa Fase 2 - Last Breath (INTERIOR DO MERCADO)
+# Mapa Fase 1 - Last Breath (INTERIOR DO MERCADO)
 # Dimensões: 32x24 tiles (1024x768 pixels com tiles 32x32)
 # 6 = Chão walkable (Piso do mercado - TILE_CHAO_MERCADO)
-# 7 = Prateleira (obstáculo - TILE_PRATELEIRA_MERCADO)
-# 8 = Caixa (obstáculo - TILE_CAIXA_MERCADO)
-# 10 = Porta retorno à loja (esquerda - centro)
-# 11 = Porta para a rua (direita - centro)
-# 12 = Parede invisível (TILE_PAREDE_INVISIVEL)
+# 7 = Prateleira (obstáculo - TILE_PRATELEIRA_MERCADO) - 7 colunas × 3 linhas
+# 8 = Caixa (obstáculo - TILE_CAIXA_MERCADO) - 5 colunas × 3 linhas
+# 10 = Porta do mercado (decoração - TILE_PORTA_MERCADO) - Coluna 31, linhas matriz 9-15 (centro=12)
+# 12 = Parede invisível (TILE_PAREDE_INVISIVEL) - Bordas do mapa
+#
+# Layout: Arena com prateleiras na esquerda (7×3) e caixas na direita (5×3)
 
 12 12 12 12 12 12 12 12 12 12 12 12 12 12 12 12 12 12 12 12 12 12 12 12 12 12 12 12 12 12 12 12
 12 6 6 6 6 6 6 6 6 6 6 6 6 6 6 6 6 6 6 6 6 6 6 6 6 6 6 6 6 6 6 12
@@ -16,13 +17,13 @@
 12 6 6 6 6 6 6 6 6 6 6 6 6 6 6 6 6 6 6 6 6 6 6 6 6 8 8 8 8 8 6 12
 12 6 6 6 6 6 6 6 6 6 6 6 6 6 6 6 6 6 6 6 6 6 6 6 6 8 8 8 8 8 6 12
 12 6 6 6 6 6 6 6 6 6 6 6 6 6 6 6 6 6 6 6 6 6 6 6 6 6 6 6 6 6 6 12
-12 6 6 6 7 7 7 7 7 7 7 7 7 7 6 6 6 6 6 6 6 6 6 6 6 6 6 6 6 6 6 11
-12 6 6 6 7 7 7 7 7 7 7 7 7 7 6 6 6 6 6 6 6 6 6 6 6 6 6 6 6 6 6 11
-10 6 6 6 7 7 7 7 7 7 7 7 7 7 6 6 6 6 6 6 6 6 6 6 6 8 8 8 8 8 6 11
-10 6 6 6 6 6 6 6 6 6 6 6 6 6 6 6 6 6 6 6 6 6 6 6 6 8 8 8 8 8 6 11
-10 6 6 6 6 6 6 6 6 6 6 6 6 6 6 6 6 6 6 6 6 6 6 6 6 8 8 8 8 8 6 11
-12 6 6 6 6 6 6 6 6 6 6 6 6 6 6 6 6 6 6 6 6 6 6 6 6 6 6 6 6 6 6 11
-12 6 6 6 7 7 7 7 7 7 7 7 7 7 6 6 6 6 6 6 6 6 6 6 6 6 6 6 6 6 6 12
+12 6 6 6 7 7 7 7 7 7 7 7 7 7 6 6 6 6 6 6 6 6 6 6 6 6 6 6 6 6 6 10
+12 6 6 6 7 7 7 7 7 7 7 7 7 7 6 6 6 6 6 6 6 6 6 6 6 6 6 6 6 6 6 10
+12 6 6 6 7 7 7 7 7 7 7 7 7 7 6 6 6 6 6 6 6 6 6 6 6 8 8 8 8 8 6 10
+12 6 6 6 6 6 6 6 6 6 6 6 6 6 6 6 6 6 6 6 6 6 6 6 6 8 8 8 8 8 6 10
+12 6 6 6 6 6 6 6 6 6 6 6 6 6 6 6 6 6 6 6 6 6 6 6 6 8 8 8 8 8 6 10
+12 6 6 6 6 6 6 6 6 6 6 6 6 6 6 6 6 6 6 6 6 6 6 6 6 6 6 6 6 6 6 10
+12 6 6 6 7 7 7 7 7 7 7 7 7 7 6 6 6 6 6 6 6 6 6 6 6 6 6 6 6 6 6 10
 12 6 6 6 7 7 7 7 7 7 7 7 7 7 6 6 6 6 6 6 6 6 6 6 6 6 6 6 6 6 6 12
 12 6 6 6 7 7 7 7 7 7 7 7 7 7 6 6 6 6 6 6 6 6 6 6 6 8 8 8 8 8 6 12
 12 6 6 6 6 6 6 6 6 6 6 6 6 6 6 6 6 6 6 6 6 6 6 6 6 8 8 8 8 8 6 12

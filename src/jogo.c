@@ -3,6 +3,7 @@
 #include "jogo.h"
 #include "arquivo.h"
 #include "recursos.h"
+#include "item.h"
 #include "pathfinding.h"
 
 #include <stdlib.h> 
@@ -58,10 +59,10 @@ void atualizarBalas(Bala **cabeca, Mapa *mapa) {
     
     Bala *atual = *cabeca;
     Bala *anterior = NULL;
-    float deltaTime = GetFrameTime();
+    static float deltaTime = 0.016f;
+    deltaTime = GetFrameTime();
     
     while (atual != NULL) {
-
         atual->posicao.x += atual->velocidade.x * deltaTime;
         atual->posicao.y += atual->velocidade.y * deltaTime;
         
@@ -97,6 +98,178 @@ void atualizarBalas(Bala **cabeca, Mapa *mapa) {
         }
     }
 }
+
+// ========== FUNÇÕES DE CARTUCHOS ==========
+
+void adicionarCartucho(Cartucho **cabeca, Vector2 posicao, float angulo, int tipo) {
+    Cartucho *novoCartucho = (Cartucho *)malloc(sizeof(Cartucho));
+    if (novoCartucho == NULL) return;
+
+    novoCartucho->posicao = posicao;
+    novoCartucho->angulo = angulo + GetRandomValue(-30, 30);
+    novoCartucho->tempoVida = 0.0f;
+    novoCartucho->tipo = tipo;
+    
+    // Ejeção para o lado direito com variação
+    float anguloEjecao = (angulo + 90) * DEG2RAD;
+    float velocidade = 100.0f + GetRandomValue(0, 50);
+    novoCartucho->velocidadeX = cosf(anguloEjecao) * velocidade;
+    novoCartucho->velocidadeY = sinf(anguloEjecao) * velocidade;
+    
+    novoCartucho->proximo = *cabeca;
+    *cabeca = novoCartucho;
+}
+
+void atualizarCartuchos(Cartucho **cabeca, float deltaTime) {
+    Cartucho *atual = *cabeca;
+    Cartucho *anterior = NULL;
+    int contador = 0;
+    
+    while (atual != NULL) {
+        atual->tempoVida += deltaTime;
+        
+        // Física de queda
+        atual->posicao.x += atual->velocidadeX * deltaTime;
+        atual->posicao.y += atual->velocidadeY * deltaTime;
+        atual->velocidadeX *= 0.95f; // Atrito
+        atual->velocidadeY *= 0.95f;
+        atual->angulo += 360.0f * deltaTime; // Rotação
+        
+        // Remove cartuchos após 3 segundos ou se tiver muitos (limite de 50)
+        if (atual->tempoVida > 3.0f || contador > 50) {
+            Cartucho *temp = atual;
+            if (anterior == NULL) {
+                *cabeca = atual->proximo;
+            } else {
+                anterior->proximo = atual->proximo;
+            }
+            atual = atual->proximo;
+            free(temp);
+        } else {
+            contador++;
+            anterior = atual;
+            atual = atual->proximo;
+        }
+    }
+}
+
+void desenharCartuchos(Cartucho *cabeca) {
+    Cartucho *atual = cabeca;
+    while (atual != NULL) {
+        // Cartucho dourado/amarelo
+        Color cor = (Color){218, 165, 32, 255};
+        
+        // Desenha retângulo pequeno rotacionado
+        Rectangle rec = {atual->posicao.x, atual->posicao.y, 4, 8};
+        Vector2 origem = {2, 4};
+        DrawRectanglePro(rec, origem, atual->angulo, cor);
+        
+        atual = atual->proximo;
+    }
+}
+
+void liberarCartuchos(Cartucho **cabeca) {
+    Cartucho *atual = *cabeca;
+    while (atual != NULL) {
+        Cartucho *temp = atual;
+        atual = atual->proximo;
+        free(temp);
+    }
+    *cabeca = NULL;
+}
+
+// ========== FUNÇÕES DE MANCHAS DE SANGUE ==========
+
+void adicionarManchaSangue(ManchaSangue **cabeca, Vector2 posicao, float raio) {
+    ManchaSangue *novaMancha = (ManchaSangue *)malloc(sizeof(ManchaSangue));
+    if (novaMancha == NULL) return;
+
+    novaMancha->posicao = posicao;
+    novaMancha->raio = raio + GetRandomValue(-5, 5);
+    novaMancha->alpha = 200.0f;
+    novaMancha->tempoVida = 0.0f;
+    
+    // Gerar pontos irregulares aleatórios para formato orgânico
+    for (int i = 0; i < 8; i++) {
+        float angulo = (i * 45.0f) * DEG2RAD;
+        float variacao = 0.6f + GetRandomValue(0, 80) / 100.0f; // 0.6 a 1.4
+        novaMancha->pontos[i][0] = cosf(angulo) * novaMancha->raio * variacao;
+        novaMancha->pontos[i][1] = sinf(angulo) * novaMancha->raio * variacao;
+    }
+    
+    novaMancha->proximo = *cabeca;
+    *cabeca = novaMancha;
+}
+
+void atualizarManchasSangue(ManchaSangue **cabeca, float deltaTime) {
+    ManchaSangue *atual = *cabeca;
+    ManchaSangue *anterior = NULL;
+    int contador = 0;
+    
+    while (atual != NULL) {
+        atual->tempoVida += deltaTime;
+        contador++;
+        
+        // Fade out gradual nos últimos 0.5 segundos
+        if (atual->tempoVida > 2.0f) {
+            float tempoRestante = 2.5f - atual->tempoVida;
+            atual->alpha = (tempoRestante / 0.5f) * 200.0f;
+        }
+        
+        // Remove após 2.5 segundos ou se tiver muitas (limite 100)
+        if (atual->tempoVida >= 2.5f || contador > 100) {
+            ManchaSangue *temp = atual;
+            if (anterior == NULL) {
+                *cabeca = atual->proximo;
+            } else {
+                anterior->proximo = atual->proximo;
+            }
+            atual = atual->proximo;
+            free(temp);
+        } else {
+            anterior = atual;
+            atual = atual->proximo;
+        }
+    }
+}
+
+void desenharManchasSangue(ManchaSangue *cabeca) {
+    ManchaSangue *atual = cabeca;
+    while (atual != NULL) {
+        Color cor = (Color){139, 0, 0, (unsigned char)atual->alpha};
+        
+        // Desenhar mancha principal com forma irregular usando triângulos
+        for (int i = 0; i < 8; i++) {
+            int proximo = (i + 1) % 8;
+            
+            Vector2 p1 = atual->posicao;
+            Vector2 p2 = {
+                atual->posicao.x + atual->pontos[i][0],
+                atual->posicao.y + atual->pontos[i][1]
+            };
+            Vector2 p3 = {
+                atual->posicao.x + atual->pontos[proximo][0],
+                atual->posicao.y + atual->pontos[proximo][1]
+            };
+            
+            DrawTriangle(p1, p2, p3, cor);
+        }
+        
+        atual = atual->proximo;
+    }
+}
+
+void liberarManchasSangue(ManchaSangue **cabeca) {
+    ManchaSangue *atual = *cabeca;
+    while (atual != NULL) {
+        ManchaSangue *temp = atual;
+        atual = atual->proximo;
+        free(temp);
+    }
+    *cabeca = NULL;
+}
+
+// ========== FUNÇÕES DE ARMA ==========
 
 void inicializarArma(Arma *arma, TipoArma tipo) {
     arma->tipo = tipo;
@@ -167,19 +340,31 @@ void recarregarArma(Player *jogador) {
     jogador->tempoRecargaAtual = armaAtual->tempoRecarga;
 }
 
-void atirarArma(Player *jogador, Bala **balas, Vector2 alvo) {
+void atirarArma(Player *jogador, Bala **balas, Vector2 alvo, Cartucho **cartuchos) {
     Arma *armaAtual = &jogador->slots[jogador->slotAtivo];
     
-
-    if (armaAtual->penteAtual <= 0) return;
+    // Modo Deus: munição infinita
+    if (!jogador->modoDeus) {
+        if (armaAtual->penteAtual <= 0) return;
+    }
     if (armaAtual->cooldown > 0.0f) return;
     if (jogador->estaRecarregando) return;
     
 
     adicionarBala(balas, jogador->posicao, alvo, 0, (float)armaAtual->dano);
     
-
-    armaAtual->penteAtual--;
+    // Adiciona cartucho ejetado
+    if (cartuchos != NULL) {
+        float dx = alvo.x - jogador->posicao.x;
+        float dy = alvo.y - jogador->posicao.y;
+        float anguloTiro = atan2f(dy, dx) * RAD2DEG;
+        adicionarCartucho(cartuchos, jogador->posicao, anguloTiro, armaAtual->tipo);
+    }
+    
+    // Modo Deus: não consome munição
+    if (!jogador->modoDeus) {
+        armaAtual->penteAtual--;
+    }
     
 
     armaAtual->cooldown = armaAtual->taxaTiroMS / 1000.0f;
@@ -221,6 +406,16 @@ void iniciarJogo(Player *jogador) {
 
     jogador->cooldownDanoBala = 0.0f;
     jogador->cooldownDanoZumbi = 0.0f;
+    
+    jogador->modoDeus = false; // Modo Deus desativado por padrão
+    
+    jogador->leuRelatorio = false;
+    jogador->conheceuMenina = false;
+    jogador->meninaLiberada = false;
+    jogador->finalFeliz = false;
+    jogador->fase2Concluida = false;
+    jogador->fase3Concluida = false;
+    jogador->matouBossFinal = false;
 
     inicializarArma(&jogador->slots[0], ARMA_PISTOL);   
     inicializarArma(&jogador->slots[1], ARMA_NENHUMA);  
@@ -228,7 +423,7 @@ void iniciarJogo(Player *jogador) {
     jogador->slotAtivo = 0;  
 }
 
-void atualizarJogoComPathfinding(Player *jogador, Zumbi **zumbis, Bala **balas, const Mapa *mapa, PathfindingGrid *grid) {
+void atualizarJogoComPathfinding(Player *jogador, Zumbi **zumbis, Bala **balas, const Mapa *mapa, PathfindingGrid *grid, Cartucho **cartuchos, ManchaSangue **manchas) {
     float deltaTime = GetFrameTime();
 
     if (jogador->vida <= 0 || jogador->jogoVencido) {
@@ -306,12 +501,12 @@ void atualizarJogoComPathfinding(Player *jogador, Zumbi **zumbis, Bala **balas, 
 
     if (IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) {
         Vector2 mousePos = GetMousePosition();
-        atirarArma(jogador, balas, mousePos);
+        atirarArma(jogador, balas, mousePos, cartuchos);
     }
 
     atualizarZumbisComPathfinding(zumbis, jogador->posicao, deltaTime, mapa, grid);
 
-    verificarColisoesBalaZumbi(balas, zumbis, jogador);
+    verificarColisoesBalaZumbi(balas, zumbis, jogador, manchas, NULL);
     verificarColisoesBalaJogador(balas, jogador);
     if (zumbis != NULL && *zumbis != NULL) {
         verificarColisoesJogadorZumbi(jogador, *zumbis);
@@ -325,6 +520,8 @@ void atualizarJogoComPathfinding(Player *jogador, Zumbi **zumbis, Bala **balas, 
 void desenharJogo(Player *jogador, Zumbi *zumbis, Bala *balas, Texture2D texturaMapa, Recursos *recursos) {
 
     desenharZumbis(zumbis);
+    
+    Arma *armaAtual = &jogador->slots[jogador->slotAtivo];
 
     if (jogador->spriteAtual.id > 0) {
 
@@ -345,6 +542,32 @@ void desenharJogo(Player *jogador, Zumbi *zumbis, Bala *balas, Texture2D textura
     } else {
 
         DrawCircleV(jogador->posicao, 15, BLUE);
+    }
+    
+    // Barra de recarga em cima do jogador
+    if (jogador->estaRecarregando) {
+        float barraLargura = 50.0f;
+        float progresso = 1.0f - (jogador->tempoRecargaAtual / armaAtual->tempoRecarga);
+        DrawRectangle(
+            jogador->posicao.x - barraLargura/2,
+            jogador->posicao.y - 30,
+            barraLargura,
+            6,
+            DARKGRAY
+        );
+        DrawRectangle(
+            jogador->posicao.x - barraLargura/2,
+            jogador->posicao.y - 30,
+            barraLargura * progresso,
+            6,
+            YELLOW
+        );
+    }
+    
+    // Indicador de Modo Deus
+    if (jogador->modoDeus) {
+        DrawText("MODO DEUS ATIVADO", jogador->posicao.x - 60, jogador->posicao.y - 45, 12, GOLD);
+        DrawCircle(jogador->posicao.x, jogador->posicao.y, 20, (Color){255, 215, 0, 50});
     }
 
     Bala *balaAtual = balas;
@@ -374,9 +597,6 @@ void desenharJogo(Player *jogador, Zumbi *zumbis, Bala *balas, Texture2D textura
         balaAtual = balaAtual->proximo;
     }
 
-    
-    Arma *armaAtual = &jogador->slots[jogador->slotAtivo];
-
     int hudEsquerdoX = 10;
     int linhaY = 10;
     int espacamentoLinha = 30;
@@ -391,7 +611,7 @@ void desenharJogo(Player *jogador, Zumbi *zumbis, Bala *balas, Texture2D textura
     DrawRectangle(hudEsquerdoX, linhaY, 200, 20, DARKGRAY);  
     DrawRectangle(hudEsquerdoX, linhaY, (int)(200 * (jogador->vida / 100.0f)), 20, corVida);  
     DrawRectangleLines(hudEsquerdoX, linhaY, 200, 20, WHITE);  
-    DrawText(TextFormat("Vida: %d/100", jogador->vida), hudEsquerdoX + 5, linhaY + 2, 18, WHITE);
+    DrawText(TextFormat("SISTEMA: %d/100", jogador->vida), hudEsquerdoX + 5, linhaY + 2, 18, WHITE);
     linhaY += espacamentoLinha;
 
     Color corMunicao = WHITE;
@@ -473,9 +693,8 @@ void desenharJogo(Player *jogador, Zumbi *zumbis, Bala *balas, Texture2D textura
 
         DrawRectangle(0, 0, 1024, 768, BLACK);
 
-        DrawText("VITORIA!", 380, 80, 60, GREEN);
+        // Removido "VITORIA!" - agora só mostra tempo e pódio
         
-
         int minutos = (int)jogador->tempoTotal / 60;
         float segundos = fmod(jogador->tempoTotal, 60.0f);
         DrawText(TextFormat("Seu tempo: %02d:%05.2f", minutos, segundos), 350, 170, 30, WHITE);
@@ -531,12 +750,13 @@ void adicionarZumbi(Zumbi **cabeca, Vector2 posInicial, Texture2D sprites[][4]) 
     novoZumbi->posicao = posInicial;
     novoZumbi->posicaoAnterior = posInicial;  
     novoZumbi->velocidade = (Vector2){0, 0};
-    novoZumbi->vida = 20; 
+    novoZumbi->vida = 20;
+    novoZumbi->vidaMax = 20;
     novoZumbi->raio = 20.0f;
 
     novoZumbi->tipoMovimento = GetRandomValue(0, 3);
 
-    novoZumbi->velocidadeBase = 120.0f + (float)GetRandomValue(0, 20); 
+    novoZumbi->velocidadeBase = 90.0f + (float)GetRandomValue(0, 15); 
 
     novoZumbi->tempoDesvio = 0.0f;
     novoZumbi->anguloDesvio = (float)GetRandomValue(0, 360) * DEG2RAD;
@@ -559,6 +779,7 @@ void adicionarZumbi(Zumbi **cabeca, Vector2 posInicial, Texture2D sprites[][4]) 
 
     novoZumbi->tempoTravado = 0.0f;
     novoZumbi->ultimaPosicaoVerificada = posInicial;
+    novoZumbi->tempoDano = 0.0f;
 
     novoZumbi->proximo = *cabeca;
     *cabeca = novoZumbi;
@@ -571,6 +792,12 @@ void atualizarZumbisComPathfinding(Zumbi **cabeca, Vector2 posicaoJogador, float
     while (atual != NULL) {
 
         atual->posicaoAnterior = atual->posicao;
+        
+        // Atualiza timer de efeito de dano
+        if (atual->tempoDano > 0.0f) {
+            atual->tempoDano -= deltaTime;
+            if (atual->tempoDano < 0.0f) atual->tempoDano = 0.0f;
+        }
 
         float dx = posicaoJogador.x - atual->posicao.x;
         float dy = posicaoJogador.y - atual->posicao.y;
@@ -663,11 +890,11 @@ void atualizarZumbisComPathfinding(Zumbi **cabeca, Vector2 posicaoJogador, float
             (atual->posicao.y - atual->ultimaPosicaoVerificada.y) * (atual->posicao.y - atual->ultimaPosicaoVerificada.y)
         );
 
-        if (distanciaMovida < 5.0f) {
+        if (distanciaMovida < 3.0f) {
             atual->tempoTravado += deltaTime;
             
-            // Se ficou travado por mais de 0.5s, força movimento perpendicular
-            if (atual->tempoTravado > 0.5f) {
+            // Se ficou travado por mais de 1.0s, força movimento perpendicular
+            if (atual->tempoTravado > 1.0f) {
                 // Força movimento perpendicular ao obstáculo
                 float anguloEscape = (float)GetRandomValue(0, 360) * DEG2RAD;
                 direcaoFinal.x = cosf(anguloEscape);
@@ -757,14 +984,20 @@ void desenharZumbis(Zumbi *cabeca) {
 
             Rectangle origem = {0, 0, (float)atual->spriteAtual.width, (float)atual->spriteAtual.height};
 
-            DrawTexturePro(atual->spriteAtual, origem, destino, (Vector2){0, 0}, 0.0f, WHITE);
+            // Cor base ou vermelha se levou dano recentemente
+            Color corZumbi = WHITE;
+            if (atual->tempoDano > 0.0f) {
+                corZumbi = RED;
+            }
+            
+            DrawTexturePro(atual->spriteAtual, origem, destino, (Vector2){0, 0}, 0.0f, corZumbi);
         } else {
 
             DrawCircleV(atual->posicao, atual->raio, GREEN);
         }
 
         float barraLargura = 40.0f;
-        float porcentagemVida = atual->vida / 20.0f; 
+        float porcentagemVida = (float)atual->vida / (float)atual->vidaMax;
         DrawRectangle(
             atual->posicao.x - barraLargura/2,
             atual->posicao.y - atual->raio - 10,
@@ -789,7 +1022,7 @@ void liberarZumbis(Zumbi **cabeca) {
     *cabeca = NULL;
 }
 
-void verificarColisoesBalaZumbi(Bala **balas, Zumbi **zumbis, Player *jogador) {
+void verificarColisoesBalaZumbi(Bala **balas, Zumbi **zumbis, Player *jogador, ManchaSangue **manchas, Moeda **moedas) {
     if (balas == NULL || *balas == NULL || zumbis == NULL || *zumbis == NULL) return;
     
     Bala *balaAtual = *balas;
@@ -811,6 +1044,20 @@ void verificarColisoesBalaZumbi(Bala **balas, Zumbi **zumbis, Player *jogador) {
             if (verificarColisaoCirculos(balaAtual->posicao, balaAtual->raio, zumbiAtual->posicao, zumbiAtual->raio)) {
 
                 zumbiAtual->vida -= (int)balaAtual->dano;
+                zumbiAtual->tempoDano = 0.1f; // Fica vermelho por 0.1s
+                
+                // Se morreu, adiciona mancha de sangue e dropa moedas
+                if (zumbiAtual->vida <= 0) {
+                    if (manchas != NULL) {
+                        adicionarManchaSangue(manchas, zumbiAtual->posicao, zumbiAtual->raio);
+                    }
+                    if (moedas != NULL) {
+                        adicionarMoeda(moedas, zumbiAtual->posicao, 10);
+                    }
+                    if (jogador != NULL) {
+                        jogador->zumbisMatados++;
+                    }
+                }
 
                 Bala *balaRemover = balaAtual;
                 Bala *proximaBala = balaAtual->proximo;
@@ -828,7 +1075,7 @@ void verificarColisoesBalaZumbi(Bala **balas, Zumbi **zumbis, Player *jogador) {
                 zumbiAtual = zumbiAtual->proximo;
             }
         }
-
+        
         if (!balaRemovida) {
             balaAnterior = balaAtual;
             balaAtual = balaAtual->proximo;
@@ -850,12 +1097,12 @@ void verificarColisoesBalaJogador(Bala **balas, Player *jogador) {
 
             if (verificarColisaoCirculos(balaAtual->posicao, balaAtual->raio, jogador->posicao, 15.0f)) {
 
-                if (jogador->cooldownDanoBala <= 0.0f) {
+                if (jogador->cooldownDanoBala <= 0.0f && !jogador->modoDeus) {
                     int dano = (int)balaAtual->dano;
                     jogador->vida -= dano;
                     jogador->cooldownDanoBala = 0.2f; 
                     
-                    printf("OUCH! Jogador recebeu %d de dano de projetil do boss. Vida: %d\n", dano, jogador->vida);
+                    printf("ALERTA: Sistema danificado. -%d. Integridade: %d\n", dano, jogador->vida);
                     
 
                     if (jogador->vida < 0) {
@@ -919,20 +1166,107 @@ void verificarColisoesJogadorZumbi(Player *jogador, Zumbi *zumbis) {
                 zumbiAtual->posicao.y += sinf(angulo) * (raioJogador + zumbiAtual->raio + 5.0f);
             }
 
-            if (jogador->cooldownDanoZumbi <= 0.0f) {
+            if (jogador->cooldownDanoZumbi <= 0.0f && !jogador->modoDeus) {
                 int dano = 5; 
                 jogador->vida -= dano;
                 jogador->cooldownDanoZumbi = 0.5f; 
 
-                printf("OUCH! Jogador recebeu %d de dano. Vida: %d\n", dano, jogador->vida);
-            }
-
-            if (jogador->vida < 0) {
-                jogador->vida = 0;
+                printf("ALERTA: Componente danificado. -%d. Integridade: %d\n", dano, jogador->vida);
+                
+                if (jogador->vida < 0) {
+                    jogador->vida = 0;
+                }
             }
         }
 
 
         zumbiAtual = zumbiAtual->proximo;
     }
+}
+
+// ========== FUNÇÕES DA MENINA ==========
+
+void atualizarMenina(Menina *menina, Player *jogador, float deltaTime) {
+    if (!menina->ativa || !menina->seguindo) return;
+    
+    // Menina segue o jogador com distância de 50 pixels
+    Vector2 direcao = {
+        jogador->posicao.x - menina->posicao.x,
+        jogador->posicao.y - menina->posicao.y
+    };
+    
+    float distancia = sqrtf(direcao.x * direcao.x + direcao.y * direcao.y);
+    
+    if (distancia > 50.0f) {
+        float velocidade = 2.5f;
+        menina->posicao.x += (direcao.x / distancia) * velocidade * 60.0f * deltaTime;
+        menina->posicao.y += (direcao.y / distancia) * velocidade * 60.0f * deltaTime;
+    }
+}
+
+void desenharMenina(Menina *menina) {
+    if (!menina->ativa) return;
+    
+    // Desenhar menina como círculo rosa/roxo
+    DrawCircleV(menina->posicao, menina->raio, PINK);
+    DrawCircleLines((int)menina->posicao.x, (int)menina->posicao.y, menina->raio, PURPLE);
+    DrawText("MENINA", (int)menina->posicao.x - 30, (int)menina->posicao.y - 30, 12, WHITE);
+}
+
+// ========== FUNÇÕES DA ESCRIVANINHA ==========
+
+void criarEscrivaninha(Escrivaninha *esc, Vector2 posicao) {
+    esc->posicao = posicao;
+    esc->largura = 60.0f;
+    esc->altura = 40.0f;
+    esc->ativa = true;
+    esc->lida = false;
+}
+
+void desenharEscrivaninha(Escrivaninha *esc) {
+    if (!esc->ativa) return;
+    
+    Color cor = esc->lida ? DARKBROWN : BROWN;
+    DrawRectangle(
+        (int)esc->posicao.x - (int)esc->largura / 2,
+        (int)esc->posicao.y - (int)esc->altura / 2,
+        (int)esc->largura,
+        (int)esc->altura,
+        cor
+    );
+    DrawRectangleLines(
+        (int)esc->posicao.x - (int)esc->largura / 2,
+        (int)esc->posicao.y - (int)esc->altura / 2,
+        (int)esc->largura,
+        (int)esc->altura,
+        BLACK
+    );
+    
+    // Papel em cima
+    DrawRectangle(
+        (int)esc->posicao.x - 15,
+        (int)esc->posicao.y - 10,
+        30, 20, WHITE
+    );
+}
+
+bool verificarInteracaoEscrivaninha(Escrivaninha *esc, Player *jogador) {
+    if (!esc->ativa) return false;
+    
+    float distancia = sqrtf(
+        (jogador->posicao.x - esc->posicao.x) * (jogador->posicao.x - esc->posicao.x) +
+        (jogador->posicao.y - esc->posicao.y) * (jogador->posicao.y - esc->posicao.y)
+    );
+    
+    if (distancia <= 60.0f) {
+        DrawText("Pressione E para ler", (int)esc->posicao.x - 70, (int)esc->posicao.y - 50, 14, YELLOW);
+        
+        if (IsKeyPressed(KEY_E) && !esc->lida) {
+            esc->lida = true;
+            jogador->leuRelatorio = true;
+            return true;
+        }
+    }
+    
+    return false;
 }

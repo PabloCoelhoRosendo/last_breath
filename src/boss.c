@@ -72,6 +72,8 @@ void criarBoss(Boss **bosses, TipoBoss tipo, Vector2 posicao, Texture2D spriteFr
     novoBoss->caminho.tamanho = 0;
     novoBoss->caminho.indiceAtual = 0;
     novoBoss->caminho.tempoRecalculo = 0.0f;
+    
+    novoBoss->tempoDano = 0.0f;
 
     novoBoss->proximo = *bosses;
     *bosses = novoBoss;
@@ -88,6 +90,12 @@ void atualizarBossComPathfinding(Boss **bosses, Player *jogador, Bala **balas, f
 
         bossAtual->posicaoAnterior = bossAtual->posicao;
         bossAtual->tempoAtaque += deltaTime;
+        
+        // Atualiza timer de efeito de dano
+        if (bossAtual->tempoDano > 0.0f) {
+            bossAtual->tempoDano -= deltaTime;
+            if (bossAtual->tempoDano < 0.0f) bossAtual->tempoDano = 0.0f;
+        }
 
         switch (bossAtual->tipo) {
             case BOSS_PROWLER: {
@@ -143,7 +151,7 @@ void atualizarBossComPathfinding(Boss **bosses, Player *jogador, Bala **balas, f
                 if (bossAtual->tempoAtaque >= bossAtual->cooldownAtaque) {
                     bossAtual->atacando = true;
 
-                    if (distancia <= 80.0f) {
+                    if (distancia <= 80.0f && !jogador->modoDeus) {
                         jogador->vida -= 15; 
                     }
 
@@ -204,7 +212,7 @@ void atualizarBossComPathfinding(Boss **bosses, Player *jogador, Bala **balas, f
                 }
 
                 if (distancia <= (bossAtual->raio + 20.0f)) {
-                    if (bossAtual->tempoAtaque >= 1.0f) { 
+                    if (bossAtual->tempoAtaque >= 1.0f && !jogador->modoDeus) { 
                         jogador->vida -= 20;
                         bossAtual->tempoAtaque = 0.0f;
                     }
@@ -281,7 +289,13 @@ void desenharBoss(Boss *bosses) {
 
             Rectangle origem = {0, 0, (float)bossAtual->spriteAtual.width, (float)bossAtual->spriteAtual.height};
 
-            DrawTexturePro(bossAtual->spriteAtual, origem, destino, (Vector2){0, 0}, 0.0f, WHITE);
+            // Cor base ou vermelha se levou dano recentemente
+            Color corBoss = WHITE;
+            if (bossAtual->tempoDano > 0.0f) {
+                corBoss = RED;
+            }
+
+            DrawTexturePro(bossAtual->spriteAtual, origem, destino, (Vector2){0, 0}, 0.0f, corBoss);
         } else {
             Color corBoss;
             switch (bossAtual->tipo) {
@@ -297,6 +311,11 @@ void desenharBoss(Boss *bosses) {
                 default:
                     corBoss = BLACK;
                     break;
+            }
+            
+            // Fica vermelho ao levar dano
+            if (bossAtual->tempoDano > 0.0f) {
+                corBoss = RED;
             }
 
             DrawCircleV(bossAtual->posicao, bossAtual->raio, corBoss);
@@ -329,7 +348,7 @@ void desenharBoss(Boss *bosses) {
     }
 }
 
-void verificarColisoesBossBala(Boss **bosses, Bala **balas, Item *itemProgresso, Item *itemArma, Player *jogador) {
+void verificarColisoesBossBala(Boss **bosses, Bala **balas, Item *itemProgresso, Item *itemArma, Player *jogador, Moeda **moedas) {
     if (bosses == NULL || balas == NULL || *balas == NULL) return;
     
     Boss *bossAtual = *bosses;
@@ -351,6 +370,7 @@ void verificarColisoesBossBala(Boss **bosses, Bala **balas, Item *itemProgresso,
                 
                 if (distancia <= (bossAtual->raio + balaAtual->raio)) {
                     bossAtual->vida -= (int)balaAtual->dano;
+                    bossAtual->tempoDano = 0.1f; // Fica vermelho por 0.1s
                     
                     if (balaAnterior == NULL) {
                         *balas = balaAtual->proximo;
@@ -371,21 +391,30 @@ void verificarColisoesBossBala(Boss **bosses, Bala **balas, Item *itemProgresso,
         if (bossAtual->vida <= 0 && bossAtual->ativo) {
             bossAtual->ativo = false;
             
+            // Incrementar contador de bosses mortos
+            if (jogador != NULL) {
+                jogador->bossesMatados++;
+            }
+            
             Vector2 posicaoItem1 = {bossAtual->posicao.x - 30, bossAtual->posicao.y};
-            Vector2 posicaoItem2 = {bossAtual->posicao.x + 30, bossAtual->posicao.y};
             
             switch (bossAtual->tipo) {
                 case BOSS_PROWLER:
                     if (itemProgresso != NULL && !itemProgresso->ativo) {
                         criarItem(itemProgresso, ITEM_CHAVE, posicaoItem1);
-                        printf("Boss morreu! CHAVE dropada!\n");
+                        printf("Boss Prowler morreu! CHAVE dropada!\n");
                     }
-                    if (itemArma != NULL && !itemArma->ativo) {
-                        criarItem(itemArma, ITEM_SHOTGUN, posicaoItem2);
-                        printf("Boss morreu! SHOTGUN dropada!\n");
+                    if (moedas != NULL) {
+                        adicionarMoeda(moedas, bossAtual->posicao, 200);
+                        printf("Boss Prowler morreu! Dropou 200 moedas!\n");
                     }
                     break;
                 case BOSS_HUNTER:
+                    if (moedas != NULL) {
+                        adicionarMoeda(moedas, bossAtual->posicao, 150);
+                        printf("Boss Hunter morreu! Dropou 150 moedas!\n");
+                    }
+                    
                     if (jogador != NULL && jogador->fase == 2 && jogador->hordaAtual == 3) {
                         int huntersVivos = 0;
                         Boss *b = *bosses;
@@ -399,24 +428,21 @@ void verificarColisoesBossBala(Boss **bosses, Bala **balas, Item *itemProgresso,
                         if (huntersVivos == 0) {
                             if (itemProgresso != NULL && !itemProgresso->ativo) {
                                 criarItem(itemProgresso, ITEM_CHAVE, posicaoItem1);
-                                printf("=== ULTIMO HUNTER DA HORDA 3 MORREU! ===\n");
-                                printf("CHAVE dropada!\n");
+                                printf("Todos os Hunters mortos! CHAVE dropada!\n");
                             }
-                            if (itemArma != NULL && !itemArma->ativo) {
-                                criarItem(itemArma, ITEM_SMG, posicaoItem2);
-                                printf("SMG dropada!\n");
-                            }
-                        } else {
-                            printf("Hunter morreu! Ainda restam %d Hunter(s).\n", huntersVivos);
                         }
-                    } else {
-                        printf("Hunter morreu (horda %d)! Sem drop.\n", jogador != NULL ? jogador->hordaAtual : 0);
                     }
                     break;
                 case BOSS_ABOMINATION:
-                    if (itemProgresso != NULL && !itemProgresso->ativo) {
-                        criarItem(itemProgresso, ITEM_CURE, bossAtual->posicao);
-                        printf("Boss morreu! CURE dropada! VITORIA!\n");
+                    // Boss final NÃO dropa CURE
+                    if (moedas != NULL) {
+                        adicionarMoeda(moedas, bossAtual->posicao, 500);
+                        printf("Boss Abomination morreu! Dropou 500 moedas!\n");
+                    }
+                    // Marcar que matou o boss final
+                    if (jogador != NULL && jogador->fase == 4) {
+                        jogador->matouBossFinal = true;
+                        printf("Boss final derrotado! Volte à loja...\n");
                     }
                     break;
                 default:

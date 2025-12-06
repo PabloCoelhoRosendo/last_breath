@@ -12,7 +12,7 @@ void iniciarHorda(Player *jogador, int numeroHorda) {
     jogador->tempoSpawn = 0.0f;  
     jogador->tempoSpawnBoss = 0.0f;  
     
-    if (jogador->fase == 1) {
+    if (jogador->fase == 2) {
         jogador->bossesTotaisHorda = 0;  
         switch (numeroHorda) {
             case 1:
@@ -29,7 +29,7 @@ void iniciarHorda(Player *jogador, int numeroHorda) {
                 jogador->zumbisTotaisHorda = 5;
                 break;
         }
-    } else if (jogador->fase == 2) {
+    } else if (jogador->fase == 3) {
         switch (numeroHorda) {
             case 1:
                 jogador->zumbisTotaisHorda = 2;   
@@ -93,7 +93,7 @@ void atualizarHorda(Player *jogador, Zumbi **zumbis, Boss **bosses, float deltaT
                 printf("=== HORDA %d COMPLETA! ===\n", jogador->hordaAtual);
                 
                 int maxHordas = 3; 
-                if ((jogador->fase == 1 || jogador->fase == 2) && jogador->hordaAtual < maxHordas) {
+                if ((jogador->fase == 1 || jogador->fase == 2 || jogador->fase == 3) && jogador->hordaAtual < maxHordas) {
                     jogador->estadoHorda = HORDA_INTERVALO;
                     jogador->tempoIntervalo = 10.0f;  
                     printf("Proxima horda em 10 segundos...\n");

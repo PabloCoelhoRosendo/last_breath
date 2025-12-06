@@ -25,6 +25,14 @@ typedef struct {
     int faseDestino;
 } Porta;
 
+typedef struct Moeda {
+    Vector2 posicao;
+    int valor;
+    bool ativa;
+    float raio;
+    struct Moeda *proximo;
+} Moeda;
+
 // Funções de Item
 void criarItem(Item *item, TipoItem tipo, Vector2 posicao);
 void desenharItem(Item *item, Recursos *recursos);
@@ -34,5 +42,11 @@ bool verificarColetaItem(Item *item, Player *jogador);
 void criarPorta(Porta *porta, Vector2 posicao, int faseDestino);
 void desenharPorta(Porta *porta, Texture2D texturaPorta);
 bool verificarInteracaoPorta(Porta *porta, Player *jogador);
+
+// Funções de Moeda
+void adicionarMoeda(Moeda **lista, Vector2 posicao, int valor);
+void desenharMoedas(Moeda *moedas);
+void verificarColetaMoedas(Moeda **moedas, Player *jogador);
+void liberarMoedas(Moeda **moedas);
 
 #endif

@@ -4,6 +4,7 @@
 #include "recursos.h"
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <math.h>
 
 void criarItem(Item *item, TipoItem tipo, Vector2 posicao) {
@@ -222,4 +223,88 @@ bool verificarInteracaoPorta(Porta *porta, Player *jogador) {
     }
     
     return false;
+}
+
+// ========== FUNÇÕES DE MOEDA ==========
+
+void adicionarMoeda(Moeda **lista, Vector2 posicao, int valor) {
+    Moeda *novaMoeda = (Moeda *)malloc(sizeof(Moeda));
+    if (novaMoeda == NULL) {
+        printf("ERRO: Falha ao alocar memória para moeda!\n");
+        return;
+    }
+    
+    novaMoeda->posicao = posicao;
+    novaMoeda->valor = valor;
+    novaMoeda->ativa = true;
+    novaMoeda->raio = 12.0f;
+    novaMoeda->proximo = *lista;
+    *lista = novaMoeda;
+}
+
+void desenharMoedas(Moeda *moedas) {
+    Moeda *atual = moedas;
+    while (atual != NULL) {
+        if (atual->ativa) {
+            // Desenhar moeda dourada
+            DrawCircleV(atual->posicao, atual->raio, GOLD);
+            DrawCircleV(atual->posicao, atual->raio - 3, YELLOW);
+            DrawText("$", (int)atual->posicao.x - 5, (int)atual->posicao.y - 8, 16, DARKBROWN);
+        }
+        atual = atual->proximo;
+    }
+}
+
+void verificarColetaMoedas(Moeda **moedas, Player *jogador) {
+    if (moedas == NULL || *moedas == NULL) return;
+    
+    Moeda *atual = *moedas;
+    Moeda *anterior = NULL;
+    
+    while (atual != NULL) {
+        if (atual->ativa) {
+            float dx = jogador->posicao.x - atual->posicao.x;
+            float dy = jogador->posicao.y - atual->posicao.y;
+            float distancia = sqrtf(dx * dx + dy * dy);
+            
+            // Mostrar prompt E quando próximo
+            if (distancia <= 40.0f) {
+                DrawText("E", (int)atual->posicao.x - 5, (int)atual->posicao.y - 25, 14, WHITE);
+                
+                if (IsKeyPressed(KEY_E)) {
+                    jogador->moedas += atual->valor;
+                    jogador->moedasColetadas += atual->valor;
+                    printf("Coletou %d moedas! Total: %d\n", atual->valor, jogador->moedas);
+                    
+                    // Remover moeda da lista
+                    if (anterior == NULL) {
+                        *moedas = atual->proximo;
+                    } else {
+                        anterior->proximo = atual->proximo;
+                    }
+                    
+                    Moeda *temp = atual;
+                    atual = atual->proximo;
+                    free(temp);
+                    continue;
+                }
+            }
+        }
+        
+        anterior = atual;
+        atual = atual->proximo;
+    }
+}
+
+void liberarMoedas(Moeda **moedas) {
+    if (moedas == NULL) return;
+    
+    Moeda *atual = *moedas;
+    while (atual != NULL) {
+        Moeda *proximo = atual->proximo;
+        free(atual);
+        atual = proximo;
+    }
+    
+    *moedas = NULL;
 }
