@@ -6,9 +6,6 @@
 #include <string.h>
 
 void inicializarLoja(Loja *loja, Player *jogador) {
-    // Posição do mercador (atrás do balcão no topo)
-    loja->posicao = (Vector2){512, 128};
-    loja->raio = 60.0f;
     loja->ativo = true;
     loja->menuAberto = false;
     loja->itemSelecionado = 0;
@@ -108,17 +105,47 @@ void atualizarDisponibilidadeItens(Loja *loja, Player *jogador) {
     }
 }
 
-void atualizarLoja(Loja *loja, Player *jogador) {
+void atualizarLoja(Loja *loja, Player *jogador, const Mapa *mapa) {
     if (!loja->ativo) return;
-    
+
     atualizarDisponibilidadeItens(loja, jogador);
-    
-    // Verificar proximidade ao balcão (não ao mercador)
-    Vector2 posBalcao = {512, 180};  // Centro frontal do balcão
-    float distancia = Vector2Distance(jogador->posicao, posBalcao);
-    
+
+    // Encontrar área completa do bloco da loja (todos os tiles 15)
+    int minLinha = -1, maxLinha = -1, minColuna = -1, maxColuna = -1;
+    bool lojaEncontrada = false;
+
+    for (int i = 0; i < mapa->altura; i++) {
+        for (int j = 0; j < mapa->largura; j++) {
+            if (mapa->tiles[i][j] == TILE_LOJA) {
+                if (!lojaEncontrada) {
+                    minLinha = maxLinha = i;
+                    minColuna = maxColuna = j;
+                    lojaEncontrada = true;
+                } else {
+                    if (i < minLinha) minLinha = i;
+                    if (i > maxLinha) maxLinha = i;
+                    if (j < minColuna) minColuna = j;
+                    if (j > maxColuna) maxColuna = j;
+                }
+            }
+        }
+    }
+
+    if (!lojaEncontrada) {
+        loja->menuAberto = false;
+        return;
+    }
+
+    // Calcular centro do bloco da loja
+    Vector2 posLoja;
+    posLoja.x = ((minColuna + maxColuna) / 2.0f) * TAMANHO_TILE + TAMANHO_TILE / 2;
+    posLoja.y = ((minLinha + maxLinha) / 2.0f) * TAMANHO_TILE + TAMANHO_TILE / 2;
+
+    // Verificar proximidade à loja (raio maior)
+    float distancia = Vector2Distance(jogador->posicao, posLoja);
+
     // Abrir/fechar menu com E
-    if (distancia <= 100.0f) {
+    if (distancia <= 200.0f) {  // Raio de interação aumentado
         if (IsKeyPressed(KEY_E)) {
             loja->menuAberto = !loja->menuAberto;
             loja->itemSelecionado = 0;
@@ -261,33 +288,44 @@ void comprarItem(Loja *loja, Player *jogador, TipoItemLoja item) {
     }
 }
 
-void desenharLoja(Loja *loja, Player *jogador) {
+void desenharLoja(Loja *loja, Player *jogador, const Mapa *mapa) {
     if (!loja->ativo) return;
-    
-    // Desenhar mercador ATRÁS do balcão (posição mais alta)
-    Color corMercador = DARKGRAY;
-    
-    switch (loja->estadoMercador) {
-        case 0: // Normal
-            corMercador = DARKGRAY;
-            DrawCircleV(loja->posicao, 20, corMercador);
-            DrawText("MERCADOR", (int)loja->posicao.x - 45, (int)loja->posicao.y - 40, 12, WHITE);
-            break;
-        default:
-            corMercador = DARKGRAY;
-            DrawCircleV(loja->posicao, 20, corMercador);
-            DrawText("MERCADOR", (int)loja->posicao.x - 45, (int)loja->posicao.y - 40, 12, WHITE);
-            break;
+
+    // Encontrar área completa do bloco da loja (todos os tiles 15)
+    int minLinha = -1, maxLinha = -1, minColuna = -1, maxColuna = -1;
+    bool lojaEncontrada = false;
+
+    for (int i = 0; i < mapa->altura; i++) {
+        for (int j = 0; j < mapa->largura; j++) {
+            if (mapa->tiles[i][j] == TILE_LOJA) {
+                if (!lojaEncontrada) {
+                    minLinha = maxLinha = i;
+                    minColuna = maxColuna = j;
+                    lojaEncontrada = true;
+                } else {
+                    if (i < minLinha) minLinha = i;
+                    if (i > maxLinha) maxLinha = i;
+                    if (j < minColuna) minColuna = j;
+                    if (j > maxColuna) maxColuna = j;
+                }
+            }
+        }
     }
-    
-    // Prompt para interagir (próximo ao BALCÃO, não ao mercador)
-    Vector2 posBalcao = {512, 180};
-    float distancia = Vector2Distance(jogador->posicao, posBalcao);
-    
-    if (distancia <= 100.0f && !loja->menuAberto) {
-        const char *texto = "Pressione E para falar com o mercador";
+
+    if (!lojaEncontrada) return;
+
+    // Calcular centro do bloco da loja
+    Vector2 posLoja;
+    posLoja.x = ((minColuna + maxColuna) / 2.0f) * TAMANHO_TILE + TAMANHO_TILE / 2;
+    posLoja.y = ((minLinha + maxLinha) / 2.0f) * TAMANHO_TILE + TAMANHO_TILE / 2;
+
+    // Verificar proximidade para mostrar prompt (raio maior)
+    float distancia = Vector2Distance(jogador->posicao, posLoja);
+
+    if (distancia <= 200.0f && !loja->menuAberto) {
+        const char *texto = "Pressione E para abrir a loja";
         int largura = MeasureText(texto, 18);
-        DrawText(texto, 512 - largura / 2, 200, 18, YELLOW);
+        DrawText(texto, (int)posLoja.x - largura / 2, (int)posLoja.y - 40, 18, YELLOW);
     }
     
     // Menu da loja

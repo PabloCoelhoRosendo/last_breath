@@ -113,7 +113,7 @@ static void detectarPredio(const Mapa* mapa, int linha, int coluna, Predio* pred
 
     if (tipo == TILE_CHAO || tipo == TILE_PAREDE || tipo == TILE_CHAO_MERCADO ||
         tipo == TILE_PRATELEIRA_MERCADO || tipo == TILE_CAIXA_MERCADO || tipo == TILE_CHAO_LAB ||
-        tipo == TILE_PAREDE_INVISIVEL) {
+        tipo == TILE_PAREDE_INVISIVEL || tipo == TILE_CHAO_DEPOSITO || tipo == TILE_LOJA) {
         predio->tipo = 0;
         return;
     }
@@ -153,6 +153,7 @@ void desenharMapaTiles(const Mapa* mapa, Texture2D texturasTiles[]) {
 
     bool temChaoMercado = false;
     bool temChaoLab = false;
+    bool temChaoDeposito = false;
     for (int i = 0; i < mapa->altura; i++) {
         for (int j = 0; j < mapa->largura; j++) {
             if (mapa->tiles[i][j] == TILE_CHAO_MERCADO) {
@@ -161,11 +162,16 @@ void desenharMapaTiles(const Mapa* mapa, Texture2D texturasTiles[]) {
             if (mapa->tiles[i][j] == TILE_CHAO_LAB) {
                 temChaoLab = true;
             }
+            if (mapa->tiles[i][j] == TILE_CHAO_DEPOSITO) {
+                temChaoDeposito = true;
+            }
         }
     }
 
     Texture2D texturaChao;
-    if (temChaoMercado && texturasTiles != NULL && texturasTiles[TILE_CHAO_MERCADO].id != 0) {
+    if (temChaoDeposito && texturasTiles != NULL && texturasTiles[TILE_CHAO_DEPOSITO].id != 0) {
+        texturaChao = texturasTiles[TILE_CHAO_DEPOSITO];
+    } else if (temChaoMercado && texturasTiles != NULL && texturasTiles[TILE_CHAO_MERCADO].id != 0) {
         texturaChao = texturasTiles[TILE_CHAO_MERCADO];
     } else if (temChaoLab && texturasTiles != NULL && texturasTiles[TILE_CHAO_LAB].id != 0) {
         texturaChao = texturasTiles[TILE_CHAO_LAB];
@@ -238,7 +244,8 @@ void desenharMapaTiles(const Mapa* mapa, Texture2D texturasTiles[]) {
             }
             else if (tipoTile == TILE_PRATELEIRA_MERCADO ||
                      tipoTile == TILE_CAIXA_MERCADO ||
-                     tipoTile == TILE_PORTA_MERCADO) {
+                     tipoTile == TILE_PORTA_MERCADO ||
+                     tipoTile == TILE_LOJA) {
                 int larguraTiles = 1;
                 int alturaTiles = 1;
 
@@ -265,6 +272,8 @@ void desenharMapaTiles(const Mapa* mapa, Texture2D texturasTiles[]) {
                         cor = (Color){139, 90, 43, 255};
                     } else if (tipoTile == TILE_CAIXA_MERCADO) {
                         cor = (Color){101, 67, 33, 255};
+                    } else if (tipoTile == TILE_LOJA) {
+                        cor = (Color){150, 100, 50, 255};
                     } else {
                         cor = (Color){80, 50, 20, 255};
                     }
@@ -293,6 +302,7 @@ bool isTileSolido(const Mapa* mapa, int linhaGrid, int colunaGrid) {
     return (tipoTile != TILE_CHAO &&
             tipoTile != TILE_CHAO_MERCADO &&
             tipoTile != TILE_CHAO_LAB &&
+            tipoTile != TILE_CHAO_DEPOSITO &&
             tipoTile != TILE_PORTA_MERCADO &&
             tipoTile != TILE_PORTA_LAB);
 }

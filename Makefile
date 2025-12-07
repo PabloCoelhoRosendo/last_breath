@@ -24,14 +24,17 @@ INCLUDE_DIR = include
 SOURCES = $(SRC_DIR)/main.c $(SRC_DIR)/jogo.c $(SRC_DIR)/arquivo.c $(SRC_DIR)/mapa.c $(SRC_DIR)/recursos.c $(SRC_DIR)/pathfinding.c $(SRC_DIR)/boss.c $(SRC_DIR)/item.c $(SRC_DIR)/horda.c $(SRC_DIR)/loja.c
 
 # Flags do compilador
-CFLAGS = -Wall -std=c99 -I$(INCLUDE_DIR)
+# Adicionar caminho do raylib
+RAYLIB_PATH = C:/raylib/raylib/src
+CFLAGS = -Wall -std=c99 -I$(INCLUDE_DIR) -I$(RAYLIB_PATH)
+LDFLAGS = -L$(RAYLIB_PATH)
 
 # Regra padrão
 all: $(TARGET)
 
 # Compilar o jogo
 $(TARGET): $(SOURCES)
-	$(CC) $(CFLAGS) -o $(TARGET) $(SOURCES) $(LIBS)
+	$(CC) $(CFLAGS) $(SOURCES) -o $(TARGET) $(LDFLAGS) $(LIBS)
 	@echo ""
 	@echo "=========================================="
 	@echo "  ✅ Compilação concluída!"

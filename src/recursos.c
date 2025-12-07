@@ -84,6 +84,8 @@ void carregarRecursos(Recursos* recursos) {
     carregarTextura(&recursos->texturasTiles[TILE_PRATELEIRA_MERCADO], "assets/tiles/prateleira mercado.png", NULL, "Prateleira Mercado");
     carregarTextura(&recursos->texturasTiles[TILE_CAIXA_MERCADO], "assets/tiles/caixa mercado.png", NULL, "Caixa Mercado");
     carregarTextura(&recursos->texturasTiles[TILE_PORTA_MERCADO], "assets/tiles/porta do mercado.png", NULL, "Porta Mercado");
+    carregarTextura(&recursos->texturasTiles[TILE_CHAO_DEPOSITO], "assets/tiles/Chao deposito.png", NULL, "Chao Deposito");
+    carregarTextura(&recursos->texturasTiles[TILE_LOJA], "assets/tiles/Loja.png", NULL, "Loja");
 
     printf("    * Tile 11 (TILE_PORTA_LAB) configurado como ponto de interacao invisivel\n");
     printf("    * Tile 12 (TILE_PAREDE_INVISIVEL) configurado como parede de colisao invisivel\n");

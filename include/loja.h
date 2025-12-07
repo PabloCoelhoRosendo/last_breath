@@ -3,6 +3,7 @@
 
 #include "raylib.h"
 #include "jogo.h"
+#include "mapa.h"
 
 typedef enum {
     ITEM_LOJA_MUNICAO_PISTOL = 0,
@@ -25,8 +26,6 @@ typedef struct {
 } ItemLoja;
 
 typedef struct {
-    Vector2 posicao;
-    float raio;
     bool ativo;
     bool menuAberto;
     int itemSelecionado;
@@ -36,8 +35,8 @@ typedef struct {
 
 // Funções da loja
 void inicializarLoja(Loja *loja, Player *jogador);
-void atualizarLoja(Loja *loja, Player *jogador);
-void desenharLoja(Loja *loja, Player *jogador);
+void atualizarLoja(Loja *loja, Player *jogador, const Mapa *mapa);
+void desenharLoja(Loja *loja, Player *jogador, const Mapa *mapa);
 void comprarItem(Loja *loja, Player *jogador, TipoItemLoja item);
 void atualizarDisponibilidadeItens(Loja *loja, Player *jogador);
 

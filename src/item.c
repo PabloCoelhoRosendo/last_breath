@@ -200,7 +200,7 @@ bool verificarInteracaoPorta(Porta *porta, Player *jogador) {
     float dy = jogador->posicao.y - porta->posicao.y;
     float distancia = sqrtf(dx * dx + dy * dy);
 
-    if (distancia <= 50.0f) {
+    if (distancia <= 80.0f) {
         if (porta->trancada) {
             if (porta->faseDestino == 2 && !jogador->temChave) {
                 DrawText("Precisa da CHAVE", (int)porta->posicao.x - 60, (int)porta->posicao.y - 50, 14, RED);

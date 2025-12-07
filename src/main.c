@@ -51,6 +51,18 @@ Vector2 gerarPosicaoValidaProximaAoJogador(const Mapa* mapa, Vector2 posJogador,
 void detectarPortaNoMapa(Mapa* mapa, Porta* portaPtr, int faseAtual) {
     portaPtr->ativa = false;
 
+    // Fase 1: Porta fixa no lado direito do depósito (posição hardcoded)
+    if (faseAtual == 1) {
+        // Porta na coluna 31, entre linhas 10-11 (pixels: x=992, y≈352)
+        Vector2 posPorta = {992, 352};
+        criarPorta(portaPtr, posPorta, 2);
+        portaPtr->largura = 32.0f;
+        portaPtr->altura = 64.0f;
+        printf("Porta do Mercado criada na posicao fixa (%.0f, %.0f) [Area: %.0fx%.0f]\n",
+               posPorta.x, posPorta.y, portaPtr->largura, portaPtr->altura);
+        return;
+    }
+
     for (int i = 0; i < mapa->altura; i++) {
         for (int j = 0; j < mapa->largura; j++) {
             if (mapa->tiles[i][j] == TILE_PORTA_MERCADO && faseAtual == 1) {
@@ -58,6 +70,13 @@ void detectarPortaNoMapa(Mapa* mapa, Porta* portaPtr, int faseAtual) {
                 Vector2 posPorta = {(j * 32) + 16, (i * 32) + 16};
                 criarPorta(portaPtr, posPorta, 2);
                 printf("Porta do Mercado encontrada no mapa em tile (%d, %d) -> posicao (%.0f, %.0f)\n",
+                       i, j, posPorta.x, posPorta.y);
+                return;
+            } else if (mapa->tiles[i][j] == TILE_PORTA_MERCADO && faseAtual == 2 && j < 15) {
+                // Na fase 2, tile 10 no lado esquerdo retorna à loja (fase 1)
+                Vector2 posPorta = {(j * 32) + 16, (i * 32) + 16};
+                criarPorta(portaPtr, posPorta, 1);
+                printf("Porta de RETORNO à loja encontrada no mapa em tile (%d, %d) -> posicao (%.0f, %.0f)\n",
                        i, j, posPorta.x, posPorta.y);
                 return;
             } else if (mapa->tiles[i][j] == TILE_PORTA_LAB && faseAtual == 2 && j > 15) {
@@ -349,16 +368,27 @@ int main(void) {
         // Atualizar loja na fase 1 (sempre atualiza para permitir abrir/fechar)
         bool jogoPausado = false;
         if (jogador.fase == 1 && loja.ativo) {
-            atualizarLoja(&loja, &jogador);
+            atualizarLoja(&loja, &jogador, mapaAtual);
             jogoPausado = loja.menuAberto;  // Pausa se menu estiver aberto
             
-            // Porta do banheiro sempre existe na fase 1
+            // Porta do banheiro sempre existe na fase 1 - detectar pelo tile 13
             if (!portaBanheiro.ativa) {
-                portaBanheiro.ativa = true;
-                portaBanheiro.posicao = (Vector2){100, 400};
-                portaBanheiro.largura = 50.0f;
-                portaBanheiro.altura = 60.0f;
-                portaBanheiro.trancada = true;  // Começa trancada
+                for (int i = 0; i < mapaAtual->altura; i++) {
+                    for (int j = 0; j < mapaAtual->largura; j++) {
+                        if (mapaAtual->tiles[i][j] == TILE_PORTA_BANHEIRO) {
+                            Vector2 posBanheiro = {(j * 32) + 16, (i * 32) + 16};
+                            portaBanheiro.ativa = true;
+                            portaBanheiro.posicao = posBanheiro;
+                            portaBanheiro.largura = 64.0f;  // 2 tiles de largura
+                            portaBanheiro.altura = 32.0f;
+                            portaBanheiro.trancada = true;  // Começa trancada
+                            printf("Porta do banheiro encontrada em tile (%d, %d) -> posicao (%.0f, %.0f)\n",
+                                   i, j, posBanheiro.x, posBanheiro.y);
+                            break;
+                        }
+                    }
+                    if (portaBanheiro.ativa) break;
+                }
             }
             
             // Se tem a chave misteriosa, destrancar a porta
@@ -830,12 +860,13 @@ int main(void) {
                         if (mapaAtual->tiles[i][j] == TILE_PORTA_MERCADO && j == 0) {
                             Vector2 posPortaRetorno = {(j * 32) + 16, (i * 32) + 16};
                             criarPorta(&portaRetorno, posPortaRetorno, 1);  // Volta pra loja
-                            printf("Porta de retorno encontrada em (%d, %d)\n", i, j);
+                            portaRetorno.ativa = true;  // Ativar porta de retorno
+                            printf("Porta de retorno à loja ATIVADA em (%d, %d)\n", i, j);
                             break;
                         }
                     }
                 }
-                
+
                 // Detectar porta principal para rua (tile 11 no lado direito)
                 detectarPortaNoMapa(mapaAtual, &porta, jogador.fase);
                 
@@ -973,45 +1004,45 @@ int main(void) {
         
         // Verificar interação com porta de retorno (volta pra loja da fase 2)
         if (portaRetorno.ativa && verificarInteracaoPorta(&portaRetorno, &jogador)) {
-            // Só permite voltar se a fase foi concluída
-            if (jogador.estadoHorda != HORDA_COMPLETA) {
-                printf("Complete a fase primeiro!\n");
-            } else {
-                printf("Voltando para a LOJA!\n");
-                jogador.fase2Concluida = true; // Marca que a fase 2 foi concluída
-                jogador.fase = 1;
-                
-                // Limpar inimigos
-                liberarZumbis(&listaZumbis);
-                listaZumbis = NULL;
-                while (listaBosses != NULL) {
-                    Boss *temp = listaBosses;
-                    listaBosses = listaBosses->proximo;
-                    free(temp);
-                }
-                while (listaBalas != NULL) {
-                    Bala *temp = listaBalas;
-                    listaBalas = listaBalas->proximo;
-                    free(temp);
-                }
-                liberarCartuchos(&listaCartuchos);
-                liberarManchasSangue(&listaManchas);
-                liberarMoedas(&listaMoedas);
-                listaMoedas = NULL;
-                
-                // Carregar mapa da loja
-                if (!carregarMapaDeArquivo(mapaAtual, "assets/maps/fase1.txt")) {
-                    printf("Erro ao carregar fase1.txt\n");
-                }
-                
-                jogador.posicao = (Vector2){512, 400};
-                if (menina.seguindo) {
-                    menina.posicao = gerarPosicaoValidaProximaAoJogador(mapaAtual, jogador.posicao, menina.raio);
-                }
-                inicializarLoja(&loja, &jogador);
-                detectarPortaNoMapa(mapaAtual, &porta, jogador.fase);
-                portaRetorno.ativa = false;
+            printf("Voltando para a LOJA!\n");
+
+            // Se completou a horda, marcar como concluída
+            if (jogador.estadoHorda == HORDA_COMPLETA) {
+                jogador.fase2Concluida = true;
             }
+
+            jogador.fase = 1;
+
+            // Limpar inimigos
+            liberarZumbis(&listaZumbis);
+            listaZumbis = NULL;
+            while (listaBosses != NULL) {
+                Boss *temp = listaBosses;
+                listaBosses = listaBosses->proximo;
+                free(temp);
+            }
+            while (listaBalas != NULL) {
+                Bala *temp = listaBalas;
+                listaBalas = listaBalas->proximo;
+                free(temp);
+            }
+            liberarCartuchos(&listaCartuchos);
+            liberarManchasSangue(&listaManchas);
+            liberarMoedas(&listaMoedas);
+            listaMoedas = NULL;
+
+            // Carregar mapa da loja
+            if (!carregarMapaDeArquivo(mapaAtual, "assets/maps/fase1.txt")) {
+                printf("Erro ao carregar fase1.txt\n");
+            }
+
+            jogador.posicao = (Vector2){512, 400};
+            if (menina.seguindo) {
+                menina.posicao = gerarPosicaoValidaProximaAoJogador(mapaAtual, jogador.posicao, menina.raio);
+            }
+            inicializarLoja(&loja, &jogador);
+            detectarPortaNoMapa(mapaAtual, &porta, jogador.fase);
+            portaRetorno.ativa = false;
         }
         
         // Verificar interação com porta de retorno (volta pro mercado da fase 3)
@@ -1255,7 +1286,7 @@ int main(void) {
             
             // Desenhar loja na fase 1
             if (jogador.fase == 1 && loja.ativo) {
-                desenharLoja(&loja, &jogador);
+                desenharLoja(&loja, &jogador, mapaAtual);
             }
             
             // Desenhar escrivaninha na fase 4
@@ -1400,32 +1431,17 @@ int main(void) {
                 }
             }
             
-            // Desenhar porta do banheiro na fase 1 (sempre visível)
+            // Porta do banheiro invisível na fase 1 (apenas mensagens de interação)
             if (jogador.fase == 1 && portaBanheiro.ativa && !jogador.conheceuMenina) {
-                // Cor da porta muda se trancada/destrancada
-                Color corPorta = portaBanheiro.trancada ? (Color){90, 50, 15, 255} : (Color){139, 69, 19, 255};
-                
-                DrawRectangle(
-                    (int)portaBanheiro.posicao.x - 25,
-                    (int)portaBanheiro.posicao.y - 30,
-                    50, 60, corPorta
-                );
-                DrawRectangleLines(
-                    (int)portaBanheiro.posicao.x - 25,
-                    (int)portaBanheiro.posicao.y - 30,
-                    50, 60, BLACK
-                );
-                DrawText("BANHEIRO", (int)portaBanheiro.posicao.x - 35, (int)portaBanheiro.posicao.y - 40, 10, WHITE);
-                
                 float dist = sqrtf(
                     (jogador.posicao.x - portaBanheiro.posicao.x) * (jogador.posicao.x - portaBanheiro.posicao.x) +
                     (jogador.posicao.y - portaBanheiro.posicao.y) * (jogador.posicao.y - portaBanheiro.posicao.y)
                 );
-                if (dist <= 50.0f) {
+                if (dist <= 80.0f) {
                     if (portaBanheiro.trancada) {
-                        DrawText("PORTA TRANCADA - Precisa de chave especial", (int)portaBanheiro.posicao.x - 140, (int)portaBanheiro.posicao.y + 40, 14, RED);
+                        DrawText("PORTA TRANCADA - Precisa de chave especial", (int)portaBanheiro.posicao.x - 140, (int)portaBanheiro.posicao.y, 14, RED);
                     } else {
-                        DrawText("Pressione E para entrar", (int)portaBanheiro.posicao.x - 80, (int)portaBanheiro.posicao.y + 40, 14, GREEN);
+                        DrawText("Pressione E para entrar", (int)portaBanheiro.posicao.x - 80, (int)portaBanheiro.posicao.y, 14, GREEN);
                     }
                 }
             }

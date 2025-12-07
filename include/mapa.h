@@ -7,7 +7,7 @@
 #define LARGURA_MAPA 32
 #define ALTURA_MAPA 24
 #define TAMANHO_TILE 32
-#define MAX_TIPOS_TILE 14
+#define MAX_TIPOS_TILE 16
 
 typedef enum {
     TILE_CHAO = 0,
@@ -24,6 +24,8 @@ typedef enum {
     TILE_PORTA_LAB = 11,
     TILE_PAREDE_INVISIVEL = 12,
     TILE_PORTA_BANHEIRO = 13,
+    TILE_CHAO_DEPOSITO = 14,
+    TILE_LOJA = 15,
 } TipoTile;
 
 typedef struct {
