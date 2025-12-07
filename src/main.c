@@ -333,6 +333,10 @@ int main(void) {
             
             // Voltar textura para a loja
             texturaMapa = recursos->fundoMapa;
+            
+            // Resetar moedas do jogador
+            jogador.moedas = 0;
+            jogador.moedasColetadas = 0;
 
             jogador.estadoJogo = ESTADO_MENU;
             jogoIniciado = false;
@@ -1352,11 +1356,19 @@ int main(void) {
                         // Se fase já foi concluída, spawnar ao lado da porta de retorno
                         if (jogador.fase2Concluida) {
                             jogador.posicao = (Vector2){portaRetorno.posicao.x + 80, portaRetorno.posicao.y};
+                            if (menina.seguindo) {
+                                menina.posicao = gerarPosicaoValidaProximaAoJogador(mapaAtual, jogador.posicao, menina.raio);
+                            }
                             jogador.estadoHorda = HORDA_COMPLETA; // Fase já concluída
                             printf("Retornando à fase 2 já concluída. Sem inimigos.\n");
                         } else {
-                            jogador.posicao = gerarPosicaoValidaSpawn(mapaAtual, 15.0f);
+                            jogador.posicao = (Vector2){3 * 32 + 16, 6 * 32 + 16};
+                            if (menina.seguindo) {
+                                menina.posicao = gerarPosicaoValidaProximaAoJogador(mapaAtual, jogador.posicao, menina.raio);
+                            }
                             iniciarHorda(&jogador, 1);
+                            printf("Jogador spawnado na Fase 2 (MERCADO) em posicao fixa: (linha=6, coluna=3) -> (%.0f, %.0f)\n",
+                                   jogador.posicao.x, jogador.posicao.y);
                         }
                         
                         printf("Bem-vindo ao MERCADO! Fase 2 iniciada.\n");
