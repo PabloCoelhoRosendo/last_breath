@@ -113,6 +113,11 @@ typedef struct {
     bool fase3Concluida; // Marca se a fase 3 (rua) já foi completada
     bool matouBossFinal; // Marca se matou o boss final no laboratório
     bool temChaveMisteriosa; // Marca se coletou a chave dropada pelo boss final
+    bool spawnadoRetornoFase2; // Marca se já spawnou zumbis ao voltar da fase 2
+    bool spawnadoRetornoFase3; // Marca se já spawnou zumbis ao voltar da fase 3
+    bool spawnadoRetornoFase4; // Marca se já spawnou zumbis ao voltar da fase 4
+    int zumbisSpawnadosRetorno; // Contador de zumbis spawnados gradativamente
+    float tempoSpawnRetorno; // Timer para spawn gradativo
 } Player;
 
 // Estruturas de Zumbi e Bala (mantidas aqui por serem usadas em jogo.c)
@@ -158,6 +163,9 @@ typedef struct {
     bool ativa;
     bool seguindo;
     float raio;
+    float cooldownTiro;
+    float alcanceVisao;
+    int danoTiro;
 } Menina;
 
 typedef struct {
@@ -236,7 +244,7 @@ void verificarColisoesBalaJogador(Bala **balas, Player *jogador);
 void verificarColisoesJogadorZumbi(Player *jogador, Zumbi *zumbis);
 
 // Funções da Menina e Escrivaninha
-void atualizarMenina(Menina *menina, Player *jogador, Mapa *mapa, float deltaTime);
+void atualizarMenina(Menina *menina, Player *jogador, Mapa *mapa, float deltaTime, Zumbi **zumbis, Bala **balas);
 void desenharMenina(Menina *menina);
 void criarEscrivaninha(Escrivaninha *esc, Vector2 posicao);
 void desenharEscrivaninha(Escrivaninha *esc);
