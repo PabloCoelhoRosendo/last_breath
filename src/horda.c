@@ -95,8 +95,8 @@ void atualizarHorda(Player *jogador, Zumbi **zumbis, Boss **bosses, float deltaT
                 int maxHordas = 3; 
                 if ((jogador->fase == 1 || jogador->fase == 2 || jogador->fase == 3) && jogador->hordaAtual < maxHordas) {
                     jogador->estadoHorda = HORDA_INTERVALO;
-                    jogador->tempoIntervalo = 10.0f;  
-                    printf("Proxima horda em 10 segundos...\n");
+                    jogador->tempoIntervalo = 5.0f;  
+                    printf("Proxima horda em 5 segundos...\n");
                 }
             }
             break;

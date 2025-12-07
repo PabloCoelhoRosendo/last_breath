@@ -12,6 +12,42 @@
 #include "horda.h"
 #include "loja.h"
 
+// Função helper para spawnar menina próxima ao jogador sem colisão
+Vector2 gerarPosicaoValidaProximaAoJogador(const Mapa* mapa, Vector2 posJogador, float raio) {
+    // Tentar diferentes offsets ao redor do jogador
+    Vector2 offsets[] = {
+        {50, 0},    // Direita
+        {-50, 0},   // Esquerda
+        {0, -50},   // Cima
+        {0, 50},    // Baixo
+        {50, -50},  // Diagonal superior direita
+        {-50, -50}, // Diagonal superior esquerda
+        {50, 50},   // Diagonal inferior direita
+        {-50, 50}   // Diagonal inferior esquerda
+    };
+    
+    for (int i = 0; i < 8; i++) {
+        Vector2 posicaoTeste = {
+            posJogador.x + offsets[i].x,
+            posJogador.y + offsets[i].y
+        };
+        
+        // Verificar se está dentro dos limites do mapa
+        if (posicaoTeste.x < 32 || posicaoTeste.x > 992 ||
+            posicaoTeste.y < 32 || posicaoTeste.y > 736) {
+            continue;
+        }
+        
+        // Verificar se não colide com obstáculos
+        if (!verificarColisaoMapa(mapa, posicaoTeste, raio)) {
+            return posicaoTeste;
+        }
+    }
+    
+    // Se nenhuma posição próxima for válida, usar gerarPosicaoValidaSpawn
+    return gerarPosicaoValidaSpawn(mapa, raio);
+}
+
 void detectarPortaNoMapa(Mapa* mapa, Porta* portaPtr, int faseAtual) {
     portaPtr->ativa = false;
 
@@ -131,6 +167,7 @@ int main(void) {
     
     Porta portaBanheiro;  // Porta secreta do banheiro (HAPPY ENDING)
     portaBanheiro.ativa = false;
+    portaBanheiro.trancada = true;  // Começa trancada
     
     Menina menina;
     menina.ativa = false;
@@ -260,7 +297,15 @@ int main(void) {
             
             liberarCartuchos(&listaCartuchos);
             liberarManchasSangue(&listaManchas);
+            
+            // Liberar zumbi do banheiro
+            liberarZumbis(&zumbiBanheiro);
+            zumbiBanheiro = NULL;
 
+            // Resetar menina
+            menina.ativa = false;
+            menina.seguindo = false;
+            menina.posicao = (Vector2){0, 0};
 
             if (!carregarMapaDeArquivo(mapaAtual, "assets/maps/fase1.txt")) {
                 inicializarMapaPadrao(mapaAtual);
@@ -269,6 +314,25 @@ int main(void) {
             itemProgresso.ativo = false;
             itemArma.ativo = false;
             criarPorta(&porta, (Vector2){960, 384}, 2);
+            
+            // Resetar portas
+            portaBanheiro.ativa = false;
+            portaBanheiro.trancada = true;
+            portaRetorno.ativa = false;
+            portaRetorno2.ativa = false;
+            portaRetorno3.ativa = false;
+            portaFinal.ativa = false;
+            
+            // Resetar loja
+            loja.ativo = false;
+            loja.menuAberto = false;
+            
+            // Resetar escrivaninha
+            escrivaninha.ativa = false;
+            escrivaninha.lida = false;
+            
+            // Voltar textura para a loja
+            texturaMapa = recursos->fundoMapa;
 
             jogador.estadoJogo = ESTADO_MENU;
             jogoIniciado = false;
@@ -284,13 +348,19 @@ int main(void) {
             atualizarLoja(&loja, &jogador);
             jogoPausado = loja.menuAberto;  // Pausa se menu estiver aberto
             
-            // Se pegou a chave misteriosa, ativar porta do banheiro
-            if (jogador.matouBossFinal && jogador.leuRelatorio && !portaBanheiro.ativa) {
+            // Porta do banheiro sempre existe na fase 1
+            if (!portaBanheiro.ativa) {
                 portaBanheiro.ativa = true;
                 portaBanheiro.posicao = (Vector2){100, 400};
                 portaBanheiro.largura = 50.0f;
                 portaBanheiro.altura = 60.0f;
-                printf("A porta do banheiro apareceu!\n");
+                portaBanheiro.trancada = true;  // Começa trancada
+            }
+            
+            // Se tem a chave misteriosa, destrancar a porta
+            if (jogador.temChaveMisteriosa && portaBanheiro.trancada) {
+                portaBanheiro.trancada = false;
+                printf("A porta do banheiro foi destrancada!\n");
             }
         }
         
@@ -309,7 +379,7 @@ int main(void) {
             
             // Atualizar menina se estiver seguindo
             if (menina.ativa && menina.seguindo) {
-                atualizarMenina(&menina, &jogador, GetFrameTime());
+                atualizarMenina(&menina, &jogador, mapaAtual, GetFrameTime());
             }
         }
         
@@ -454,21 +524,24 @@ int main(void) {
                 // Boss controlado pelo sistema de hordas
             }
             else if (jogador.fase == 4) {
-                jogador.timerBoss += GetFrameTime();
+                // Boss final só spawna se ainda NÃO foi morto
+                if (!jogador.matouBossFinal) {
+                    jogador.timerBoss += GetFrameTime();
 
-                int numZumbis = 0;
-                Zumbi *z = listaZumbis;
-                while (z != NULL) {
-                    numZumbis++;
-                    z = z->proximo;
-                }
+                    int numZumbis = 0;
+                    Zumbi *z = listaZumbis;
+                    while (z != NULL) {
+                        numZumbis++;
+                        z = z->proximo;
+                    }
 
-                if (jogador.timerBoss >= 45.0f || numZumbis == 0) {
-                    Vector2 posicaoBoss = {512.0f, 384.0f};
-                    criarBoss(&listaBosses, BOSS_ABOMINATION, posicaoBoss, abominationFrente, abominationCostas, abominationDireita, abominationEsquerda);
-                    printf("BOSS APARECEU: ABOMINATION!\n");
+                    if (jogador.timerBoss >= 45.0f || numZumbis == 0) {
+                        Vector2 posicaoBoss = {512.0f, 384.0f};
+                        criarBoss(&listaBosses, BOSS_ABOMINATION, posicaoBoss, abominationFrente, abominationCostas, abominationDireita, abominationEsquerda);
+                        printf("BOSS APARECEU: ABOMINATION!\n");
 
-                    jogador.bossSpawnado = true;
+                        jogador.bossSpawnado = true;
+                    }
                 }
             }
         }
@@ -525,32 +598,41 @@ int main(void) {
         }
         
         // Lógica da porta do banheiro (HAPPY ENDING PATH) - leva a outro mapa
-        if (portaBanheiro.ativa && !jogador.conheceuMenina) {
+        if (portaBanheiro.ativa && !jogador.conheceuMenina && !portaBanheiro.trancada) {
             float distPorta = sqrtf(
                 (jogador.posicao.x - portaBanheiro.posicao.x) * (jogador.posicao.x - portaBanheiro.posicao.x) +
                 (jogador.posicao.y - portaBanheiro.posicao.y) * (jogador.posicao.y - portaBanheiro.posicao.y)
             );
             
+            // Só permite entrar se não estiver trancada E apertar E
             if (distPorta <= 50.0f && IsKeyPressed(KEY_E) && !loja.menuAberto) {
                 // Carregar mapa do banheiro
                 if (!carregarMapaDeArquivo(mapaAtual, "assets/maps/banheiro.txt")) {
                     printf("Erro: Não foi possível carregar banheiro.txt\n");
                 }
                 
+                // Marcar que está no banheiro
+                jogador.estaNoBanheiro = true;
+                
+                // Mudar textura de fundo para chão do laboratório (azulejo)
+                texturaMapa = recursos->chaoLab;
+                
                 // Desativar loja no banheiro
                 loja.ativo = false;
                 
-                // Spawnar menina e zumbi no banheiro
-                menina.posicao = (Vector2){512, 400};  // Centro do mapa
+                // Spawnar menina e zumbi no banheiro (layout da imagem)
+                // Menina no centro-direita (perto do box/chuveiro)
+                menina.posicao = (Vector2){20 * 32, 10 * 32};  // Coluna 20, linha 10
                 menina.ativa = true;
                 menina.seguindo = false;
                 jogador.conheceuMenina = true;
                 
-                Vector2 spawnZumbi = {600, 400};
+                // Zumbi spawna na esquerda (perto dos vasos sanitários)
+                Vector2 spawnZumbi = {4 * 32, 10 * 32};  // Coluna 4, linha 10
                 adicionarZumbi(&zumbiBanheiro, spawnZumbi, recursos->zumbis);
                 
-                // Jogador spawna perto da porta de saída
-                jogador.posicao = (Vector2){512, 650};
+                // Jogador spawna perto da porta de saída (centro-sul)
+                jogador.posicao = (Vector2){16 * 32, 20 * 32};  // Meio do mapa, perto da porta
                 
                 printf("Você entrou no banheiro! Há uma menina e um zumbi!\n");
             }
@@ -584,8 +666,14 @@ int main(void) {
                     printf("Erro ao carregar fase1.txt\n");
                 }
                 
+                // Marcar que saiu do banheiro
+                jogador.estaNoBanheiro = false;
+                
                 texturaMapa = recursos->fundoMapa;
                 jogador.posicao = (Vector2){100, 450};
+                if (menina.seguindo) {
+                    menina.posicao = gerarPosicaoValidaProximaAoJogador(mapaAtual, jogador.posicao, menina.raio);
+                }
                 loja.ativo = true;
                 inicializarLoja(&loja, &jogador);
                 
@@ -611,8 +699,16 @@ int main(void) {
                                 printf("Erro: Não foi possível carregar fase1.txt\n");
                             }
                             
+                            // Marcar que saiu do banheiro
+                            jogador.estaNoBanheiro = false;
+                            
+                            // Voltar textura da loja
+                            texturaMapa = recursos->fundoMapa;
+                            
                             jogador.posicao = (Vector2){200, 400};
-                            menina.posicao = (Vector2){250, 400};
+                            if (menina.seguindo) {
+                                menina.posicao = gerarPosicaoValidaProximaAoJogador(mapaAtual, jogador.posicao, menina.raio);
+                            }
                             
                             // Reativar loja
                             inicializarLoja(&loja, &jogador);
@@ -709,6 +805,12 @@ int main(void) {
             jogador.tempoIntervalo = 0.0f;
             jogador.tempoSpawn = 0.0f;
             jogador.tempoSpawnBoss = 0.0f;
+            
+            // Não resetar timer e flag de boss na fase 4 se já foi morto
+            if (jogador.fase != 4 || !jogador.matouBossFinal) {
+                jogador.timerBoss = 0.0f;
+                jogador.bossSpawnado = false;
+            }
 
             char caminhoMapa[64];
             snprintf(caminhoMapa, sizeof(caminhoMapa), "assets/maps/fase%d.txt", jogador.fase);
@@ -742,10 +844,16 @@ int main(void) {
                 // Verificar se a fase já foi concluída
                 if (jogador.fase2Concluida) {
                     jogador.posicao = (Vector2){portaRetorno.posicao.x + 80, portaRetorno.posicao.y};
+                    if (menina.seguindo) {
+                        menina.posicao = gerarPosicaoValidaProximaAoJogador(mapaAtual, jogador.posicao, menina.raio);
+                    }
                     jogador.estadoHorda = HORDA_COMPLETA;
                     printf("Fase 2 já concluída. Sem inimigos.\n");
                 } else {
                     jogador.posicao = (Vector2){8 * 32 + 16, 9 * 32 + 16};
+                    if (menina.seguindo) {
+                        menina.posicao = gerarPosicaoValidaProximaAoJogador(mapaAtual, jogador.posicao, menina.raio);
+                    }
                     printf("Jogador spawnado na Fase 2 (MERCADO) em posicao fixa: (linha=9, coluna=8) -> (%.0f, %.0f)\n",
                            jogador.posicao.x, jogador.posicao.y);
                 }
@@ -781,11 +889,17 @@ int main(void) {
                 if (jogador.fase3Concluida) {
                     // Spawnar ABAIXO da porta (na rua, não dentro do mercado)
                     jogador.posicao = (Vector2){portaRetorno2.posicao.x, portaRetorno2.posicao.y + 80};
+                    if (menina.seguindo) {
+                        menina.posicao = gerarPosicaoValidaProximaAoJogador(mapaAtual, jogador.posicao, menina.raio);
+                    }
                     jogador.estadoHorda = HORDA_COMPLETA;
                     portaRetorno2.ativa = true;  // Ativar porta de retorno
                     printf("Fase 3 já concluída. Spawnado em (%.0f, %.0f)\n", jogador.posicao.x, jogador.posicao.y);
                 } else {
                     jogador.posicao = (Vector2){8 * 32 + 16, 9 * 32 + 16};
+                    if (menina.seguindo) {
+                        menina.posicao = gerarPosicaoValidaProximaAoJogador(mapaAtual, jogador.posicao, menina.raio);
+                    }
                     printf("Jogador spawnado na Fase 3 (RUA) em posicao fixa: (linha=9, coluna=8) -> (%.0f, %.0f)\n",
                            jogador.posicao.x, jogador.posicao.y);
                     
@@ -795,6 +909,9 @@ int main(void) {
                 }
             } else if (jogador.fase == 4) {
                 jogador.posicao = (Vector2){16 * 32 + 16, 21 * 32 + 16};
+                if (menina.seguindo) {
+                    menina.posicao = gerarPosicaoValidaProximaAoJogador(mapaAtual, jogador.posicao, menina.raio);
+                }
                 printf("Jogador spawnado na Fase 4 (LAB) em posicao fixa: (linha=21, coluna=16 - meio) -> (%.0f, %.0f)\n",
                        jogador.posicao.x, jogador.posicao.y);
                 
@@ -819,6 +936,9 @@ int main(void) {
                 portaFinal.trancada = false;  // Sempre aberta
             } else {
                 jogador.posicao = gerarPosicaoValidaSpawn(mapaAtual, 15.0f);
+                if (menina.seguindo) {
+                    menina.posicao = gerarPosicaoValidaProximaAoJogador(mapaAtual, jogador.posicao, menina.raio);
+                }
             }
 
             if (jogador.fase == 3) {
@@ -830,13 +950,19 @@ int main(void) {
             if (jogador.fase == 1) {
                 inicializarLoja(&loja, &jogador);
                 
-                // Se já leu o relatório na fase 4, criar porta do banheiro
-                if (jogador.leuRelatorio && !jogador.conheceuMenina) {
+                // Porta do banheiro sempre existe, mas pode estar trancada/destrancada
+                if (!jogador.conheceuMenina) {
                     portaBanheiro.ativa = true;
                     portaBanheiro.posicao = (Vector2){100, 400};
                     portaBanheiro.largura = 50.0f;
                     portaBanheiro.altura = 60.0f;
-                    printf("Porta do banheiro apareceu na loja!\n");
+                    portaBanheiro.trancada = !jogador.temChaveMisteriosa;  // Trancada se não tem chave
+                    
+                    if (jogador.temChaveMisteriosa) {
+                        printf("Porta do banheiro reaparece destrancada na loja!\n");
+                    } else {
+                        printf("Porta do banheiro está na loja (trancada).\n");
+                    }
                 }
             }
         }
@@ -875,6 +1001,9 @@ int main(void) {
                 }
                 
                 jogador.posicao = (Vector2){512, 400};
+                if (menina.seguindo) {
+                    menina.posicao = gerarPosicaoValidaProximaAoJogador(mapaAtual, jogador.posicao, menina.raio);
+                }
                 inicializarLoja(&loja, &jogador);
                 detectarPortaNoMapa(mapaAtual, &porta, jogador.fase);
                 portaRetorno.ativa = false;
@@ -940,9 +1069,15 @@ int main(void) {
                     // Spawnar perto da porta da rua (direita)
                     if (porta.ativa) {
                         jogador.posicao = (Vector2){porta.posicao.x - 80, porta.posicao.y};
+                        if (menina.seguindo) {
+                            menina.posicao = gerarPosicaoValidaProximaAoJogador(mapaAtual, jogador.posicao, menina.raio);
+                        }
                         printf("Spawnado perto da porta da RUA no mercado.\n");
                     } else {
                         jogador.posicao = gerarPosicaoValidaSpawn(mapaAtual, 15.0f);
+                        if (menina.seguindo) {
+                            menina.posicao = gerarPosicaoValidaProximaAoJogador(mapaAtual, jogador.posicao, menina.raio);
+                        }
                     }
                     
                     portaRetorno2.ativa = false;
@@ -1006,9 +1141,15 @@ int main(void) {
                 // Spawnar perto da porta do LAB
                 if (porta.ativa) {
                     jogador.posicao = (Vector2){porta.posicao.x - 80, porta.posicao.y};
+                    if (menina.seguindo) {
+                        menina.posicao = gerarPosicaoValidaProximaAoJogador(mapaAtual, jogador.posicao, menina.raio);
+                    }
                     printf("Spawnado perto da porta do LAB na rua.\n");
                 } else {
                     jogador.posicao = gerarPosicaoValidaSpawn(mapaAtual, 15.0f);
+                    if (menina.seguindo) {
+                        menina.posicao = gerarPosicaoValidaProximaAoJogador(mapaAtual, jogador.posicao, menina.raio);
+                    }
                 }
                 
                 jogador.estadoHorda = HORDA_COMPLETA;
@@ -1223,8 +1364,8 @@ int main(void) {
                 }
             }
             
-            // Desenhar porta de saída do banheiro (volta para loja)
-            if (jogador.conheceuMenina && jogador.meninaLiberada) {
+            // Desenhar porta de saída do banheiro (volta para loja) - SÓ NO BANHEIRO
+            if (jogador.estaNoBanheiro && jogador.conheceuMenina && jogador.meninaLiberada) {
                 Vector2 portaSaidaBanheiro = {512, 700};
                 DrawRectangle(
                     (int)portaSaidaBanheiro.x - 30,
@@ -1247,12 +1388,15 @@ int main(void) {
                 }
             }
             
-            // Desenhar porta do banheiro na fase 1
+            // Desenhar porta do banheiro na fase 1 (sempre visível)
             if (jogador.fase == 1 && portaBanheiro.ativa && !jogador.conheceuMenina) {
+                // Cor da porta muda se trancada/destrancada
+                Color corPorta = portaBanheiro.trancada ? (Color){90, 50, 15, 255} : (Color){139, 69, 19, 255};
+                
                 DrawRectangle(
                     (int)portaBanheiro.posicao.x - 25,
                     (int)portaBanheiro.posicao.y - 30,
-                    50, 60, (Color){139, 69, 19, 255}
+                    50, 60, corPorta
                 );
                 DrawRectangleLines(
                     (int)portaBanheiro.posicao.x - 25,
@@ -1266,7 +1410,11 @@ int main(void) {
                     (jogador.posicao.y - portaBanheiro.posicao.y) * (jogador.posicao.y - portaBanheiro.posicao.y)
                 );
                 if (dist <= 50.0f) {
-                    DrawText("Pressione E para entrar", (int)portaBanheiro.posicao.x - 80, (int)portaBanheiro.posicao.y + 40, 14, GREEN);
+                    if (portaBanheiro.trancada) {
+                        DrawText("PORTA TRANCADA - Precisa de chave especial", (int)portaBanheiro.posicao.x - 140, (int)portaBanheiro.posicao.y + 40, 14, RED);
+                    } else {
+                        DrawText("Pressione E para entrar", (int)portaBanheiro.posicao.x - 80, (int)portaBanheiro.posicao.y + 40, 14, GREEN);
+                    }
                 }
             }
 
@@ -1466,18 +1614,19 @@ int main(void) {
             DrawText("existiu. Ele precisa acreditar para ter empatia,", 100, 450, 18, YELLOW);
             DrawText("para proteger minha filha no banheiro.", 100, 475, 18, YELLOW);
             
-            DrawText("Se voce esta lendo isso... sua missao e real:", 100, 515, 18, GREEN);
-            DrawText("PROTEJA A MENINA. De a ela um proposito p", 100, 540, 18, GREEN);
+            DrawText("O MONSTRO ENGOLIU A CHAVE DO BANHEIRO. Mate-o para", 100, 515, 18, RED);
+            DrawText("recupera-la. Minha filha esta la... sozinha...", 100, 540, 18, RED);
+            DrawText("aterrorizada. SALVE ELA. De a ela um proposito p", 100, 565, 18, GREEN);
             
             // Corte de sangue dramatico - como se o zumbi matou no meio
-            DrawLine(100, 560, 920, 570, RED);
-            DrawLine(95, 565, 915, 575, MAROON);
-            DrawRectangle(450, 570, 180, 90, (Color){80, 0, 0, 200});
-            DrawCircle(500, 600, 35, RED);
-            DrawCircle(520, 595, 28, MAROON);
-            DrawCircle(480, 610, 22, DARKBROWN);
-            DrawLine(300, 575, 700, 650, (Color){120, 0, 0, 180});
-            DrawLine(250, 600, 750, 630, (Color){100, 0, 0, 150});
+            DrawLine(100, 585, 920, 595, RED);
+            DrawLine(95, 590, 915, 600, MAROON);
+            DrawRectangle(450, 595, 180, 90, (Color){80, 0, 0, 200});
+            DrawCircle(500, 625, 35, RED);
+            DrawCircle(520, 620, 28, MAROON);
+            DrawCircle(480, 635, 22, DARKBROWN);
+            DrawLine(300, 600, 700, 675, (Color){120, 0, 0, 180});
+            DrawLine(250, 625, 750, 655, (Color){100, 0, 0, 150});
             
             DrawText("[O resto esta coberto de sangue...]", 280, 670, 16, RED);
             

@@ -412,10 +412,12 @@ void iniciarJogo(Player *jogador) {
     jogador->leuRelatorio = false;
     jogador->conheceuMenina = false;
     jogador->meninaLiberada = false;
+    jogador->estaNoBanheiro = false;
     jogador->finalFeliz = false;
     jogador->fase2Concluida = false;
     jogador->fase3Concluida = false;
     jogador->matouBossFinal = false;
+    jogador->temChaveMisteriosa = false;
 
     inicializarArma(&jogador->slots[0], ARMA_PISTOL);   
     inicializarArma(&jogador->slots[1], ARMA_NENHUMA);  
@@ -1186,7 +1188,7 @@ void verificarColisoesJogadorZumbi(Player *jogador, Zumbi *zumbis) {
 
 // ========== FUNÇÕES DA MENINA ==========
 
-void atualizarMenina(Menina *menina, Player *jogador, float deltaTime) {
+void atualizarMenina(Menina *menina, Player *jogador, Mapa *mapa, float deltaTime) {
     if (!menina->ativa || !menina->seguindo) return;
     
     // Menina segue o jogador com distância de 50 pixels
@@ -1199,8 +1201,35 @@ void atualizarMenina(Menina *menina, Player *jogador, float deltaTime) {
     
     if (distancia > 50.0f) {
         float velocidade = 2.5f;
-        menina->posicao.x += (direcao.x / distancia) * velocidade * 60.0f * deltaTime;
-        menina->posicao.y += (direcao.y / distancia) * velocidade * 60.0f * deltaTime;
+        
+        // Calcular nova posição
+        Vector2 novaPosicao = {
+            menina->posicao.x + (direcao.x / distancia) * velocidade * 60.0f * deltaTime,
+            menina->posicao.y + (direcao.y / distancia) * velocidade * 60.0f * deltaTime
+        };
+        
+        // Verificar colisão com o mapa antes de mover
+        if (mapa != NULL) {
+            if (!verificarColisaoMapa(mapa, novaPosicao, menina->raio)) {
+                // Não há colisão, pode mover
+                menina->posicao = novaPosicao;
+            } else {
+                // Tentar mover apenas no eixo X
+                Vector2 posicaoX = {novaPosicao.x, menina->posicao.y};
+                if (!verificarColisaoMapa(mapa, posicaoX, menina->raio)) {
+                    menina->posicao.x = novaPosicao.x;
+                } else {
+                    // Tentar mover apenas no eixo Y
+                    Vector2 posicaoY = {menina->posicao.x, novaPosicao.y};
+                    if (!verificarColisaoMapa(mapa, posicaoY, menina->raio)) {
+                        menina->posicao.y = novaPosicao.y;
+                    }
+                }
+            }
+        } else {
+            // Sem mapa, move livremente
+            menina->posicao = novaPosicao;
+        }
     }
 }
 

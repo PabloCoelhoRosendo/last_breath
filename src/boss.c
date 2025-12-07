@@ -434,15 +434,22 @@ void verificarColisoesBossBala(Boss **bosses, Bala **balas, Item *itemProgresso,
                     }
                     break;
                 case BOSS_ABOMINATION:
-                    // Boss final NÃO dropa CURE
+                    // Boss final dropa moedas E a CHAVE MISTERIOSA
                     if (moedas != NULL) {
                         adicionarMoeda(moedas, bossAtual->posicao, 500);
                         printf("Boss Abomination morreu! Dropou 500 moedas!\n");
                     }
+                    
+                    // Dropar a CHAVE MISTERIOSA que estava no estomago do monstro
+                    if (itemProgresso != NULL && !itemProgresso->ativo) {
+                        criarItem(itemProgresso, ITEM_CHAVE, posicaoItem1);
+                        printf("O monstro cuspiu algo... A CHAVE MISTERIOSA!\n");
+                    }
+                    
                     // Marcar que matou o boss final
                     if (jogador != NULL && jogador->fase == 4) {
                         jogador->matouBossFinal = true;
-                        printf("Boss final derrotado! Volte à loja...\n");
+                        printf("Boss final derrotado! Você encontrou a chave!\n");
                     }
                     break;
                 default:

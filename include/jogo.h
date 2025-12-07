@@ -107,10 +107,12 @@ typedef struct {
     bool leuRelatorio;
     bool conheceuMenina;
     bool meninaLiberada;
+    bool estaNoBanheiro;  // Flag para saber se está no mapa do banheiro
     bool finalFeliz;
     bool fase2Concluida; // Marca se a fase 2 (mercado) já foi completada
     bool fase3Concluida; // Marca se a fase 3 (rua) já foi completada
     bool matouBossFinal; // Marca se matou o boss final no laboratório
+    bool temChaveMisteriosa; // Marca se coletou a chave dropada pelo boss final
 } Player;
 
 // Estruturas de Zumbi e Bala (mantidas aqui por serem usadas em jogo.c)
@@ -156,7 +158,6 @@ typedef struct {
     bool ativa;
     bool seguindo;
     float raio;
-    Texture2D sprite;
 } Menina;
 
 typedef struct {
@@ -235,7 +236,7 @@ void verificarColisoesBalaJogador(Bala **balas, Player *jogador);
 void verificarColisoesJogadorZumbi(Player *jogador, Zumbi *zumbis);
 
 // Funções da Menina e Escrivaninha
-void atualizarMenina(Menina *menina, Player *jogador, float deltaTime);
+void atualizarMenina(Menina *menina, Player *jogador, Mapa *mapa, float deltaTime);
 void desenharMenina(Menina *menina);
 void criarEscrivaninha(Escrivaninha *esc, Vector2 posicao);
 void desenharEscrivaninha(Escrivaninha *esc);

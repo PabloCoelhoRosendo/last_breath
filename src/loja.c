@@ -12,14 +12,7 @@ void inicializarLoja(Loja *loja, Player *jogador) {
     loja->ativo = true;
     loja->menuAberto = false;
     loja->itemSelecionado = 0;
-    
-    // Determinar estado do mercador baseado nas chaves coletadas
-    int chavesColetadas = 0;
-    if (jogador->temChave) chavesColetadas++;
-    if (jogador->temMapa) chavesColetadas++;  // Fase 3 completa
-    if (jogador->temCure) chavesColetadas++; // Fase 4 completa
-    
-    loja->estadoMercador = chavesColetadas;
+    loja->estadoMercador = 0;  // Sempre normal
     
     // Inicializar itens da loja
     loja->itens[ITEM_LOJA_MUNICAO_PISTOL] = (ItemLoja){
@@ -78,14 +71,6 @@ void inicializarLoja(Loja *loja, Player *jogador) {
         true
     };
     
-    loja->itens[ITEM_LOJA_CHAVE_MISTERIOSA] = (ItemLoja){
-        ITEM_LOJA_CHAVE_MISTERIOSA,
-        "Chave Misteriosa",
-        "Uma chave estranha... Para onde leva?",
-        0,
-        false  // Só aparece após matar boss final
-    };
-    
     loja->itens[ITEM_LOJA_UPGRADE_VIDA_MAX] = (ItemLoja){
         ITEM_LOJA_UPGRADE_VIDA_MAX,
         "Upgrade: Blindagem +20",
@@ -121,9 +106,6 @@ void atualizarDisponibilidadeItens(Loja *loja, Player *jogador) {
             loja->itens[ITEM_LOJA_SMG].disponivel = false;
         }
     }
-    
-    // Chave misteriosa só aparece após matar boss final
-    loja->itens[ITEM_LOJA_CHAVE_MISTERIOSA].disponivel = jogador->matouBossFinal;
 }
 
 void atualizarLoja(Loja *loja, Player *jogador) {
@@ -269,13 +251,6 @@ void comprarItem(Loja *loja, Player *jogador, TipoItemLoja item) {
             printf("Restauracao profunda completa. Sistema: +70\n");
             break;
             
-        case ITEM_LOJA_CHAVE_MISTERIOSA:
-            // Ao "comprar" (pegar) a chave, ativa a porta do banheiro
-            printf("Você pegou a Chave Misteriosa!\n");
-            printf("Uma porta apareceu na loja...\n");
-            // A porta do banheiro será ativada no main.c
-            break;
-            
         case ITEM_LOJA_UPGRADE_VIDA_MAX:
             jogador->vida += 20;
             printf("Blindagem refor\u00e7ada. Capacidade maxima: +20\n");
@@ -298,25 +273,10 @@ void desenharLoja(Loja *loja, Player *jogador) {
             DrawCircleV(loja->posicao, 20, corMercador);
             DrawText("MERCADOR", (int)loja->posicao.x - 45, (int)loja->posicao.y - 40, 12, WHITE);
             break;
-        case 1: // Faiscando
-            corMercador = LIGHTGRAY;
+        default:
+            corMercador = DARKGRAY;
             DrawCircleV(loja->posicao, 20, corMercador);
-            DrawCircle((int)loja->posicao.x + 10, (int)loja->posicao.y - 10, 2, YELLOW);
-            DrawText("MERCADOR", (int)loja->posicao.x - 45, (int)loja->posicao.y - 40, 12, YELLOW);
-            break;
-        case 2: // Desgastado
-            corMercador = GRAY;
-            DrawCircleV(loja->posicao, 20, corMercador);
-            DrawCircle((int)loja->posicao.x - 8, (int)loja->posicao.y + 5, 3, ORANGE);
-            DrawCircle((int)loja->posicao.x + 12, (int)loja->posicao.y - 8, 2, ORANGE);
-            DrawText("MERCAD0R", (int)loja->posicao.x - 45, (int)loja->posicao.y - 40, 12, ORANGE);
-            break;
-        case 3: // Robô revelado
-            corMercador = (Color){100, 100, 120, 255};
-            DrawCircleV(loja->posicao, 20, corMercador);
-            DrawRectangle((int)loja->posicao.x - 6, (int)loja->posicao.y - 4, 4, 8, RED);
-            DrawRectangle((int)loja->posicao.x + 2, (int)loja->posicao.y - 4, 4, 8, RED);
-            DrawText("R0B0-MERC4D0R", (int)loja->posicao.x - 60, (int)loja->posicao.y - 40, 12, RED);
+            DrawText("MERCADOR", (int)loja->posicao.x - 45, (int)loja->posicao.y - 40, 12, WHITE);
             break;
     }
     

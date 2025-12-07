@@ -116,8 +116,15 @@ bool verificarColetaItem(Item *item, Player *jogador) {
     if (distancia <= item->raio && IsKeyPressed(KEY_E)) {
         switch (item->tipo) {
             case ITEM_CHAVE:
-                jogador->temChave = true;
-                printf("CHAVE COLETADA! Va ate a porta.\n");
+                // Verificar se é a chave misteriosa (dropada pelo boss final na fase 4)
+                if (jogador->fase == 4 && jogador->matouBossFinal) {
+                    jogador->temChaveMisteriosa = true;
+                    printf("CHAVE MISTERIOSA COLETADA! O monstro engoliu isso...\n");
+                    printf("Volte a loja e procure pela porta do banheiro!\n");
+                } else {
+                    jogador->temChave = true;
+                    printf("CHAVE COLETADA! Va ate a porta.\n");
+                }
                 break;
             case ITEM_MAPA:
                 jogador->temMapa = true;
