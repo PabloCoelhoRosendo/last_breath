@@ -418,6 +418,11 @@ void iniciarJogo(Player *jogador) {
     jogador->fase3Concluida = false;
     jogador->matouBossFinal = false;
     jogador->temChaveMisteriosa = false;
+    jogador->spawnadoRetornoFase2 = false;
+    jogador->spawnadoRetornoFase3 = false;
+    jogador->spawnadoRetornoFase4 = false;
+    jogador->zumbisSpawnadosRetorno = 0;
+    jogador->tempoSpawnRetorno = 0.0f;
 
     inicializarArma(&jogador->slots[0], ARMA_PISTOL);   
     inicializarArma(&jogador->slots[1], ARMA_NENHUMA);  
@@ -1188,8 +1193,13 @@ void verificarColisoesJogadorZumbi(Player *jogador, Zumbi *zumbis) {
 
 // ========== FUNÇÕES DA MENINA ==========
 
-void atualizarMenina(Menina *menina, Player *jogador, Mapa *mapa, float deltaTime) {
+void atualizarMenina(Menina *menina, Player *jogador, Mapa *mapa, float deltaTime, Zumbi **zumbis, Bala **balas) {
     if (!menina->ativa || !menina->seguindo) return;
+    
+    // Atualizar cooldown de tiro
+    if (menina->cooldownTiro > 0.0f) {
+        menina->cooldownTiro -= deltaTime;
+    }
     
     // Menina segue o jogador com distância de 50 pixels
     Vector2 direcao = {
@@ -1229,6 +1239,33 @@ void atualizarMenina(Menina *menina, Player *jogador, Mapa *mapa, float deltaTim
         } else {
             // Sem mapa, move livremente
             menina->posicao = novaPosicao;
+        }
+    }
+    
+    // Sistema de tiro da menina
+    if (menina->cooldownTiro <= 0.0f && zumbis != NULL && *zumbis != NULL) {
+        // Procurar zumbi mais próximo dentro do alcance
+        Zumbi *zumbiMaisProximo = NULL;
+        float menorDistancia = menina->alcanceVisao;
+        
+        Zumbi *zumbiAtual = *zumbis;
+        while (zumbiAtual != NULL) {
+            float dx = zumbiAtual->posicao.x - menina->posicao.x;
+            float dy = zumbiAtual->posicao.y - menina->posicao.y;
+            float dist = sqrtf(dx * dx + dy * dy);
+            
+            if (dist < menorDistancia) {
+                menorDistancia = dist;
+                zumbiMaisProximo = zumbiAtual;
+            }
+            
+            zumbiAtual = zumbiAtual->proximo;
+        }
+        
+        // Se encontrou zumbi, atirar
+        if (zumbiMaisProximo != NULL) {
+            adicionarBala(balas, menina->posicao, zumbiMaisProximo->posicao, 0, (float)menina->danoTiro);
+            menina->cooldownTiro = 0.8f; // Atira a cada 0.8 segundos
         }
     }
 }

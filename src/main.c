@@ -173,6 +173,9 @@ int main(void) {
     menina.ativa = false;
     menina.seguindo = false;
     menina.raio = 15.0f;
+    menina.cooldownTiro = 0.0f;
+    menina.alcanceVisao = 300.0f;
+    menina.danoTiro = 5;
     
     Escrivaninha escrivaninha;
     escrivaninha.ativa = false;
@@ -379,7 +382,7 @@ int main(void) {
             
             // Atualizar menina se estiver seguindo
             if (menina.ativa && menina.seguindo) {
-                atualizarMenina(&menina, &jogador, mapaAtual, GetFrameTime());
+                atualizarMenina(&menina, &jogador, mapaAtual, GetFrameTime(), &listaZumbis, &listaBalas);
             }
         }
         
@@ -549,6 +552,55 @@ int main(void) {
         atualizarZumbisComPathfinding(&listaZumbis, jogador.posicao, GetFrameTime(), mapaAtual, &pathfindingGrid);
         atualizarBossComPathfinding(&listaBosses, &jogador, &listaBalas, GetFrameTime(), mapaAtual, &pathfindingGrid);
         
+        // Spawnar 5 zumbis normais GRADATIVAMENTE no caminho de volta após buscar a menina
+        // Spawn: 1 zumbi a cada 1 segundo
+        // APENAS NO MERCADO (FASE 2) E NA RUA (FASE 3)
+        if (menina.seguindo && jogador.vida > 0) {
+            bool deveSpawnar = false;
+            int maxZumbis = 5;
+            
+            // APENAS SPAWNA NO MERCADO (FASE 2) E NA RUA (FASE 3)
+            // Se está no mercado e a fase foi concluída (está voltando)
+            if (jogador.fase == 2 && jogador.fase2Concluida && !jogador.spawnadoRetornoFase2) {
+                if (jogador.zumbisSpawnadosRetorno == 0) {
+                    printf("=== INICIO SPAWN: MERCADO (Fase 2) com menina ===\n");
+                }
+                deveSpawnar = true;
+            }
+            // Se está na rua e a fase foi concluída (está voltando)
+            else if (jogador.fase == 3 && jogador.fase3Concluida && !jogador.spawnadoRetornoFase3) {
+                if (jogador.zumbisSpawnadosRetorno == 0) {
+                    printf("=== INICIO SPAWN: RUA (Fase 3) com menina ===\n");
+                }
+                deveSpawnar = true;
+            }
+            
+            if (deveSpawnar && jogador.zumbisSpawnadosRetorno < maxZumbis) {
+                jogador.tempoSpawnRetorno += GetFrameTime();
+                
+                if (jogador.tempoSpawnRetorno >= 1.0f) { // Spawn a cada 1 segundo (mesma velocidade que todos)
+                    Vector2 posSpawn = gerarPosicaoValidaSpawn(mapaAtual, 20.0f);
+                    adicionarZumbi(&listaZumbis, posSpawn, recursos->zumbis);
+                    jogador.zumbisSpawnadosRetorno++;
+                    jogador.tempoSpawnRetorno = 0.0f;
+                    
+                    printf("Zumbi %d/5 spawnado no caminho de volta (Fase %d)\n", 
+                           jogador.zumbisSpawnadosRetorno, jogador.fase);
+                    
+                    // Marcar como completo quando spawnar todos
+                    if (jogador.zumbisSpawnadosRetorno >= maxZumbis) {
+                        if (jogador.fase == 2) {
+                            jogador.spawnadoRetornoFase2 = true;
+                            printf("=== TODOS OS 5 ZUMBIS DO MERCADO SPAWNADOS! ===\n");
+                        } else if (jogador.fase == 3) {
+                            jogador.spawnadoRetornoFase3 = true;
+                            printf("=== TODOS OS 5 ZUMBIS DA RUA SPAWNADOS! ===\n");
+                        }
+                    }
+                }
+            }
+        }
+        
         // Atualizar zumbi do banheiro se existir
         if (zumbiBanheiro != NULL) {
             atualizarZumbisComPathfinding(&zumbiBanheiro, jogador.posicao, GetFrameTime(), mapaAtual, &pathfindingGrid);
@@ -666,8 +718,19 @@ int main(void) {
                     printf("Erro ao carregar fase1.txt\n");
                 }
                 
-                // Marcar que saiu do banheiro
+                // Marcar que saiu do banheiro e que completou todas as fases
                 jogador.estaNoBanheiro = false;
+                jogador.fase = 1;
+                jogador.matouBossFinal = true; // Veio do laboratório
+                jogador.fase2Concluida = true;  // Marca que passou pelo mercado
+                jogador.fase3Concluida = true;  // Marca que passou pela rua
+                
+                // Resetar spawn para começar a spawnar zumbis gradativamente
+                jogador.spawnadoRetornoFase2 = false;
+                jogador.spawnadoRetornoFase3 = false;
+                jogador.spawnadoRetornoFase4 = false;
+                jogador.zumbisSpawnadosRetorno = 0;
+                jogador.tempoSpawnRetorno = 0.0f;
                 
                 texturaMapa = recursos->fundoMapa;
                 jogador.posicao = (Vector2){100, 450};
@@ -677,7 +740,7 @@ int main(void) {
                 loja.ativo = true;
                 inicializarLoja(&loja, &jogador);
                 
-                printf("Voltou para a loja com a menina!\n");
+                printf("Voltou para a loja com a menina! Prepare-se para zumbis!\n");
             }
         }
         
@@ -846,9 +909,16 @@ int main(void) {
                     jogador.posicao = (Vector2){portaRetorno.posicao.x + 80, portaRetorno.posicao.y};
                     if (menina.seguindo) {
                         menina.posicao = gerarPosicaoValidaProximaAoJogador(mapaAtual, jogador.posicao, menina.raio);
+                        // Com menina, resetar para spawnar zumbis gradativamente
+                        jogador.estadoHorda = HORDA_EM_PROGRESSO;
+                        jogador.spawnadoRetornoFase2 = false;
+                        jogador.zumbisSpawnadosRetorno = 0;
+                        jogador.tempoSpawnRetorno = 0.0f;
+                        printf("Fase 2 com menina. Zumbis vão spawnar!\n");
+                    } else {
+                        jogador.estadoHorda = HORDA_COMPLETA;
+                        printf("Fase 2 já concluída. Sem inimigos.\n");
                     }
-                    jogador.estadoHorda = HORDA_COMPLETA;
-                    printf("Fase 2 já concluída. Sem inimigos.\n");
                 } else {
                     jogador.posicao = (Vector2){8 * 32 + 16, 9 * 32 + 16};
                     if (menina.seguindo) {
@@ -891,10 +961,17 @@ int main(void) {
                     jogador.posicao = (Vector2){portaRetorno2.posicao.x, portaRetorno2.posicao.y + 80};
                     if (menina.seguindo) {
                         menina.posicao = gerarPosicaoValidaProximaAoJogador(mapaAtual, jogador.posicao, menina.raio);
+                        // Com menina, resetar para spawnar zumbis gradativamente
+                        jogador.estadoHorda = HORDA_EM_PROGRESSO;
+                        jogador.spawnadoRetornoFase3 = false;
+                        jogador.zumbisSpawnadosRetorno = 0;
+                        jogador.tempoSpawnRetorno = 0.0f;
+                        printf("Fase 3 com menina. Zumbis vão spawnar!\n");
+                    } else {
+                        jogador.estadoHorda = HORDA_COMPLETA;
+                        printf("Fase 3 já concluída. Sem inimigos.\n");
                     }
-                    jogador.estadoHorda = HORDA_COMPLETA;
                     portaRetorno2.ativa = true;  // Ativar porta de retorno
-                    printf("Fase 3 já concluída. Spawnado em (%.0f, %.0f)\n", jogador.posicao.x, jogador.posicao.y);
                 } else {
                     jogador.posicao = (Vector2){8 * 32 + 16, 9 * 32 + 16};
                     if (menina.seguindo) {
@@ -1007,6 +1084,11 @@ int main(void) {
                 inicializarLoja(&loja, &jogador);
                 detectarPortaNoMapa(mapaAtual, &porta, jogador.fase);
                 portaRetorno.ativa = false;
+                
+                // Resetar spawn gradativo
+                jogador.spawnadoRetornoFase2 = false;
+                jogador.zumbisSpawnadosRetorno = 0;
+                jogador.tempoSpawnRetorno = 0.0f;
             }
         }
         
@@ -1081,6 +1163,11 @@ int main(void) {
                     }
                     
                     portaRetorno2.ativa = false;
+                    
+                    // Resetar spawn gradativo
+                    jogador.spawnadoRetornoFase3 = false;
+                    jogador.zumbisSpawnadosRetorno = 0;
+                    jogador.tempoSpawnRetorno = 0.0f;
                 }
             }
         }
@@ -1154,6 +1241,11 @@ int main(void) {
                 
                 jogador.estadoHorda = HORDA_COMPLETA;
                 portaRetorno3.ativa = false;
+                
+                // Resetar spawn gradativo
+                jogador.spawnadoRetornoFase4 = false;
+                jogador.zumbisSpawnadosRetorno = 0;
+                jogador.tempoSpawnRetorno = 0.0f;
                 }
             }
         }
