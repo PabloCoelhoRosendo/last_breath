@@ -59,6 +59,7 @@ void detectarPortaNoMapa(Mapa* mapa, Porta* portaPtr, int faseAtual) {
         criarPorta(portaPtr, posPorta, 2);
         portaPtr->largura = 32.0f;
         portaPtr->altura = 64.0f;
+        portaPtr->trancada = false;  // Porta do mercado sempre aberta
         printf("Porta do Mercado criada na posicao fixa (%.0f, %.0f) [Area: %.0fx%.0f]\n",
                posPorta.x, posPorta.y, portaPtr->largura, portaPtr->altura);
         return;
@@ -222,6 +223,15 @@ int main(void) {
     // Fase 1 já foi carregada por padrão no início
 
     detectarPortaNoMapa(mapaAtual, &porta, jogador.fase);
+
+    // Se iniciando em fase já concluída, destrancar portas
+    if (jogador.fase == 2 && jogador.fase2Concluida && porta.ativa) {
+        porta.trancada = false;
+    } else if (jogador.fase == 3 && jogador.fase3Concluida && porta.ativa) {
+        porta.trancada = false;
+    } else if (jogador.fase == 1 && porta.ativa) {
+        porta.trancada = false;  // Porta do mercado sempre aberta
+    }
 
     jogador.estadoJogo = ESTADO_MENU;
     bool jogoIniciado = false;
@@ -486,6 +496,11 @@ int main(void) {
                 if (portaBanheiro.trancada) {
                     portaBanheiro.trancada = false;
                     printf("A porta do BANHEIRO foi destrancada!\n");
+                }
+                // Destrancar porta final após ler o relatório
+                if (portaFinal.trancada) {
+                    portaFinal.trancada = false;
+                    printf("A porta de SAÍDA foi destrancada!\n");
                 }
             }
             // Fechar relatório com tecla F
@@ -765,7 +780,7 @@ int main(void) {
         }
         
         // Lógica da porta do banheiro (HAPPY ENDING PATH) - leva a outro mapa
-        if (portaBanheiro.ativa && !jogador.conheceuMenina && !portaBanheiro.trancada) {
+        if (jogador.fase == 1 && portaBanheiro.ativa && !jogador.conheceuMenina && !portaBanheiro.trancada) {
             float distPorta = sqrtf(
                 (jogador.posicao.x - portaBanheiro.posicao.x) * (jogador.posicao.x - portaBanheiro.posicao.x) +
                 (jogador.posicao.y - portaBanheiro.posicao.y) * (jogador.posicao.y - portaBanheiro.posicao.y)
@@ -813,7 +828,7 @@ int main(void) {
         }
         
         // Verificar se matou o zumbi do banheiro e liberar a menina
-        if (jogador.conheceuMenina && !jogador.meninaLiberada && zumbiBanheiro == NULL && menina.ativa) {
+        if (jogador.estaNoBanheiro && jogador.conheceuMenina && !jogador.meninaLiberada && zumbiBanheiro == NULL && menina.ativa) {
             float distMenina = sqrtf(
                 (jogador.posicao.x - menina.posicao.x) * (jogador.posicao.x - menina.posicao.x) +
                 (jogador.posicao.y - menina.posicao.y) * (jogador.posicao.y - menina.posicao.y)
@@ -827,7 +842,7 @@ int main(void) {
         }
         
         // Porta de saída do banheiro - volta pra loja
-        if (jogador.conheceuMenina && jogador.meninaLiberada) {
+        if (jogador.estaNoBanheiro && jogador.conheceuMenina && jogador.meninaLiberada) {
             Vector2 portaSaidaBanheiro = {512, 700};  // Porta inferior
             float distPortaSaida = sqrtf(
                 (jogador.posicao.x - portaSaidaBanheiro.x) * (jogador.posicao.x - portaSaidaBanheiro.x) +
@@ -861,13 +876,14 @@ int main(void) {
                 }
                 loja.ativo = true;
                 inicializarLoja(&loja, &jogador);
-                
+                detectarPortaNoMapa(mapaAtual, &porta, jogador.fase);
+
                 printf("Voltou para a loja com a menina! Prepare-se para zumbis!\n");
             }
         }
         
         // Porta de saída do banheiro - volta pra loja com a menina
-        if (jogador.conheceuMenina && menina.seguindo) {
+        if (jogador.estaNoBanheiro && jogador.conheceuMenina && menina.seguindo) {
             // Detectar porta de saída do banheiro (tile 13)
             for (int i = 0; i < mapaAtual->altura; i++) {
                 for (int j = 0; j < mapaAtual->largura; j++) {
@@ -898,7 +914,7 @@ int main(void) {
                             // Reativar loja
                             inicializarLoja(&loja, &jogador);
                             detectarPortaNoMapa(mapaAtual, &porta, jogador.fase);
-                            
+
                             printf("Você voltou à loja com a menina!\n");
                             goto fim_loop_porta_banheiro;
                         }
@@ -909,26 +925,26 @@ int main(void) {
         }
         
         // Verificar HAPPY ENDING - menina chegou na porta final
-        if (jogador.fase == 4 && jogador.meninaLiberada && portaFinal.ativa) {
+        if (jogador.fase == 4 && jogador.meninaLiberada && portaFinal.ativa && !portaFinal.trancada) {
             float distMeninaPorta = sqrtf(
                 (menina.posicao.x - portaFinal.posicao.x) * (menina.posicao.x - portaFinal.posicao.x) +
                 (menina.posicao.y - portaFinal.posicao.y) * (menina.posicao.y - portaFinal.posicao.y)
             );
-            
+
             if (distMeninaPorta <= 60.0f) {
                 jogador.finalFeliz = true;
                 jogador.jogoVencido = true;
                 printf("=== HAPPY ENDING! Você salvou a menina! ===\n");
             }
         }
-        
+
         // Verificar BAD ENDING - jogador entrou na porta sem a menina
-        if (portaFinal.ativa && !jogador.meninaLiberada) {
+        if (jogador.fase == 4 && portaFinal.ativa && !jogador.meninaLiberada && !portaFinal.trancada) {
             float distJogadorPortaFinal = sqrtf(
                 (jogador.posicao.x - portaFinal.posicao.x) * (jogador.posicao.x - portaFinal.posicao.x) +
                 (jogador.posicao.y - portaFinal.posicao.y) * (jogador.posicao.y - portaFinal.posicao.y)
             );
-            
+
             if (distJogadorPortaFinal <= 50.0f && IsKeyPressed(KEY_E)) {
                 jogador.jogoVencido = true;
                 jogador.finalFeliz = false;
@@ -953,8 +969,18 @@ int main(void) {
             pertoDaPortaBanheiro = (distBanheiro <= 80.0f);
         }
 
-        if (porta.ativa && !pertoDaPortaBanheiro && verificarInteracaoPorta(&porta, &jogador, recursos)) {
+        if (jogador.fase != 1 && porta.ativa && !pertoDaPortaBanheiro && verificarInteracaoPorta(&porta, &jogador, recursos)) {
             printf("Usando porta! Indo para Fase %d\n", porta.faseDestino);
+
+            // Marcar fase anterior como concluída ao avançar
+            if (porta.faseDestino == 3) {
+                jogador.fase2Concluida = true; // Completou mercado, indo para rua
+                printf("Fase 2 (MERCADO) marcada como concluída!\n");
+            } else if (porta.faseDestino == 4) {
+                jogador.fase3Concluida = true; // Completou rua, indo para laboratório
+                printf("Fase 3 (RUA) marcada como concluída!\n");
+            }
+
             jogador.fase = porta.faseDestino;
             jogador.timerBoss = 0.0f;
             jogador.bossSpawnado = false;
@@ -1140,10 +1166,18 @@ int main(void) {
                 
                 // Criar escrivaninha com relatório no centro superior
                 criarEscrivaninha(&escrivaninha, (Vector2){512, 175});
-                
+
                 // Criar porta final (BAD ENDING) ao lado da escrivaninha
                 criarPorta(&portaFinal, (Vector2){612, 150}, 5);  // fase 5 = ending
-                portaFinal.trancada = false;  // Sempre aberta
+
+                // Se já leu o relatório, manter tudo destrancado
+                if (jogador.leuRelatorio) {
+                    escrivaninha.trancada = false;
+                    portaFinal.trancada = false;
+                    portaRetorno3.ativa = true;
+                } else {
+                    portaFinal.trancada = true;  // Trancada até ler o relatório
+                }
             } else {
                 jogador.posicao = gerarPosicaoValidaSpawn(mapaAtual, 15.0f);
                 if (menina.seguindo) {
@@ -1178,7 +1212,7 @@ int main(void) {
         }
         
         // Verificar interação com porta de retorno (volta pra loja da fase 2)
-        if (portaRetorno.ativa && verificarInteracaoPorta(&portaRetorno, &jogador, recursos)) {
+        if (jogador.fase == 2 && portaRetorno.ativa && verificarInteracaoPorta(&portaRetorno, &jogador, recursos)) {
             // Só permite voltar se a fase foi concluída
             if (jogador.estadoHorda != HORDA_COMPLETA) {
                 printf("Complete a fase primeiro!\n");
@@ -1216,6 +1250,7 @@ int main(void) {
                 }
                 inicializarLoja(&loja, &jogador);
                 detectarPortaNoMapa(mapaAtual, &porta, jogador.fase);
+
                 portaRetorno.ativa = false;
 
                 // Resetar spawn gradativo
@@ -1255,6 +1290,7 @@ int main(void) {
             }
             inicializarLoja(&loja, &jogador);
             detectarPortaNoMapa(mapaAtual, &porta, jogador.fase);
+
             portaRetorno.ativa = false;
         }
         
@@ -1313,7 +1349,13 @@ int main(void) {
                     
                     // Detectar porta para rua (tile 11 no lado direito)
                     detectarPortaNoMapa(mapaAtual, &porta, jogador.fase);
-                    
+
+                    // Se a fase já foi concluída, destrancar a porta
+                    if (jogador.fase2Concluida && porta.ativa) {
+                        porta.trancada = false;
+                        printf("Porta para RUA destrancada (fase já concluída)\n");
+                    }
+
                     // Spawnar perto da porta da rua (direita)
                     if (porta.ativa) {
                         jogador.posicao = certificarPosicaoWalkable(mapaAtual, (Vector2){porta.posicao.x - 80, porta.posicao.y}, 15.0f);
@@ -1390,7 +1432,13 @@ int main(void) {
                 
                 // Detectar porta para laboratório
                 detectarPortaNoMapa(mapaAtual, &porta, jogador.fase);
-                
+
+                // Se a fase já foi concluída, destrancar a porta
+                if (jogador.fase3Concluida && porta.ativa) {
+                    porta.trancada = false;
+                    printf("Porta para LAB destrancada (fase já concluída)\n");
+                }
+
                 // Spawnar perto da porta do LAB
                 if (porta.ativa) {
                     jogador.posicao = certificarPosicaoWalkable(mapaAtual, (Vector2){porta.posicao.x - 80, porta.posicao.y}, 15.0f);
@@ -1565,13 +1613,17 @@ int main(void) {
                     50, 80, RED
                 );
                 DrawText("SAIDA", (int)portaFinal.posicao.x - 25, (int)portaFinal.posicao.y - 50, 12, RED);
-                
+
                 float dist = sqrtf(
                     (jogador.posicao.x - portaFinal.posicao.x) * (jogador.posicao.x - portaFinal.posicao.x) +
                     (jogador.posicao.y - portaFinal.posicao.y) * (jogador.posicao.y - portaFinal.posicao.y)
                 );
                 if (dist <= 50.0f) {
-                    DrawText("Pressione E para sair", (int)portaFinal.posicao.x - 70, (int)portaFinal.posicao.y + 50, 14, YELLOW);
+                    if (portaFinal.trancada) {
+                        DrawText("TRANCADA - Leia o relatorio", (int)portaFinal.posicao.x - 100, (int)portaFinal.posicao.y + 50, 14, RED);
+                    } else {
+                        DrawText("Pressione E para sair", (int)portaFinal.posicao.x - 70, (int)portaFinal.posicao.y + 50, 14, YELLOW);
+                    }
                 }
             }
             
@@ -1586,11 +1638,16 @@ int main(void) {
                 
                 if (distPortaMercado <= 60.0f) {
                     DrawText("Pressione E para ir ao MERCADO", (int)porta.posicao.x - 120, (int)porta.posicao.y + 50, 16, YELLOW);
-                    
+
                     if (IsKeyPressed(KEY_E) && !loja.menuAberto) {
+                        // Tocar som de porta
+                        if (recursos->sfxPorta.frameCount > 0) {
+                            PlaySound(recursos->sfxPorta);
+                        }
+
                         // Ir para o mercado (fase 2)
                         jogador.fase = 2;
-                        
+
                         // Limpar tudo
                         liberarZumbis(&listaZumbis);
                         listaZumbis = NULL;
@@ -1813,7 +1870,7 @@ int main(void) {
                     if (portaRetorno3.ativa) {
                         DrawText("Pressione E para voltar a RUA", (int)portaRetorno3.posicao.x - 110, (int)portaRetorno3.posicao.y + 50, 14, GREEN);
                     } else {
-                        DrawText("Porta trancada. Explore o laboratorio", (int)portaRetorno3.posicao.x - 130, (int)portaRetorno3.posicao.y + 50, 14, RED);
+                        DrawText("TRANCADA - Leia o relatorio", (int)portaRetorno3.posicao.x - 100, (int)portaRetorno3.posicao.y + 50, 14, RED);
                     }
                 }
             }

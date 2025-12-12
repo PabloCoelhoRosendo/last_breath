@@ -1335,6 +1335,12 @@ bool verificarInteracaoEscrivaninha(Escrivaninha *esc, Player *jogador) {
     );
 
     if (distancia <= 100.0f) {
+        // Primeiro verificar se matou o boss
+        if (!jogador->matouBossFinal) {
+            DrawText("Elimine a ameaca primeiro!", (int)esc->posicao.x - 90, (int)esc->posicao.y - 50, 14, RED);
+            return false;
+        }
+
         // Se está trancada, precisa da chave misteriosa
         if (esc->trancada) {
             if (!jogador->temChaveMisteriosa) {
