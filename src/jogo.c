@@ -701,10 +701,10 @@ void desenharJogo(Player *jogador, Zumbi *zumbis, Bala *balas, Texture2D textura
     int minutos = (int)jogador->tempoTotal / 60;
     float segundos = fmod(jogador->tempoTotal, 60.0f);
     DrawText(TextFormat("Tempo: %02d:%05.2f", minutos, segundos), hudEsquerdoX, linhaY, 20, GOLD);
-    linhaY += espacamentoLinha;
+    // linhaY += espacamentoLinha;
 
-    DrawText(TextFormat("Fase: %d/3", jogador->fase), hudEsquerdoX, linhaY, 20, WHITE);
-    
+    // DrawText(TextFormat("Fase: %d/3", jogador->fase), hudEsquerdoX, linhaY, 20, WHITE);
+
 
     int hudX = 800;  
     int hudY = 690;  

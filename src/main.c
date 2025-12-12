@@ -1483,14 +1483,14 @@ int main(void) {
                     DrawText(mensagem, posX, 210, 32, YELLOW);
                 } else if (jogador.estadoHorda == HORDA_EM_PROGRESSO) {
                     const char* faseNome = (jogador.fase == 2) ? "FASE 2 - MERCADO" : (jogador.fase == 3) ? "FASE 3 - RUA" : "FASE 1 - LOJA";
-                    DrawText(TextFormat("%s - HORDA %d/3", faseNome, jogador.hordaAtual), 10, 150, 20, YELLOW);
+                    DrawText(TextFormat("%s - HORDA %d/3", faseNome, jogador.hordaAtual), 10, 130, 20, YELLOW);
 
                     int inimigosTotais = jogador.zumbisRestantes + contarBossesVivos(listaBosses);
-                    DrawText(TextFormat("Inimigos: %d", inimigosTotais), 10, 175, 18, WHITE);
+                    DrawText(TextFormat("Inimigos: %d", inimigosTotais), 10, 160, 18, WHITE);
 
                     if (jogador.bossesTotaisHorda > 0) {
                         int bossesVivos = contarBossesVivos(listaBosses);
-                        DrawText(TextFormat("Bosses: %d/%d", bossesVivos, jogador.bossesTotaisHorda), 10, 195, 18, RED);
+                        DrawText(TextFormat("Bosses: %d/%d", bossesVivos, jogador.bossesTotaisHorda), 10, 190, 18, RED);
                     }
                 } else if (jogador.estadoHorda == HORDA_COMPLETA && jogador.hordaAtual == 3) {
                     const char* mensagem = "TODAS AS HORDAS COMPLETAS!";
@@ -1844,7 +1844,7 @@ int main(void) {
             }
             
             // Mostrar moedas
-            DrawText(TextFormat("Moedas: %d", jogador.moedas), 10, 120, 20, YELLOW);
+            DrawText(TextFormat("Moedas: %d", jogador.moedas), 10, 100, 20, YELLOW);
 
             if ((jogador.fase == 2 && jogador.temChave && porta.ativa) ||
                 (jogador.fase == 3 && jogador.temChave && porta.ativa) ||
