@@ -202,23 +202,36 @@ bool verificarInteracaoPorta(Porta *porta, Player *jogador, Recursos *recursos) 
 
     if (distancia <= 80.0f) {
         if (porta->trancada) {
-            if (porta->faseDestino == 2 && !jogador->temChave) {
-                DrawText("Precisa da CHAVE", (int)porta->posicao.x - 60, (int)porta->posicao.y - 50, 14, RED);
+            // Porta do laboratório precisa do MAPA
+            if (porta->faseDestino == 4 && !jogador->temMapa) {
+                DrawText("Precisa do MAPA", (int)porta->posicao.x - 60, (int)porta->posicao.y - 50, 14, RED);
                 return false;
             }
-
-            if (porta->faseDestino == 3 && !jogador->temChave) {
+            // Outras portas precisam da CHAVE
+            if ((porta->faseDestino == 2 || porta->faseDestino == 3) && !jogador->temChave) {
                 DrawText("Precisa da CHAVE", (int)porta->posicao.x - 60, (int)porta->posicao.y - 50, 14, RED);
                 return false;
             }
         }
-        
+
         DrawText("Pressione E", (int)porta->posicao.x - 45, (int)porta->posicao.y - 50, 16, YELLOW);
-        
+
         if (IsKeyPressed(KEY_E)) {
             if (porta->trancada) {
-                if (porta->faseDestino == 2 || porta->faseDestino == 3) {
-                    jogador->temChave = false;  
+                // Porta do laboratório usa o MAPA
+                if (porta->faseDestino == 4) {
+                    if (!jogador->temMapa) {
+                        return false;
+                    }
+                    jogador->temMapa = false;
+                    printf("Mapa usado! Porta do laboratorio destrancada!\n");
+                }
+                // Outras portas usam a CHAVE
+                else if (porta->faseDestino == 2 || porta->faseDestino == 3) {
+                    if (!jogador->temChave) {
+                        return false;
+                    }
+                    jogador->temChave = false;
                     printf("Chave usada! Porta destrancada!\n");
                 }
 

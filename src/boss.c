@@ -434,8 +434,8 @@ void verificarColisoesBossBala(Boss **bosses, Bala **balas, Item *itemProgresso,
                         adicionarMoeda(moedas, bossAtual->posicao, 150);
                         printf("Boss Hunter morreu! Dropou 150 moedas!\n");
                     }
-                    
-                    if (jogador != NULL && jogador->fase == 2 && jogador->hordaAtual == 3) {
+
+                    if (jogador != NULL && jogador->fase == 3 && jogador->hordaAtual == 3) {
                         int huntersVivos = 0;
                         Boss *b = *bosses;
                         while (b != NULL) {
@@ -444,11 +444,11 @@ void verificarColisoesBossBala(Boss **bosses, Bala **balas, Item *itemProgresso,
                             }
                             b = b->proximo;
                         }
-                        
+
                         if (huntersVivos == 0) {
                             if (itemProgresso != NULL && !itemProgresso->ativo) {
-                                criarItem(itemProgresso, ITEM_CHAVE, posicaoItem1);
-                                printf("Todos os Hunters mortos! CHAVE dropada!\n");
+                                criarItem(itemProgresso, ITEM_MAPA, posicaoItem1);
+                                printf("Todos os Hunters mortos! MAPA dropado!\n");
                             }
                         }
                     }
