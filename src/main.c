@@ -257,7 +257,7 @@ int main(void) {
                     iniciarJogo(&jogador);
 
                     if (jogador.fase == 4) {
-                        jogador.posicao = (Vector2){16 * 32 + 16, 21 * 32 + 16};
+                        jogador.posicao = certificarPosicaoWalkable(mapaAtual, (Vector2){16 * 32 + 16, 21 * 32 + 16}, 15.0f);
                         printf("Spawn inicial Fase 4: (linha=21, coluna=16 - meio) -> (%.0f, %.0f)\n",
                                jogador.posicao.x, jogador.posicao.y);
                     } else {
@@ -788,7 +788,7 @@ int main(void) {
 
                 // Jogador spawna onde a menina estava antes (centro-direita)
                 // Coluna 20, linha 10
-                jogador.posicao = (Vector2){20 * 32, 10 * 32};  // Onde a menina estava
+                jogador.posicao = certificarPosicaoWalkable(mapaAtual, (Vector2){20 * 32, 10 * 32}, 15.0f);
                 
                 printf("Você entrou no banheiro! Há uma menina e um zumbi!\n");
             }
@@ -837,7 +837,7 @@ int main(void) {
                 jogador.tempoSpawnRetorno = 0.0f;
                 
                 texturaMapa = recursos->fundoMapa;
-                jogador.posicao = (Vector2){100, 450};
+                jogador.posicao = certificarPosicaoWalkable(mapaAtual, (Vector2){100, 450}, 15.0f);
                 if (menina.seguindo) {
                     menina.posicao = gerarPosicaoValidaProximaAoJogador(mapaAtual, jogador.posicao, menina.raio);
                 }
@@ -871,8 +871,8 @@ int main(void) {
                             
                             // Voltar textura da loja
                             texturaMapa = recursos->fundoMapa;
-                            
-                            jogador.posicao = (Vector2){200, 400};
+
+                            jogador.posicao = certificarPosicaoWalkable(mapaAtual, (Vector2){200, 400}, 15.0f);
                             if (menina.seguindo) {
                                 menina.posicao = gerarPosicaoValidaProximaAoJogador(mapaAtual, jogador.posicao, menina.raio);
                             }
@@ -1021,7 +1021,7 @@ int main(void) {
                 
                 // Verificar se a fase já foi concluída
                 if (jogador.fase2Concluida) {
-                    jogador.posicao = (Vector2){portaRetorno.posicao.x + 80, portaRetorno.posicao.y};
+                    jogador.posicao = certificarPosicaoWalkable(mapaAtual, (Vector2){portaRetorno.posicao.x + 80, portaRetorno.posicao.y}, 15.0f);
                     if (menina.seguindo) {
                         menina.posicao = gerarPosicaoValidaProximaAoJogador(mapaAtual, jogador.posicao, menina.raio);
                         // Com menina, resetar para spawnar zumbis gradativamente
@@ -1035,7 +1035,7 @@ int main(void) {
                         printf("Fase 2 já concluída. Sem inimigos.\n");
                     }
                 } else {
-                    jogador.posicao = (Vector2){8 * 32 + 16, 9 * 32 + 16};
+                    jogador.posicao = certificarPosicaoWalkable(mapaAtual, (Vector2){8 * 32 + 16, 9 * 32 + 16}, 15.0f);
                     if (menina.seguindo) {
                         menina.posicao = gerarPosicaoValidaProximaAoJogador(mapaAtual, jogador.posicao, menina.raio);
                     }
@@ -1073,7 +1073,7 @@ int main(void) {
                 // Verificar se a fase já foi concluída
                 if (jogador.fase3Concluida) {
                     // Spawnar ABAIXO da porta (na rua, não dentro do mercado)
-                    jogador.posicao = (Vector2){portaRetorno2.posicao.x, portaRetorno2.posicao.y + 80};
+                    jogador.posicao = certificarPosicaoWalkable(mapaAtual, (Vector2){portaRetorno2.posicao.x, portaRetorno2.posicao.y + 80}, 15.0f);
                     if (menina.seguindo) {
                         menina.posicao = gerarPosicaoValidaProximaAoJogador(mapaAtual, jogador.posicao, menina.raio);
                         // Com menina, resetar para spawnar zumbis gradativamente
@@ -1088,7 +1088,7 @@ int main(void) {
                     }
                     portaRetorno2.ativa = true;  // Ativar porta de retorno
                 } else {
-                    jogador.posicao = (Vector2){8 * 32 + 16, 9 * 32 + 16};
+                    jogador.posicao = certificarPosicaoWalkable(mapaAtual, (Vector2){8 * 32 + 16, 9 * 32 + 16}, 15.0f);
                     if (menina.seguindo) {
                         menina.posicao = gerarPosicaoValidaProximaAoJogador(mapaAtual, jogador.posicao, menina.raio);
                     }
@@ -1100,7 +1100,7 @@ int main(void) {
                     printf("Horda da RUA iniciada!\n");
                 }
             } else if (jogador.fase == 4) {
-                jogador.posicao = (Vector2){16 * 32 + 16, 21 * 32 + 16};
+                jogador.posicao = certificarPosicaoWalkable(mapaAtual, (Vector2){16 * 32 + 16, 21 * 32 + 16}, 15.0f);
                 if (menina.seguindo) {
                     menina.posicao = gerarPosicaoValidaProximaAoJogador(mapaAtual, jogador.posicao, menina.raio);
                 }
@@ -1191,15 +1191,15 @@ int main(void) {
                 if (!carregarMapaDeArquivo(mapaAtual, "assets/maps/fase1.txt")) {
                     printf("Erro ao carregar fase1.txt\n");
                 }
-                
-                jogador.posicao = (Vector2){512, 400};
+
+                jogador.posicao = certificarPosicaoWalkable(mapaAtual, (Vector2){512, 400}, 15.0f);
                 if (menina.seguindo) {
                     menina.posicao = gerarPosicaoValidaProximaAoJogador(mapaAtual, jogador.posicao, menina.raio);
                 }
                 inicializarLoja(&loja, &jogador);
                 detectarPortaNoMapa(mapaAtual, &porta, jogador.fase);
                 portaRetorno.ativa = false;
-                
+
                 // Resetar spawn gradativo
                 jogador.spawnadoRetornoFase2 = false;
                 jogador.zumbisSpawnadosRetorno = 0;
@@ -1231,7 +1231,7 @@ int main(void) {
                 printf("Erro ao carregar fase1.txt\n");
             }
 
-            jogador.posicao = (Vector2){512, 400};
+            jogador.posicao = certificarPosicaoWalkable(mapaAtual, (Vector2){512, 400}, 15.0f);
             if (menina.seguindo) {
                 menina.posicao = gerarPosicaoValidaProximaAoJogador(mapaAtual, jogador.posicao, menina.raio);
             }
@@ -1298,7 +1298,7 @@ int main(void) {
                     
                     // Spawnar perto da porta da rua (direita)
                     if (porta.ativa) {
-                        jogador.posicao = (Vector2){porta.posicao.x - 80, porta.posicao.y};
+                        jogador.posicao = certificarPosicaoWalkable(mapaAtual, (Vector2){porta.posicao.x - 80, porta.posicao.y}, 15.0f);
                         if (menina.seguindo) {
                             menina.posicao = gerarPosicaoValidaProximaAoJogador(mapaAtual, jogador.posicao, menina.raio);
                         }
@@ -1375,7 +1375,7 @@ int main(void) {
                 
                 // Spawnar perto da porta do LAB
                 if (porta.ativa) {
-                    jogador.posicao = (Vector2){porta.posicao.x - 80, porta.posicao.y};
+                    jogador.posicao = certificarPosicaoWalkable(mapaAtual, (Vector2){porta.posicao.x - 80, porta.posicao.y}, 15.0f);
                     if (menina.seguindo) {
                         menina.posicao = gerarPosicaoValidaProximaAoJogador(mapaAtual, jogador.posicao, menina.raio);
                     }
@@ -1591,14 +1591,14 @@ int main(void) {
                         
                         // Se fase já foi concluída, spawnar ao lado da porta de retorno
                         if (jogador.fase2Concluida) {
-                            jogador.posicao = (Vector2){portaRetorno.posicao.x + 80, portaRetorno.posicao.y};
+                            jogador.posicao = certificarPosicaoWalkable(mapaAtual, (Vector2){portaRetorno.posicao.x + 80, portaRetorno.posicao.y}, 15.0f);
                             if (menina.seguindo) {
                                 menina.posicao = gerarPosicaoValidaProximaAoJogador(mapaAtual, jogador.posicao, menina.raio);
                             }
                             jogador.estadoHorda = HORDA_COMPLETA; // Fase já concluída
                             printf("Retornando à fase 2 já concluída. Sem inimigos.\n");
                         } else {
-                            jogador.posicao = (Vector2){3 * 32 + 16, 6 * 32 + 16};
+                            jogador.posicao = certificarPosicaoWalkable(mapaAtual, (Vector2){3 * 32 + 16, 6 * 32 + 16}, 15.0f);
                             if (menina.seguindo) {
                                 menina.posicao = gerarPosicaoValidaProximaAoJogador(mapaAtual, jogador.posicao, menina.raio);
                             }

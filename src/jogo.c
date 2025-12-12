@@ -439,6 +439,7 @@ void iniciarJogo(Player *jogador) {
     jogador->bossSpawnado = false;
 
     jogador->temChave = true;   // DEBUG: Começar com a chave do banheiro
+    jogador->temChaveMisteriosa = true;  // DEBUG: Começar com a chave misteriosa
     jogador->temMapa = false;
     jogador->temCure = false;
     jogador->jogoVencido = false;
