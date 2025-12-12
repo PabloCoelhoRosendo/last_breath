@@ -38,6 +38,11 @@ typedef struct {
     Texture2D meninaAtirandoDireita;
     Texture2D meninaAtirandoEsquerda;
 
+    // Texturas da escrivaninha e relatório
+    Texture2D mesaComFolha;
+    Texture2D mesaSemFolha;
+    Texture2D relatorio;
+
     // Sons do jogo
     Sound sfxTiroPistol;
     Sound sfxTiroShotgun;

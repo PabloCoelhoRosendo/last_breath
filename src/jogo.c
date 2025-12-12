@@ -426,7 +426,7 @@ void iniciarJogo(Player *jogador) {
     jogador->posicao = (Vector2){512, 384};
     jogador->vida = 100;
     jogador->tempoTotal = 0.0f;
-    jogador->fase = 1;
+    jogador->fase = 3;  // DEBUG: Começar na fase 3
     jogador->velocidadeBase = 3.0f;
     jogador->direcaoVertical = 0;
     jogador->direcaoHorizontal = 1;
@@ -461,18 +461,18 @@ void iniciarJogo(Player *jogador) {
 
     jogador->modoDeus = false; // Modo Deus desativado por padrão
 
-    jogador->leuRelatorio = false;
-    jogador->conheceuMenina = false;
-    jogador->meninaLiberada = false;
+    jogador->leuRelatorio = false;  // DEBUG: Pode ler o relatório
+    jogador->conheceuMenina = true;  // DEBUG: Já conheceu a menina
+    jogador->meninaLiberada = true;  // DEBUG: Menina liberada para segui-lo
     jogador->estaNoBanheiro = false;
     jogador->finalFeliz = false;
-    jogador->fase2Concluida = false;
-    jogador->fase3Concluida = false;
-    jogador->matouBossFinal = false;
+    jogador->fase2Concluida = true;  // DEBUG: Fase 2 completa
+    jogador->fase3Concluida = false;  // DEBUG: Fase 3 NÃO completa (vai completar agora)
+    jogador->matouBossFinal = false;  // DEBUG: Boss final não morreu ainda
     jogador->temChaveMisteriosa = true;  // DEBUG: Começar com a chave misteriosa
-    jogador->spawnadoRetornoFase2 = false;
-    jogador->spawnadoRetornoFase3 = false;
-    jogador->spawnadoRetornoFase4 = false;
+    jogador->spawnadoRetornoFase2 = true;  // DEBUG: Já spawnou retorno da fase 2
+    jogador->spawnadoRetornoFase3 = false;  // DEBUG: Ainda NÃO spawnou retorno da fase 3
+    jogador->spawnadoRetornoFase4 = false;  // DEBUG: Ainda não spawnou retorno da fase 4
     jogador->zumbisSpawnadosRetorno = 0;
     jogador->tempoSpawnRetorno = 0.0f;
 
@@ -1270,31 +1270,60 @@ void criarEscrivaninha(Escrivaninha *esc, Vector2 posicao) {
     esc->trancada = true;  // Começa trancada
 }
 
-void desenharEscrivaninha(Escrivaninha *esc) {
+void desenharEscrivaninha(Escrivaninha *esc, Recursos *recursos) {
     if (!esc->ativa) return;
-    
-    Color cor = esc->lida ? DARKBROWN : BROWN;
-    DrawRectangle(
-        (int)esc->posicao.x - (int)esc->largura / 2,
-        (int)esc->posicao.y - (int)esc->altura / 2,
-        (int)esc->largura,
-        (int)esc->altura,
-        cor
-    );
-    DrawRectangleLines(
-        (int)esc->posicao.x - (int)esc->largura / 2,
-        (int)esc->posicao.y - (int)esc->altura / 2,
-        (int)esc->largura,
-        (int)esc->altura,
-        BLACK
-    );
-    
-    // Papel em cima
-    DrawRectangle(
-        (int)esc->posicao.x - 15,
-        (int)esc->posicao.y - 10,
-        30, 20, WHITE
-    );
+
+    // Selecionar textura baseado no estado
+    Texture2D textura = esc->lida ? recursos->mesaSemFolha : recursos->mesaComFolha;
+
+    // Verificar se a textura é válida
+    if (textura.id > 0) {
+        // Desenhar textura centralizada na posição da escrivaninha
+        float escala = 0.13f;  // Ajustar conforme necessário
+        float largura = textura.width * escala;
+        float altura = textura.height * escala;
+
+        Rectangle destino = {
+            esc->posicao.x - largura / 2,
+            esc->posicao.y - altura / 2,
+            largura,
+            altura
+        };
+
+        Rectangle origem = {
+            0, 0,
+            (float)textura.width,
+            (float)textura.height
+        };
+
+        DrawTexturePro(textura, origem, destino, (Vector2){0, 0}, 0.0f, WHITE);
+    } else {
+        // Fallback: desenhar retângulos se texturas não carregaram
+        Color cor = esc->lida ? DARKBROWN : BROWN;
+        DrawRectangle(
+            (int)esc->posicao.x - (int)esc->largura / 2,
+            (int)esc->posicao.y - (int)esc->altura / 2,
+            (int)esc->largura,
+            (int)esc->altura,
+            cor
+        );
+        DrawRectangleLines(
+            (int)esc->posicao.x - (int)esc->largura / 2,
+            (int)esc->posicao.y - (int)esc->altura / 2,
+            (int)esc->largura,
+            (int)esc->altura,
+            BLACK
+        );
+
+        // Papel em cima (apenas se não foi lida)
+        if (!esc->lida) {
+            DrawRectangle(
+                (int)esc->posicao.x - 15,
+                (int)esc->posicao.y - 10,
+                30, 20, WHITE
+            );
+        }
+    }
 }
 
 bool verificarInteracaoEscrivaninha(Escrivaninha *esc, Player *jogador) {
@@ -1305,7 +1334,7 @@ bool verificarInteracaoEscrivaninha(Escrivaninha *esc, Player *jogador) {
         (jogador->posicao.y - esc->posicao.y) * (jogador->posicao.y - esc->posicao.y)
     );
 
-    if (distancia <= 60.0f) {
+    if (distancia <= 100.0f) {
         // Se está trancada, precisa da chave misteriosa
         if (esc->trancada) {
             if (!jogador->temChaveMisteriosa) {

@@ -226,7 +226,7 @@ void verificarColisoesJogadorZumbi(Player *jogador, Zumbi *zumbis, Recursos *rec
 
 // Funções da Escrivaninha
 void criarEscrivaninha(Escrivaninha *esc, Vector2 posicao);
-void desenharEscrivaninha(Escrivaninha *esc);
+void desenharEscrivaninha(Escrivaninha *esc, Recursos *recursos);
 bool verificarInteracaoEscrivaninha(Escrivaninha *esc, Player *jogador);
 
 #endif

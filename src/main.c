@@ -210,7 +210,17 @@ int main(void) {
 
     // Inicializar jogador antes de detectar porta
     iniciarJogo(&jogador);
-    
+
+    // Carregar mapa baseado na fase inicial do jogador
+    if (jogador.fase == 2) {
+        carregarMapaDeArquivo(mapaAtual, "assets/maps/fase2.txt");
+    } else if (jogador.fase == 3) {
+        carregarMapaDeArquivo(mapaAtual, "assets/maps/fase3.txt");
+    } else if (jogador.fase == 4) {
+        carregarMapaDeArquivo(mapaAtual, "assets/maps/fase4.txt");
+    }
+    // Fase 1 já foi carregada por padrão no início
+
     detectarPortaNoMapa(mapaAtual, &porta, jogador.fase);
 
     jogador.estadoJogo = ESTADO_MENU;
@@ -536,6 +546,13 @@ int main(void) {
 
             if (verificarColisaoMapa(mapaAtual, jogador.posicao, 15.0f)) {
                 jogador.posicao = posicaoAnteriorJogador;
+            }
+
+            // Colisão com escrivaninha na fase 4
+            if (jogador.fase == 4 && escrivaninha.ativa) {
+                if (verificarColisaoCirculos(jogador.posicao, 15.0f, escrivaninha.posicao, 50.0f)) {
+                    jogador.posicao = posicaoAnteriorJogador;
+                }
             }
         }
 
@@ -1121,7 +1138,7 @@ int main(void) {
                 }
                 
                 // Criar escrivaninha com relatório no centro superior
-                criarEscrivaninha(&escrivaninha, (Vector2){512, 150});
+                criarEscrivaninha(&escrivaninha, (Vector2){512, 175});
                 
                 // Criar porta final (BAD ENDING) ao lado da escrivaninha
                 criarPorta(&portaFinal, (Vector2){612, 150}, 5);  // fase 5 = ending
@@ -1496,9 +1513,44 @@ int main(void) {
             
             // Desenhar escrivaninha na fase 4
             if (jogador.fase == 4 && escrivaninha.ativa) {
-                desenharEscrivaninha(&escrivaninha);
+                desenharEscrivaninha(&escrivaninha, recursos);
             }
-            
+
+            // Desenhar relatório em tela cheia quando está sendo lido
+            if (jogador.fase == 4 && escrivaninha.ativa && escrivaninha.lida) {
+                if (recursos->relatorio.id > 0) {
+                    // Desenhar fundo semi-transparente escuro
+                    DrawRectangle(0, 0, GetScreenWidth(), GetScreenHeight(), (Color){0, 0, 0, 200});
+
+                    // Calcular escala para preencher a tela mantendo proporção
+                    float escalaX = (float)GetScreenWidth() / recursos->relatorio.width;
+                    float escalaY = (float)GetScreenHeight() / recursos->relatorio.height;
+                    float escala = (escalaX < escalaY) ? escalaX : escalaY;
+
+                    // Centralizar relatório na tela
+                    float largura = recursos->relatorio.width * escala * 0.9f;  // 90% da tela
+                    float altura = recursos->relatorio.height * escala * 0.9f;
+
+                    Rectangle destino = {
+                        (GetScreenWidth() - largura) / 2,
+                        (GetScreenHeight() - altura) / 2,
+                        largura,
+                        altura
+                    };
+
+                    Rectangle origem = {
+                        0, 0,
+                        (float)recursos->relatorio.width,
+                        (float)recursos->relatorio.height
+                    };
+
+                    DrawTexturePro(recursos->relatorio, origem, destino, (Vector2){0, 0}, 0.0f, WHITE);
+
+                    // Desenhar instrução para fechar
+                    DrawText("Pressione F para fechar", GetScreenWidth() / 2 - 100, GetScreenHeight() - 40, 20, YELLOW);
+                }
+            }
+
             // Desenhar porta final na fase 4
             if (jogador.fase == 4 && portaFinal.ativa) {
                 DrawRectangle(
@@ -1817,48 +1869,6 @@ int main(void) {
                     DrawText(mensagem, posX, posY, 20, YELLOW);
                 }
             }
-        }
-        
-        // Tela de relatório científico (após ler o papel)
-        if (escrivaninha.lida) {
-            DrawRectangle(50, 50, 924, 668, (Color){0, 0, 0, 240});
-            DrawRectangleLinesEx((Rectangle){50, 50, 924, 668}, 3, DARKBROWN);
-            
-            DrawText("=== RELATORIO FINAL - PROJETO ZOBOCOP ===", 150, 80, 24, YELLOW);
-            DrawText("Dia 19/03/2034 - Dr. Helena Voss", 100, 130, 18, LIGHTGRAY);
-            DrawText("Laboratorio de Pesquisa Avancada - Setor 7", 100, 155, 16, GRAY);
-            
-            DrawText("Ja nao aguentamos mais. Os infectados se multiplicam", 100, 195, 18, WHITE);
-            DrawText("sem parar e passamos do prazo para criar uma cura.", 100, 220, 18, WHITE);
-            DrawText("Somos os ultimos restantes da humanidade neste", 100, 245, 18, WHITE);
-            DrawText("laboratorio reforcado.", 100, 270, 18, WHITE);
-            
-            DrawText("Nossa unica esperanca e o ZOBOCOP. O projeto que", 100, 310, 18, SKYBLUE);
-            DrawText("exterminara todos eles antes que nos exterminem.", 100, 335, 18, SKYBLUE);
-            DrawText("E nossa unica chance... eles ja estao arrombando", 100, 360, 18, SKYBLUE);
-            DrawText("as portas reforcadas.", 100, 385, 18, SKYBLUE);
-            
-            DrawText("Implantei memorias nele. Uma vida inteira que nunca", 100, 425, 18, YELLOW);
-            DrawText("existiu. Ele precisa acreditar para ter empatia,", 100, 450, 18, YELLOW);
-            DrawText("para proteger minha filha no banheiro.", 100, 475, 18, YELLOW);
-            
-            DrawText("O MONSTRO ENGOLIU A CHAVE DO BANHEIRO. Mate-o para", 100, 515, 18, RED);
-            DrawText("recupera-la. Minha filha esta la... sozinha...", 100, 540, 18, RED);
-            DrawText("aterrorizada. SALVE ELA. De a ela um proposito p", 100, 565, 18, GREEN);
-            
-            // Corte de sangue dramatico - como se o zumbi matou no meio
-            DrawLine(100, 585, 920, 595, RED);
-            DrawLine(95, 590, 915, 600, MAROON);
-            DrawRectangle(450, 595, 180, 90, (Color){80, 0, 0, 200});
-            DrawCircle(500, 625, 35, RED);
-            DrawCircle(520, 620, 28, MAROON);
-            DrawCircle(480, 635, 22, DARKBROWN);
-            DrawLine(300, 600, 700, 675, (Color){120, 0, 0, 180});
-            DrawLine(250, 625, 750, 655, (Color){100, 0, 0, 150});
-            
-            DrawText("[O resto esta coberto de sangue...]", 280, 670, 16, RED);
-            
-            DrawText("Pressione F para fechar", 350, 690, 16, YELLOW);
         }
         
                 // Tela de ENDING

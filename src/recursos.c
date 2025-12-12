@@ -132,6 +132,11 @@ void carregarRecursos(Recursos* recursos) {
     carregarTextura(&recursos->meninaAtirandoDireita, "assets/menina/Menina atirando direita.png", NULL, "Menina Atirando Direita");
     carregarTextura(&recursos->meninaAtirandoEsquerda, "assets/menina/Menina atirando esquerda.png", NULL, "Menina Atirando Esquerda");
 
+    printf("  - Carregando texturas da escrivaninha e relatório...\n");
+    carregarTextura(&recursos->mesaComFolha, "assets/tiles/Mesa com folha.png", NULL, "Mesa com Folha");
+    carregarTextura(&recursos->mesaSemFolha, "assets/tiles/Mesa sem folha.png", NULL, "Mesa sem Folha");
+    carregarTextura(&recursos->relatorio, "assets/tiles/Relatorio.png", NULL, "Relatório");
+
     printf("  - Carregando texturas de zumbis...\n");
     const char* nomesDirecoesZumbi[] = {"frente direita", "frente esquerda", "costas direita", "costas esquerda"};
 
@@ -394,6 +399,20 @@ void descarregarRecursos(Recursos* recursos) {
     if (texturaValida(recursos->meninaAtirandoEsquerda)) {
         UnloadTexture(recursos->meninaAtirandoEsquerda);
         recursos->meninaAtirandoEsquerda.id = 0;
+    }
+
+    // Descarregar texturas da escrivaninha e relatório
+    if (texturaValida(recursos->mesaComFolha)) {
+        UnloadTexture(recursos->mesaComFolha);
+        recursos->mesaComFolha.id = 0;
+    }
+    if (texturaValida(recursos->mesaSemFolha)) {
+        UnloadTexture(recursos->mesaSemFolha);
+        recursos->mesaSemFolha.id = 0;
+    }
+    if (texturaValida(recursos->relatorio)) {
+        UnloadTexture(recursos->relatorio);
+        recursos->relatorio.id = 0;
     }
 
     for (int i = 0; i < 5; i++) {
