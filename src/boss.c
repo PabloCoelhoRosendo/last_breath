@@ -447,8 +447,8 @@ void verificarColisoesBossBala(Boss **bosses, Bala **balas, Item *itemProgresso,
 
                         if (huntersVivos == 0) {
                             if (itemProgresso != NULL && !itemProgresso->ativo) {
-                                criarItem(itemProgresso, ITEM_MAPA, posicaoItem1);
-                                printf("Todos os Hunters mortos! MAPA dropado!\n");
+                                criarItem(itemProgresso, ITEM_CHAVE, posicaoItem1);
+                                printf("Todos os Hunters mortos! CHAVE dropada!\n");
                             }
                         }
                     }

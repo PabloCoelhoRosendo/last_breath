@@ -202,13 +202,8 @@ bool verificarInteracaoPorta(Porta *porta, Player *jogador, Recursos *recursos) 
 
     if (distancia <= 80.0f) {
         if (porta->trancada) {
-            // Porta do laboratório precisa do MAPA
-            if (porta->faseDestino == 4 && !jogador->temMapa) {
-                DrawText("Precisa do MAPA", (int)porta->posicao.x - 60, (int)porta->posicao.y - 50, 14, RED);
-                return false;
-            }
-            // Outras portas precisam da CHAVE
-            if ((porta->faseDestino == 2 || porta->faseDestino == 3) && !jogador->temChave) {
+            // Todas as portas precisam da CHAVE
+            if ((porta->faseDestino == 2 || porta->faseDestino == 3 || porta->faseDestino == 4) && !jogador->temChave) {
                 DrawText("Precisa da CHAVE", (int)porta->posicao.x - 60, (int)porta->posicao.y - 50, 14, RED);
                 return false;
             }
@@ -218,16 +213,8 @@ bool verificarInteracaoPorta(Porta *porta, Player *jogador, Recursos *recursos) 
 
         if (IsKeyPressed(KEY_E)) {
             if (porta->trancada) {
-                // Porta do laboratório usa o MAPA
-                if (porta->faseDestino == 4) {
-                    if (!jogador->temMapa) {
-                        return false;
-                    }
-                    jogador->temMapa = false;
-                    printf("Mapa usado! Porta do laboratorio destrancada!\n");
-                }
-                // Outras portas usam a CHAVE
-                else if (porta->faseDestino == 2 || porta->faseDestino == 3) {
+                // Todas as portas usam a CHAVE
+                if (porta->faseDestino == 2 || porta->faseDestino == 3 || porta->faseDestino == 4) {
                     if (!jogador->temChave) {
                         return false;
                     }

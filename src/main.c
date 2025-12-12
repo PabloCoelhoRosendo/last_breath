@@ -1795,7 +1795,7 @@ int main(void) {
             DrawText(TextFormat("Moedas: %d", jogador.moedas), 10, 120, 20, YELLOW);
 
             if ((jogador.fase == 2 && jogador.temChave && porta.ativa) ||
-                (jogador.fase == 3 && jogador.temMapa && porta.ativa) ||
+                (jogador.fase == 3 && jogador.temChave && porta.ativa) ||
                 (jogador.fase == 4 && jogador.temChaveMisteriosa && escrivaninha.trancada)) {
                 float tempoTotal = GetTime();
                 int mostrar = ((int)(tempoTotal * 2)) % 2;
