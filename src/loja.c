@@ -105,7 +105,7 @@ void atualizarDisponibilidadeItens(Loja *loja, Player *jogador) {
     }
 }
 
-void atualizarLoja(Loja *loja, Player *jogador, const Mapa *mapa) {
+void atualizarLoja(Loja *loja, Player *jogador, const Mapa *mapa, Recursos *recursos) {
     if (!loja->ativo) return;
 
     atualizarDisponibilidadeItens(loja, jogador);
@@ -177,7 +177,7 @@ void atualizarLoja(Loja *loja, Player *jogador, const Mapa *mapa) {
                 
                 // Comprar com clique do mouse
                 if (IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) {
-                    comprarItem(loja, jogador, i);
+                    comprarItem(loja, jogador, i, recursos);
                 }
             }
         }
@@ -189,21 +189,32 @@ void atualizarLoja(Loja *loja, Player *jogador, const Mapa *mapa) {
     }
 }
 
-void comprarItem(Loja *loja, Player *jogador, TipoItemLoja item) {
+void comprarItem(Loja *loja, Player *jogador, TipoItemLoja item, Recursos *recursos) {
     ItemLoja *itemLoja = &loja->itens[item];
     
     if (!itemLoja->disponivel) {
         printf("Item nao disponivel!\n");
+        if (recursos != NULL) {
+            PlaySound(recursos->sfxCompraNegado);
+        }
         return;
     }
     
     if (jogador->moedas < itemLoja->preco) {
         printf("Dinheiro insuficiente! Precisa de %d moedas.\n", itemLoja->preco);
+        if (recursos != NULL) {
+            PlaySound(recursos->sfxCompraNegado);
+        }
         return;
     }
     
     // Processar compra
     jogador->moedas -= itemLoja->preco;
+    
+    // Tocar som de compra
+    if (recursos != NULL) {
+        PlaySound(recursos->sfxCompra);
+    }
     
     switch (item) {
         case ITEM_LOJA_MUNICAO_PISTOL:

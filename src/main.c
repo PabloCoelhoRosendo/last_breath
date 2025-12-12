@@ -107,6 +107,17 @@ int main(void) {
     const int alturaTela = 768;
 
     InitWindow(larguraTela, alturaTela, "Last Breath - Zumbi Survival Game");
+    
+    // Inicializar sistema de áudio ANTES de SetTargetFPS
+    InitAudioDevice();
+    
+    if (!IsAudioDeviceReady()) {
+        printf("ERRO CRITICO: Dispositivo de audio nao inicializado!\n");
+    } else {
+        printf("=== AUDIO INICIALIZADO COM SUCESSO ===\n");
+        SetMasterVolume(1.0f);  // Volume máximo
+    }
+    
     SetTargetFPS(60);
 
     Texture2D logoTexture = LoadTexture("assets/logo/imagem.png");
@@ -195,6 +206,7 @@ int main(void) {
     menina.cooldownTiro = 0.0f;
     menina.alcanceVisao = 300.0f;
     menina.danoTiro = 5;
+    menina.timerSom = 0.0f;
     
     Escrivaninha escrivaninha;
     escrivaninha.ativa = false;
@@ -212,9 +224,29 @@ int main(void) {
     jogador.posicao = gerarPosicaoValidaSpawn(mapaAtual, 15.0f);
 
     jogador.spriteAtual = spriteFrenteDireita;
+    
+    // Controle de música
+    Music *musicaAtual = NULL;
+    bool musicaMenuTocando = false;
 
     while (!WindowShouldClose()) {
+        // Atualizar stream de música
+        if (musicaAtual != NULL) {
+            UpdateMusicStream(*musicaAtual);
+        }
+        
         if (jogador.estadoJogo == ESTADO_MENU) {
+            // Iniciar música do menu se ainda não estiver tocando
+            if (!musicaMenuTocando && recursos->musicMenu.frameCount > 0) {
+                if (musicaAtual != NULL) {
+                    StopMusicStream(*musicaAtual);
+                }
+                musicaAtual = &recursos->musicMenu;
+                PlayMusicStream(*musicaAtual);
+                SetMusicVolume(*musicaAtual, 0.35f);
+                musicaMenuTocando = true;
+            }
+            
             Rectangle botaoJogar = {
                 larguraTela / 2 - 100,
                 alturaTela / 2 + 150,
@@ -230,8 +262,7 @@ int main(void) {
                     iniciarJogo(&jogador);
 
                     if (jogador.fase == 4) {
-                        Vector2 posicaoDesejadaInicialFase4 = (Vector2){16 * 32 + 16, 21 * 32 + 16};
-                        jogador.posicao = certificarPosicaoWalkable(mapaAtual, posicaoDesejadaInicialFase4, 15.0f);
+                        jogador.posicao = (Vector2){16 * 32 + 16, 21 * 32 + 16};
                         printf("Spawn inicial Fase 4: (linha=21, coluna=16 - meio) -> (%.0f, %.0f)\n",
                                jogador.posicao.x, jogador.posicao.y);
                     } else {
@@ -248,6 +279,15 @@ int main(void) {
                 }
                 jogador.estadoJogo = ESTADO_JOGANDO;
                 printf("Jogo iniciado!\n");
+                
+                // Trocar para música de gameplay
+                if (recursos->musicGameplay.frameCount > 0) {
+                    StopMusicStream(recursos->musicMenu);
+                    musicaAtual = &recursos->musicGameplay;
+                    PlayMusicStream(*musicaAtual);
+                    SetMusicVolume(*musicaAtual, 0.15f);
+                    musicaMenuTocando = false;
+                }
             }
 
             BeginDrawing();
@@ -365,6 +405,13 @@ int main(void) {
             jogoIniciado = false;
 
             printf("Voltando ao menu principal...\n");
+            
+            // Voltar para música do menu
+            if (musicaAtual != NULL) {
+                StopMusicStream(*musicaAtual);
+            }
+            musicaMenuTocando = false;
+            musicaAtual = NULL;
         }
 
         Vector2 posicaoAnteriorJogador = jogador.posicao;
@@ -372,7 +419,7 @@ int main(void) {
         // Atualizar loja na fase 1 (sempre atualiza para permitir abrir/fechar)
         bool jogoPausado = false;
         if (jogador.fase == 1 && loja.ativo) {
-            atualizarLoja(&loja, &jogador, mapaAtual);
+            atualizarLoja(&loja, &jogador, mapaAtual, recursos);
             jogoPausado = loja.menuAberto;  // Pausa se menu estiver aberto
             
             // Porta do banheiro sempre existe na fase 1 - detectar pelo tile 13
@@ -404,7 +451,7 @@ int main(void) {
         
         // Só atualiza o jogo se não estiver pausado pela loja
         if (!jogoPausado) {
-            atualizarJogoComPathfinding(&jogador, &listaZumbis, &listaBalas, mapaAtual, &pathfindingGrid, &listaCartuchos, &listaManchas);
+            atualizarJogoComPathfinding(&jogador, &listaZumbis, &listaBalas, mapaAtual, &pathfindingGrid, &listaCartuchos, &listaManchas, recursos);
             
             // Atualiza cartuchos
             atualizarCartuchos(&listaCartuchos, GetFrameTime());
@@ -413,11 +460,11 @@ int main(void) {
             atualizarManchasSangue(&listaManchas, GetFrameTime());
             
             // Verifica coleta de moedas
-            verificarColetaMoedas(&listaMoedas, &jogador);
+            verificarColetaMoedas(&listaMoedas, &jogador, recursos);
             
             // Atualizar menina se estiver seguindo
             if (menina.ativa && menina.seguindo) {
-                atualizarMenina(&menina, &jogador, mapaAtual, GetFrameTime(), &listaZumbis, &listaBalas);
+                atualizarMenina(&menina, &jogador, mapaAtual, GetFrameTime(), &listaZumbis, &listaBalas, recursos);
             }
         }
         
@@ -579,13 +626,23 @@ int main(void) {
                         printf("BOSS APARECEU: ABOMINATION!\n");
 
                         jogador.bossSpawnado = true;
+                        
+                        // Trocar para música de boss fight
+                        if (recursos->musicBossFight.frameCount > 0 && musicaAtual != &recursos->musicBossFight) {
+                            if (musicaAtual != NULL) {
+                                StopMusicStream(*musicaAtual);
+                            }
+                            musicaAtual = &recursos->musicBossFight;
+                            PlayMusicStream(*musicaAtual);
+                            SetMusicVolume(*musicaAtual, 0.45f);
+                        }
                     }
                 }
             }
         }
 
         atualizarZumbisComPathfinding(&listaZumbis, jogador.posicao, GetFrameTime(), mapaAtual, &pathfindingGrid);
-        atualizarBossComPathfinding(&listaBosses, &jogador, &listaBalas, GetFrameTime(), mapaAtual, &pathfindingGrid);
+        atualizarBossComPathfinding(&listaBosses, &jogador, &listaBalas, GetFrameTime(), mapaAtual, &pathfindingGrid, recursos);
         
         // Spawnar 5 zumbis normais GRADATIVAMENTE no caminho de volta após buscar a menina
         // Spawn: 1 zumbi a cada 1 segundo
@@ -675,13 +732,24 @@ int main(void) {
             bossAtual = bossAtual->proximo;
         }
 
-        verificarColisoesBossBala(&listaBosses, &listaBalas, &itemProgresso, &itemArma, &jogador, &listaMoedas);
+        verificarColisoesBossBala(&listaBosses, &listaBalas, &itemProgresso, &itemArma, &jogador, &listaMoedas, recursos);
+        
+        // Verificar se o boss morreu e voltar para música de gameplay
+        if (jogador.bossSpawnado && listaBosses == NULL && musicaAtual == &recursos->musicBossFight) {
+            if (recursos->musicGameplay.frameCount > 0) {
+                StopMusicStream(recursos->musicBossFight);
+                musicaAtual = &recursos->musicGameplay;
+                PlayMusicStream(*musicaAtual);
+                SetMusicVolume(*musicaAtual, 0.4f);
+            }
+        }
+        
         verificarColisoesBossJogador(listaBosses, &jogador);
-        verificarColisoesBalaZumbi(&listaBalas, &listaZumbis, &jogador, &listaManchas, &listaMoedas);
+        verificarColisoesBalaZumbi(&listaBalas, &listaZumbis, &jogador, &listaManchas, &listaMoedas, recursos);
         
         // Verificar colisões com zumbi do banheiro
         if (zumbiBanheiro != NULL) {
-            verificarColisoesBalaZumbi(&listaBalas, &zumbiBanheiro, &jogador, &listaManchas, &listaMoedas);
+            verificarColisoesBalaZumbi(&listaBalas, &zumbiBanheiro, &jogador, &listaManchas, &listaMoedas, recursos);
         }
         
         // Lógica da porta do banheiro (HAPPY ENDING PATH) - leva a outro mapa
@@ -692,43 +760,41 @@ int main(void) {
             );
             
             // Só permite entrar se não estiver trancada E apertar E
-            if (distPorta <= 80.0f && IsKeyPressed(KEY_E) && !loja.menuAberto) {
-                printf("=== ENTRANDO NO BANHEIRO ===\n");
-
+            if (distPorta <= 50.0f && IsKeyPressed(KEY_E) && !loja.menuAberto) {
                 // Carregar mapa do banheiro
-                if (carregarMapaDeArquivo(mapaAtual, "assets/maps/banheiro.txt")) {
-                    printf("Mapa banheiro.txt carregado com sucesso!\n");
-                    printf("Tile [0][0] = %d, Tile [1][1] = %d\n", mapaAtual->tiles[0][0], mapaAtual->tiles[1][1]);
-                } else {
-                    printf("ERRO: Não foi possível carregar banheiro.txt\n");
+                if (!carregarMapaDeArquivo(mapaAtual, "assets/maps/banheiro.txt")) {
+                    printf("Erro: Não foi possível carregar banheiro.txt\n");
                 }
-
+                
+                // Tocar grito da garota
+                if (recursos->sfxGarotaGrito.frameCount > 0) {
+                    PlaySound(recursos->sfxGarotaGrito);
+                }
+                
                 // Marcar que está no banheiro
                 jogador.estaNoBanheiro = true;
-
+                
+                // Mudar textura de fundo para chão do laboratório (azulejo)
+                texturaMapa = recursos->chaoLab;
+                
                 // Desativar loja no banheiro
                 loja.ativo = false;
-
-                // Desativar porta do banheiro (já está dentro)
-                portaBanheiro.ativa = false;
-
+                
                 // Spawnar menina e zumbi no banheiro (layout da imagem)
                 // Menina no centro-direita (perto do box/chuveiro)
                 menina.posicao = (Vector2){20 * 32, 10 * 32};  // Coluna 20, linha 10
                 menina.ativa = true;
                 menina.seguindo = false;
                 jogador.conheceuMenina = true;
-
+                
                 // Zumbi spawna na esquerda (perto dos vasos sanitários)
                 Vector2 spawnZumbi = {4 * 32, 10 * 32};  // Coluna 4, linha 10
                 adicionarZumbi(&zumbiBanheiro, spawnZumbi, recursos->zumbis);
-
+                
                 // Jogador spawna perto da porta de saída (centro-sul)
-                Vector2 posicaoDesejadaBanheiro = (Vector2){16 * 32, 20 * 32};
-                jogador.posicao = certificarPosicaoWalkable(mapaAtual, posicaoDesejadaBanheiro, 15.0f);
-
+                jogador.posicao = (Vector2){16 * 32, 20 * 32};  // Meio do mapa, perto da porta
+                
                 printf("Você entrou no banheiro! Há uma menina e um zumbi!\n");
-                printf("=== FIM ENTRADA NO BANHEIRO ===\n");
             }
         }
         
@@ -775,8 +841,7 @@ int main(void) {
                 jogador.tempoSpawnRetorno = 0.0f;
                 
                 texturaMapa = recursos->fundoMapa;
-                Vector2 posicaoDesejadaRetornoLoja1 = (Vector2){100, 450};
-                jogador.posicao = certificarPosicaoWalkable(mapaAtual, posicaoDesejadaRetornoLoja1, 15.0f);
+                jogador.posicao = (Vector2){100, 450};
                 if (menina.seguindo) {
                     menina.posicao = gerarPosicaoValidaProximaAoJogador(mapaAtual, jogador.posicao, menina.raio);
                 }
@@ -810,9 +875,8 @@ int main(void) {
                             
                             // Voltar textura da loja
                             texturaMapa = recursos->fundoMapa;
-
-                            Vector2 posicaoDesejadaRetornoLoja2 = (Vector2){200, 400};
-                            jogador.posicao = certificarPosicaoWalkable(mapaAtual, posicaoDesejadaRetornoLoja2, 15.0f);
+                            
+                            jogador.posicao = (Vector2){200, 400};
                             if (menina.seguindo) {
                                 menina.posicao = gerarPosicaoValidaProximaAoJogador(mapaAtual, jogador.posicao, menina.raio);
                             }
@@ -875,7 +939,7 @@ int main(void) {
             pertoDaPortaBanheiro = (distBanheiro <= 80.0f);
         }
 
-        if (porta.ativa && !pertoDaPortaBanheiro && verificarInteracaoPorta(&porta, &jogador)) {
+        if (porta.ativa && !pertoDaPortaBanheiro && verificarInteracaoPorta(&porta, &jogador, recursos)) {
             printf("Usando porta! Indo para Fase %d\n", porta.faseDestino);
             jogador.fase = porta.faseDestino;
             jogador.timerBoss = 0.0f;
@@ -975,8 +1039,7 @@ int main(void) {
                         printf("Fase 2 já concluída. Sem inimigos.\n");
                     }
                 } else {
-                    Vector2 posicaoDesejadaFase2 = (Vector2){8 * 32 + 16, 9 * 32 + 16};
-                    jogador.posicao = certificarPosicaoWalkable(mapaAtual, posicaoDesejadaFase2, 15.0f);
+                    jogador.posicao = (Vector2){8 * 32 + 16, 9 * 32 + 16};
                     if (menina.seguindo) {
                         menina.posicao = gerarPosicaoValidaProximaAoJogador(mapaAtual, jogador.posicao, menina.raio);
                     }
@@ -1029,8 +1092,7 @@ int main(void) {
                     }
                     portaRetorno2.ativa = true;  // Ativar porta de retorno
                 } else {
-                    Vector2 posicaoDesejadaFase3 = (Vector2){8 * 32 + 16, 9 * 32 + 16};
-                    jogador.posicao = certificarPosicaoWalkable(mapaAtual, posicaoDesejadaFase3, 15.0f);
+                    jogador.posicao = (Vector2){8 * 32 + 16, 9 * 32 + 16};
                     if (menina.seguindo) {
                         menina.posicao = gerarPosicaoValidaProximaAoJogador(mapaAtual, jogador.posicao, menina.raio);
                     }
@@ -1042,8 +1104,7 @@ int main(void) {
                     printf("Horda da RUA iniciada!\n");
                 }
             } else if (jogador.fase == 4) {
-                Vector2 posicaoDesejadaFase4 = (Vector2){16 * 32 + 16, 21 * 32 + 16};
-                jogador.posicao = certificarPosicaoWalkable(mapaAtual, posicaoDesejadaFase4, 15.0f);
+                jogador.posicao = (Vector2){16 * 32 + 16, 21 * 32 + 16};
                 if (menina.seguindo) {
                     menina.posicao = gerarPosicaoValidaProximaAoJogador(mapaAtual, jogador.posicao, menina.raio);
                 }
@@ -1103,7 +1164,7 @@ int main(void) {
         }
         
         // Verificar interação com porta de retorno (volta pra loja da fase 2)
-        if (portaRetorno.ativa && verificarInteracaoPorta(&portaRetorno, &jogador)) {
+        if (portaRetorno.ativa && verificarInteracaoPorta(&portaRetorno, &jogador, recursos)) {
             // Só permite voltar se a fase foi concluída
             if (jogador.estadoHorda != HORDA_COMPLETA) {
                 printf("Complete a fase primeiro!\n");
@@ -1135,8 +1196,7 @@ int main(void) {
                     printf("Erro ao carregar fase1.txt\n");
                 }
                 
-                Vector2 posicaoDesejadaLoja1 = (Vector2){512, 400};
-                jogador.posicao = certificarPosicaoWalkable(mapaAtual, posicaoDesejadaLoja1, 15.0f);
+                jogador.posicao = (Vector2){512, 400};
                 if (menina.seguindo) {
                     menina.posicao = gerarPosicaoValidaProximaAoJogador(mapaAtual, jogador.posicao, menina.raio);
                 }
@@ -1175,8 +1235,7 @@ int main(void) {
                 printf("Erro ao carregar fase1.txt\n");
             }
 
-            Vector2 posicaoDesejadaLoja2 = (Vector2){512, 400};
-            jogador.posicao = certificarPosicaoWalkable(mapaAtual, posicaoDesejadaLoja2, 15.0f);
+            jogador.posicao = (Vector2){512, 400};
             if (menina.seguindo) {
                 menina.posicao = gerarPosicaoValidaProximaAoJogador(mapaAtual, jogador.posicao, menina.raio);
             }
@@ -1543,8 +1602,7 @@ int main(void) {
                             jogador.estadoHorda = HORDA_COMPLETA; // Fase já concluída
                             printf("Retornando à fase 2 já concluída. Sem inimigos.\n");
                         } else {
-                            Vector2 posicaoDesejadaRetornoFase2 = (Vector2){3 * 32 + 16, 6 * 32 + 16};
-                            jogador.posicao = certificarPosicaoWalkable(mapaAtual, posicaoDesejadaRetornoFase2, 15.0f);
+                            jogador.posicao = (Vector2){3 * 32 + 16, 6 * 32 + 16};
                             if (menina.seguindo) {
                                 menina.posicao = gerarPosicaoValidaProximaAoJogador(mapaAtual, jogador.posicao, menina.raio);
                             }
@@ -1962,6 +2020,9 @@ int main(void) {
 
     UnloadTexture(logoTexture);
     UnloadTexture(backgroundTexture);
+
+    // Fechar sistema de áudio
+    CloseAudioDevice();
 
     CloseWindow();
 

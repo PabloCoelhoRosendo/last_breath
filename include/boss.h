@@ -6,7 +6,7 @@
 #include "item.h"  // Para ter acesso ao tipo Item
 #include <stdbool.h>
 
-// TipoBoss, Player, Bala são definidos em jogo.h
+// TipoBoss, Player, Bala, Recursos são definidos em jogo.h
 // Este header DEVE ser incluído após jogo.h
 
 typedef struct Boss {
@@ -40,12 +40,12 @@ void criarBoss(Boss **bosses, TipoBoss tipo, Vector2 posicao,
                Texture2D spriteDireita, Texture2D spriteEsquerda);
 
 void atualizarBossComPathfinding(Boss **bosses, Player *jogador, Bala **balas, 
-                                  float deltaTime, const Mapa *mapa, PathfindingGrid *grid);
+                                  float deltaTime, const Mapa *mapa, PathfindingGrid *grid, Recursos *recursos);
 
 void desenharBoss(Boss *bosses);
 
 void verificarColisoesBossBala(Boss **bosses, struct Bala **balas, 
-                               Item *itemProgresso, Item *itemArma, Player *jogador, Moeda **moedas);
+                               Item *itemProgresso, Item *itemArma, Player *jogador, Moeda **moedas, Recursos *recursos);
 
 void verificarColisoesBossJogador(Boss *bosses, Player *jogador);
 

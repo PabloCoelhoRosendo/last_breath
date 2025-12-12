@@ -326,7 +326,7 @@ void equiparArma(Player *jogador, int slot) {
     jogador->slotAtivo = slot;
 }
 
-void recarregarArma(Player *jogador) {
+void recarregarArma(Player *jogador, Recursos *recursos) {
     if (jogador->estaRecarregando) return;
     
     Arma *armaAtual = &jogador->slots[jogador->slotAtivo];
@@ -338,20 +338,71 @@ void recarregarArma(Player *jogador) {
 
     jogador->estaRecarregando = true;
     jogador->tempoRecargaAtual = armaAtual->tempoRecarga;
+    
+    // Tocar som de recarga baseado no tipo de arma
+    if (recursos != NULL) {
+        if (armaAtual->tipo == ARMA_PISTOL || armaAtual->tipo == ARMA_SMG) {
+            if (recursos->sfxReloadPistol.frameCount > 0) {
+                PlaySound(recursos->sfxReloadPistol);
+            }
+        } else if (armaAtual->tipo == ARMA_SHOTGUN) {
+            if (recursos->sfxReloadShotgun.frameCount > 0) {
+                PlaySound(recursos->sfxReloadShotgun);
+            }
+        }
+    }
 }
 
-void atirarArma(Player *jogador, Bala **balas, Vector2 alvo, Cartucho **cartuchos) {
+void atirarArma(Player *jogador, Bala **balas, Vector2 alvo, Cartucho **cartuchos, Recursos *recursos) {
     Arma *armaAtual = &jogador->slots[jogador->slotAtivo];
     
     // Modo Deus: munição infinita
     if (!jogador->modoDeus) {
-        if (armaAtual->penteAtual <= 0) return;
+        if (armaAtual->penteAtual <= 0) {
+            // Tocar som de click vazio
+            if (recursos != NULL && recursos->sfxGunClick.frameCount > 0) {
+                PlaySound(recursos->sfxGunClick);
+            }
+            return;
+        }
     }
     if (armaAtual->cooldown > 0.0f) return;
     if (jogador->estaRecarregando) return;
     
 
     adicionarBala(balas, jogador->posicao, alvo, 0, (float)armaAtual->dano);
+    
+    // Tocar som do tiro baseado no tipo de arma
+    if (recursos != NULL) {
+        if (armaAtual->tipo == ARMA_PISTOL) {
+            if (recursos->sfxTiroPistol.frameCount > 0) {
+                SetSoundVolume(recursos->sfxTiroPistol, 1.0f);
+                PlaySound(recursos->sfxTiroPistol);
+                printf("DEBUG: Tocando som de pistola (frames: %u)\n", recursos->sfxTiroPistol.frameCount);
+            } else {
+                printf("DEBUG: Som de pistola nao carregado!\n");
+            }
+        } else if (armaAtual->tipo == ARMA_SHOTGUN) {
+            if (recursos->sfxTiroShotgun.frameCount > 0) {
+                SetSoundVolume(recursos->sfxTiroShotgun, 1.0f);
+                PlaySound(recursos->sfxTiroShotgun);
+                printf("DEBUG: Tocando som de shotgun (frames: %u)\n", recursos->sfxTiroShotgun.frameCount);
+            } else {
+                printf("DEBUG: Som de shotgun nao carregado!\n");
+            }
+        } else if (armaAtual->tipo == ARMA_SMG) {
+            // SMG usa o mesmo som da pistola
+            if (recursos->sfxTiroPistol.frameCount > 0) {
+                SetSoundVolume(recursos->sfxTiroPistol, 1.0f);
+                PlaySound(recursos->sfxTiroPistol);
+                printf("DEBUG: Tocando som de SMG (pistola) (frames: %u)\n", recursos->sfxTiroPistol.frameCount);
+            } else {
+                printf("DEBUG: Som de SMG nao carregado!\n");
+            }
+        }
+    } else {
+        printf("DEBUG: recursos NULL ao atirar!\n");
+    }
     
     // Adiciona cartucho ejetado
     if (cartuchos != NULL) {
@@ -430,7 +481,7 @@ void iniciarJogo(Player *jogador) {
     jogador->slotAtivo = 0;  
 }
 
-void atualizarJogoComPathfinding(Player *jogador, Zumbi **zumbis, Bala **balas, const Mapa *mapa, PathfindingGrid *grid, Cartucho **cartuchos, ManchaSangue **manchas) {
+void atualizarJogoComPathfinding(Player *jogador, Zumbi **zumbis, Bala **balas, const Mapa *mapa, PathfindingGrid *grid, Cartucho **cartuchos, ManchaSangue **manchas, Recursos *recursos) {
     float deltaTime = GetFrameTime();
 
     if (jogador->vida <= 0 || jogador->jogoVencido) {
@@ -470,7 +521,7 @@ void atualizarJogoComPathfinding(Player *jogador, Zumbi **zumbis, Bala **balas, 
     }
 
     if (IsKeyPressed(KEY_R)) {
-        recarregarArma(jogador);
+        recarregarArma(jogador, recursos);
     }
 
     Vector2 movimento = {0, 0};
@@ -508,15 +559,15 @@ void atualizarJogoComPathfinding(Player *jogador, Zumbi **zumbis, Bala **balas, 
 
     if (IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) {
         Vector2 mousePos = GetMousePosition();
-        atirarArma(jogador, balas, mousePos, cartuchos);
+        atirarArma(jogador, balas, mousePos, cartuchos, recursos);
     }
 
     atualizarZumbisComPathfinding(zumbis, jogador->posicao, deltaTime, mapa, grid);
 
-    verificarColisoesBalaZumbi(balas, zumbis, jogador, manchas, NULL);
+    verificarColisoesBalaZumbi(balas, zumbis, jogador, manchas, NULL, recursos);
     verificarColisoesBalaJogador(balas, jogador);
     if (zumbis != NULL && *zumbis != NULL) {
-        verificarColisoesJogadorZumbi(jogador, *zumbis);
+        verificarColisoesJogadorZumbi(jogador, *zumbis, recursos);
     }
 
     if (jogador->vida > 0) {
@@ -1029,7 +1080,7 @@ void liberarZumbis(Zumbi **cabeca) {
     *cabeca = NULL;
 }
 
-void verificarColisoesBalaZumbi(Bala **balas, Zumbi **zumbis, Player *jogador, ManchaSangue **manchas, Moeda **moedas) {
+void verificarColisoesBalaZumbi(Bala **balas, Zumbi **zumbis, Player *jogador, ManchaSangue **manchas, Moeda **moedas, Recursos *recursos) {
     if (balas == NULL || *balas == NULL || zumbis == NULL || *zumbis == NULL) return;
     
     Bala *balaAtual = *balas;
@@ -1058,6 +1109,12 @@ void verificarColisoesBalaZumbi(Bala **balas, Zumbi **zumbis, Player *jogador, M
                     if (manchas != NULL) {
                         adicionarManchaSangue(manchas, zumbiAtual->posicao, zumbiAtual->raio);
                     }
+                    
+                    // Tocar som de morte do zumbi
+                    if (recursos != NULL) {
+                        PlaySound(recursos->sfxZumbiMorte);
+                    }
+                    
                     if (moedas != NULL) {
                         adicionarMoeda(moedas, zumbiAtual->posicao, 10);
                     }
@@ -1138,7 +1195,7 @@ void verificarColisoesBalaJogador(Bala **balas, Player *jogador) {
     }
 }
 
-void verificarColisoesJogadorZumbi(Player *jogador, Zumbi *zumbis) {
+void verificarColisoesJogadorZumbi(Player *jogador, Zumbi *zumbis, Recursos *recursos) {
     if (jogador == NULL || zumbis == NULL) return;
 
     jogador->cooldownDanoZumbi -= GetFrameTime();
@@ -1177,11 +1234,21 @@ void verificarColisoesJogadorZumbi(Player *jogador, Zumbi *zumbis) {
                 int dano = 5; 
                 jogador->vida -= dano;
                 jogador->cooldownDanoZumbi = 0.5f; 
+                
+                // Tocar som de dano do jogador
+                if (recursos != NULL) {
+                    PlaySound(recursos->sfxJogadorDano);
+                }
 
                 printf("ALERTA: Componente danificado. -%d. Integridade: %d\n", dano, jogador->vida);
                 
                 if (jogador->vida < 0) {
                     jogador->vida = 0;
+                }
+                
+                // Tocar som de morte do jogador se morreu
+                if (jogador->vida <= 0 && recursos != NULL) {
+                    PlaySound(recursos->sfxJogadorMorte);
                 }
             }
         }
@@ -1193,8 +1260,17 @@ void verificarColisoesJogadorZumbi(Player *jogador, Zumbi *zumbis) {
 
 // ========== FUNÇÕES DA MENINA ==========
 
-void atualizarMenina(Menina *menina, Player *jogador, Mapa *mapa, float deltaTime, Zumbi **zumbis, Bala **balas) {
+void atualizarMenina(Menina *menina, Player *jogador, Mapa *mapa, float deltaTime, Zumbi **zumbis, Bala **balas, Recursos *recursos) {
     if (!menina->ativa || !menina->seguindo) return;
+    
+    // Atualizar timer do som da garota (suspiro a cada 8 segundos)
+    menina->timerSom += deltaTime;
+    if (menina->timerSom >= 8.0f) {
+        if (recursos != NULL && recursos->sfxGarotaSuspiro.frameCount > 0) {
+            PlaySound(recursos->sfxGarotaSuspiro);
+        }
+        menina->timerSom = 0.0f;
+    }
     
     // Atualizar cooldown de tiro
     if (menina->cooldownTiro > 0.0f) {

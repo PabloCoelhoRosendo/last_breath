@@ -30,6 +30,31 @@ typedef struct {
     Texture2D texturaShotgun;
     Texture2D texturaSMG;
 
+    // Sons do jogo
+    Sound sfxTiroPistol;
+    Sound sfxTiroShotgun;
+    Sound sfxZumbiMorte;
+    Sound sfxJogadorDano;
+    Sound sfxJogadorMorte;
+    Sound sfxPorta;
+    Sound sfxMoeda;
+    Sound sfxCompra;
+    Sound sfxCompraNegado;
+    Sound sfxReloadPistol;
+    Sound sfxReloadShotgun;
+    Sound sfxGunClick;
+    Sound sfxBossFase1;
+    Sound sfxBossFase2;
+    Sound sfxBossFase3;
+    Sound sfxBossMorte;
+    Sound sfxGarotaGrito;
+    Sound sfxGarotaSuspiro;
+    
+    // Músicas do jogo
+    Music musicMenu;
+    Music musicGameplay;
+    Music musicBossFight;
+
 } Recursos;
 
 Recursos* criarRecursos(void);

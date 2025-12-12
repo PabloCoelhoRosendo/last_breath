@@ -40,6 +40,31 @@ Recursos* criarRecursos(void) {
     recursos->texturaShotgun.id = 0;
     recursos->texturaSMG.id = 0;
 
+    // Inicializar sons
+    recursos->sfxTiroPistol.frameCount = 0;
+    recursos->sfxTiroShotgun.frameCount = 0;
+    recursos->sfxZumbiMorte.frameCount = 0;
+    recursos->sfxJogadorDano.frameCount = 0;
+    recursos->sfxJogadorMorte.frameCount = 0;
+    recursos->sfxPorta.frameCount = 0;
+    recursos->sfxMoeda.frameCount = 0;
+    recursos->sfxCompra.frameCount = 0;
+    recursos->sfxCompraNegado.frameCount = 0;
+    recursos->sfxReloadPistol.frameCount = 0;
+    recursos->sfxReloadShotgun.frameCount = 0;
+    recursos->sfxGunClick.frameCount = 0;
+    recursos->sfxBossFase1.frameCount = 0;
+    recursos->sfxBossFase2.frameCount = 0;
+    recursos->sfxBossFase3.frameCount = 0;
+    recursos->sfxBossMorte.frameCount = 0;
+    recursos->sfxGarotaGrito.frameCount = 0;
+    recursos->sfxGarotaSuspiro.frameCount = 0;
+    
+    // Inicializar músicas
+    recursos->musicMenu.frameCount = 0;
+    recursos->musicGameplay.frameCount = 0;
+    recursos->musicBossFight.frameCount = 0;
+
     return recursos;
 }
 
@@ -157,6 +182,148 @@ void carregarRecursos(Recursos* recursos) {
     carregarTextura(&recursos->texturaShotgun, "assets/armas/shotgun.png", NULL, "Shotgun");
     carregarTextura(&recursos->texturaSMG, "assets/armas/smg.png", NULL, "SMG");
 
+    printf("  - Carregando sons...\n");
+    
+    if (!IsAudioDeviceReady()) {
+        printf("    ! AVISO: Audio nao esta pronto! Sons nao serao carregados.\n");
+        return;
+    }
+    
+    if (FileExists("assets/audio/sfx/tiro_pistol.wav")) {
+        recursos->sfxTiroPistol = LoadSound("assets/audio/sfx/tiro_pistol.wav");
+        printf("    * SFX Tiro Pistol: carregado (frames: %u)\n", recursos->sfxTiroPistol.frameCount);
+    } else {
+        printf("    ! SFX Tiro Pistol: arquivo nao encontrado\n");
+    }
+    if (FileExists("assets/audio/sfx/tiro_shotgun.wav")) {
+        recursos->sfxTiroShotgun = LoadSound("assets/audio/sfx/tiro_shotgun.wav");
+        printf("    * SFX Tiro Shotgun: carregado (frames: %u)\n", recursos->sfxTiroShotgun.frameCount);
+    } else {
+        printf("    ! SFX Tiro Shotgun: arquivo nao encontrado\n");
+    }
+    if (FileExists("assets/audio/sfx/zombie_morte.wav")) {
+        recursos->sfxZumbiMorte = LoadSound("assets/audio/sfx/zombie_morte.wav");
+        printf("    * SFX Zumbi Morte: carregado (frames: %u)\n", recursos->sfxZumbiMorte.frameCount);
+    } else {
+        printf("    ! SFX Zumbi Morte: arquivo nao encontrado\n");
+    }
+    if (FileExists("assets/audio/sfx/dano_jogador.wav")) {
+        recursos->sfxJogadorDano = LoadSound("assets/audio/sfx/dano_jogador.wav");
+        printf("    * SFX Jogador Dano: carregado (frames: %u)\n", recursos->sfxJogadorDano.frameCount);
+    } else {
+        printf("    ! SFX Jogador Dano: arquivo nao encontrado\n");
+    }
+    if (FileExists("assets/audio/sfx/jogador_morte.wav")) {
+        recursos->sfxJogadorMorte = LoadSound("assets/audio/sfx/jogador_morte.wav");
+        printf("    * SFX Jogador Morte: carregado (frames: %u)\n", recursos->sfxJogadorMorte.frameCount);
+    } else {
+        printf("    ! SFX Jogador Morte: arquivo nao encontrado\n");
+    }
+    if (FileExists("assets/audio/sfx/abrir_porta.mp3")) {
+        recursos->sfxPorta = LoadSound("assets/audio/sfx/abrir_porta.mp3");
+        SetSoundVolume(recursos->sfxPorta, 1.5f);
+        printf("    * SFX Porta (Transicao): carregado (frames: %u)\n", recursos->sfxPorta.frameCount);
+    } else {
+        printf("    ! SFX Porta (Transicao): arquivo nao encontrado\n");
+    }
+    if (FileExists("assets/audio/sfx/pegar_moeda.wav")) {
+        recursos->sfxMoeda = LoadSound("assets/audio/sfx/pegar_moeda.wav");
+        printf("    * SFX Moeda: carregado (frames: %u)\n", recursos->sfxMoeda.frameCount);
+    } else {
+        printf("    ! SFX Moeda: arquivo nao encontrado\n");
+    }
+    if (FileExists("assets/audio/sfx/comprar_loja.wav")) {
+        recursos->sfxCompra = LoadSound("assets/audio/sfx/comprar_loja.wav");
+        printf("    * SFX Compra: carregado (frames: %u)\n", recursos->sfxCompra.frameCount);
+    } else {
+        printf("    ! SFX Compra: arquivo nao encontrado\n");
+    }
+    if (FileExists("assets/audio/sfx/som_loja_negado.mp3")) {
+        recursos->sfxCompraNegado = LoadSound("assets/audio/sfx/som_loja_negado.mp3");
+        printf("    * SFX Compra Negado: carregado (frames: %u)\n", recursos->sfxCompraNegado.frameCount);
+    } else {
+        printf("    ! SFX Compra Negado: arquivo nao encontrado\n");
+    }
+    if (FileExists("assets/audio/sfx/reload_pistola.wav")) {
+        recursos->sfxReloadPistol = LoadSound("assets/audio/sfx/reload_pistola.wav");
+        printf("    * SFX Reload Pistol: carregado (frames: %u)\n", recursos->sfxReloadPistol.frameCount);
+    } else {
+        printf("    ! SFX Reload Pistol: arquivo nao encontrado\n");
+    }
+    if (FileExists("assets/audio/sfx/reload_shotgun.wav")) {
+        recursos->sfxReloadShotgun = LoadSound("assets/audio/sfx/reload_shotgun.wav");
+        printf("    * SFX Reload Shotgun: carregado (frames: %u)\n", recursos->sfxReloadShotgun.frameCount);
+    } else {
+        printf("    ! SFX Reload Shotgun: arquivo nao encontrado\n");
+    }
+    if (FileExists("assets/audio/sfx/gun_click.wav")) {
+        recursos->sfxGunClick = LoadSound("assets/audio/sfx/gun_click.wav");
+        printf("    * SFX Gun Click: carregado (frames: %u)\n", recursos->sfxGunClick.frameCount);
+    } else {
+        printf("    ! SFX Gun Click: arquivo nao encontrado\n");
+    }
+    if (FileExists("assets/audio/sfx/som_boss_da_fase1.mp3")) {
+        recursos->sfxBossFase1 = LoadSound("assets/audio/sfx/som_boss_da_fase1.mp3");
+        SetSoundVolume(recursos->sfxBossFase1, 0.7f);
+        printf("    * SFX Boss Fase 1: carregado (frames: %u)\n", recursos->sfxBossFase1.frameCount);
+    } else {
+        printf("    ! SFX Boss Fase 1: arquivo nao encontrado\n");
+    }
+    if (FileExists("assets/audio/sfx/som_boss_da_fase2.mp3")) {
+        recursos->sfxBossFase2 = LoadSound("assets/audio/sfx/som_boss_da_fase2.mp3");
+        SetSoundVolume(recursos->sfxBossFase2, 0.7f);
+        printf("    * SFX Boss Fase 2: carregado (frames: %u)\n", recursos->sfxBossFase2.frameCount);
+    } else {
+        printf("    ! SFX Boss Fase 2: arquivo nao encontrado\n");
+    }
+    if (FileExists("assets/audio/sfx/som_boss_da_fase3.wav")) {
+        recursos->sfxBossFase3 = LoadSound("assets/audio/sfx/som_boss_da_fase3.wav");
+        SetSoundVolume(recursos->sfxBossFase3, 0.7f);
+        printf("    * SFX Boss Fase 3: carregado (frames: %u)\n", recursos->sfxBossFase3.frameCount);
+    } else {
+        printf("    ! SFX Boss Fase 3: arquivo nao encontrado\n");
+    }
+    if (FileExists("assets/audio/sfx/som_morte_bosses.mp3")) {
+        recursos->sfxBossMorte = LoadSound("assets/audio/sfx/som_morte_bosses.mp3");
+        printf("    * SFX Boss Morte: carregado (frames: %u)\n", recursos->sfxBossMorte.frameCount);
+    } else {
+        printf("    ! SFX Boss Morte: arquivo nao encontrado\n");
+    }
+    if (FileExists("assets/audio/sfx/som_garota_grito.mp3")) {
+        recursos->sfxGarotaGrito = LoadSound("assets/audio/sfx/som_garota_grito.mp3");
+        SetSoundVolume(recursos->sfxGarotaGrito, 0.9f);
+        printf("    * SFX Garota Grito: carregado (frames: %u)\n", recursos->sfxGarotaGrito.frameCount);
+    } else {
+        printf("    ! SFX Garota Grito: arquivo nao encontrado\n");
+    }
+    if (FileExists("assets/audio/sfx/garota_suspiro.mp3")) {
+        recursos->sfxGarotaSuspiro = LoadSound("assets/audio/sfx/garota_suspiro.mp3");
+        SetSoundVolume(recursos->sfxGarotaSuspiro, 0.7f);
+        printf("    * SFX Garota Suspiro: carregado (frames: %u)\n", recursos->sfxGarotaSuspiro.frameCount);
+    } else {
+        printf("    ! SFX Garota Suspiro: arquivo nao encontrado\n");
+    }
+    
+    printf("  - Carregando musicas...\n");
+    if (FileExists("assets/audio/music/musica_menu.mp3")) {
+        recursos->musicMenu = LoadMusicStream("assets/audio/music/musica_menu.mp3");
+        printf("    * Musica Menu: carregada\n");
+    } else {
+        printf("    ! Musica Menu: arquivo nao encontrado\n");
+    }
+    if (FileExists("assets/audio/music/musica_da_gameplay.mp3")) {
+        recursos->musicGameplay = LoadMusicStream("assets/audio/music/musica_da_gameplay.mp3");
+        printf("    * Musica Gameplay: carregada\n");
+    } else {
+        printf("    ! Musica Gameplay: arquivo nao encontrado\n");
+    }
+    if (FileExists("assets/audio/music/musica_bossfight.mp3")) {
+        recursos->musicBossFight = LoadMusicStream("assets/audio/music/musica_bossfight.mp3");
+        printf("    * Musica Boss Fight: carregada\n");
+    } else {
+        printf("    ! Musica Boss Fight: arquivo nao encontrado\n");
+    }
+
     printf("Recursos carregados com sucesso!\n\n");
 }
 
@@ -240,6 +407,31 @@ void descarregarRecursos(Recursos* recursos) {
     recursos->chaoMercado.id = 0;
     recursos->chaoRua.id = 0;
     recursos->chaoLab.id = 0;
+
+    // Descarregar sons
+    if (recursos->sfxTiroPistol.frameCount > 0) UnloadSound(recursos->sfxTiroPistol);
+    if (recursos->sfxTiroShotgun.frameCount > 0) UnloadSound(recursos->sfxTiroShotgun);
+    if (recursos->sfxZumbiMorte.frameCount > 0) UnloadSound(recursos->sfxZumbiMorte);
+    if (recursos->sfxJogadorDano.frameCount > 0) UnloadSound(recursos->sfxJogadorDano);
+    if (recursos->sfxJogadorMorte.frameCount > 0) UnloadSound(recursos->sfxJogadorMorte);
+    if (recursos->sfxPorta.frameCount > 0) UnloadSound(recursos->sfxPorta);
+    if (recursos->sfxMoeda.frameCount > 0) UnloadSound(recursos->sfxMoeda);
+    if (recursos->sfxCompra.frameCount > 0) UnloadSound(recursos->sfxCompra);
+    if (recursos->sfxCompraNegado.frameCount > 0) UnloadSound(recursos->sfxCompraNegado);
+    if (recursos->sfxReloadPistol.frameCount > 0) UnloadSound(recursos->sfxReloadPistol);
+    if (recursos->sfxReloadShotgun.frameCount > 0) UnloadSound(recursos->sfxReloadShotgun);
+    if (recursos->sfxGunClick.frameCount > 0) UnloadSound(recursos->sfxGunClick);
+    if (recursos->sfxBossFase1.frameCount > 0) UnloadSound(recursos->sfxBossFase1);
+    if (recursos->sfxBossFase2.frameCount > 0) UnloadSound(recursos->sfxBossFase2);
+    if (recursos->sfxBossFase3.frameCount > 0) UnloadSound(recursos->sfxBossFase3);
+    if (recursos->sfxBossMorte.frameCount > 0) UnloadSound(recursos->sfxBossMorte);
+    if (recursos->sfxGarotaGrito.frameCount > 0) UnloadSound(recursos->sfxGarotaGrito);
+    if (recursos->sfxGarotaSuspiro.frameCount > 0) UnloadSound(recursos->sfxGarotaSuspiro);
+    
+    // Descarregar músicas
+    if (recursos->musicMenu.frameCount > 0) UnloadMusicStream(recursos->musicMenu);
+    if (recursos->musicGameplay.frameCount > 0) UnloadMusicStream(recursos->musicGameplay);
+    if (recursos->musicBossFight.frameCount > 0) UnloadMusicStream(recursos->musicBossFight);
 
     printf("Recursos descarregados!\n");
 }

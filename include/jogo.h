@@ -166,6 +166,7 @@ typedef struct {
     float cooldownTiro;
     float alcanceVisao;
     int danoTiro;
+    float timerSom;
 } Menina;
 
 typedef struct {
@@ -197,7 +198,7 @@ typedef struct ManchaSangue {
 
 // Funções principais do jogo
 void iniciarJogo(Player *jogador);
-void atualizarJogoComPathfinding(Player *jogador, Zumbi **zumbis, Bala **balas, const Mapa *mapa, PathfindingGrid *grid, Cartucho **cartuchos, ManchaSangue **manchas);
+void atualizarJogoComPathfinding(Player *jogador, Zumbi **zumbis, Bala **balas, const Mapa *mapa, PathfindingGrid *grid, Cartucho **cartuchos, ManchaSangue **manchas, Recursos *recursos);
 void desenharJogo(Player *jogador, Zumbi *zumbis, Bala *balas, Texture2D texturaMapa, Recursos *recursos);
 
 // Funções de Cartuchos e Manchas
@@ -214,18 +215,8 @@ void liberarManchasSangue(ManchaSangue **cabeca);
 // Funções de Arma
 void inicializarArma(Arma *arma, TipoArma tipo);
 void equiparArma(Player *jogador, int slot);
-void recarregarArma(Player *jogador);
-void atirarArma(Player *jogador, Bala **balas, Vector2 alvo, Cartucho **cartuchos);
-
-
-void adicionarBala(struct Bala **cabeca, Vector2 posInicial, Vector2 alvo, int tipo, float dano);
-void atualizarBalas(struct Bala **cabeca, Mapa *mapa);
-
-// Funções de Arma
-void inicializarArma(Arma *arma, TipoArma tipo);
-void equiparArma(Player *jogador, int slot);
-void recarregarArma(Player *jogador);
-void atirarArma(Player *jogador, Bala **balas, Vector2 alvo, Cartucho **cartuchos);
+void recarregarArma(Player *jogador, Recursos *recursos);
+void atirarArma(Player *jogador, Bala **balas, Vector2 alvo, Cartucho **cartuchos, Recursos *recursos);
 
 // Funções de Bala
 void adicionarBala(Bala **cabeca, Vector2 posInicial, Vector2 alvo, int tipo, float dano);
@@ -239,12 +230,12 @@ void liberarZumbis(Zumbi **cabeca);
 
 // Funções de Colisão
 int verificarColisaoCirculos(Vector2 pos1, float raio1, Vector2 pos2, float raio2);
-void verificarColisoesBalaZumbi(Bala **balas, Zumbi **zumbis, Player *jogador, ManchaSangue **manchas, Moeda **moedas);
+void verificarColisoesBalaZumbi(Bala **balas, Zumbi **zumbis, Player *jogador, ManchaSangue **manchas, Moeda **moedas, Recursos *recursos);
 void verificarColisoesBalaJogador(Bala **balas, Player *jogador);
-void verificarColisoesJogadorZumbi(Player *jogador, Zumbi *zumbis);
+void verificarColisoesJogadorZumbi(Player *jogador, Zumbi *zumbis, Recursos *recursos);
 
 // Funções da Menina e Escrivaninha
-void atualizarMenina(Menina *menina, Player *jogador, Mapa *mapa, float deltaTime, Zumbi **zumbis, Bala **balas);
+void atualizarMenina(Menina *menina, Player *jogador, Mapa *mapa, float deltaTime, Zumbi **zumbis, Bala **balas, Recursos *recursos);
 void desenharMenina(Menina *menina);
 void criarEscrivaninha(Escrivaninha *esc, Vector2 posicao);
 void desenharEscrivaninha(Escrivaninha *esc);

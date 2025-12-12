@@ -41,12 +41,12 @@ bool verificarColetaItem(Item *item, Player *jogador);
 // Funções de Porta
 void criarPorta(Porta *porta, Vector2 posicao, int faseDestino);
 void desenharPorta(Porta *porta, Texture2D texturaPorta);
-bool verificarInteracaoPorta(Porta *porta, Player *jogador);
+bool verificarInteracaoPorta(Porta *porta, Player *jogador, Recursos *recursos);
 
 // Funções de Moeda
 void adicionarMoeda(Moeda **lista, Vector2 posicao, int valor);
 void desenharMoedas(Moeda *moedas);
-void verificarColetaMoedas(Moeda **moedas, Player *jogador);
+void verificarColetaMoedas(Moeda **moedas, Player *jogador, Recursos *recursos);
 void liberarMoedas(Moeda **moedas);
 
 #endif

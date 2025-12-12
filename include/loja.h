@@ -35,9 +35,9 @@ typedef struct {
 
 // Funções da loja
 void inicializarLoja(Loja *loja, Player *jogador);
-void atualizarLoja(Loja *loja, Player *jogador, const Mapa *mapa);
+void atualizarLoja(Loja *loja, Player *jogador, const Mapa *mapa, Recursos *recursos);
 void desenharLoja(Loja *loja, Player *jogador, const Mapa *mapa);
-void comprarItem(Loja *loja, Player *jogador, TipoItemLoja item);
+void comprarItem(Loja *loja, Player *jogador, TipoItemLoja item, Recursos *recursos);
 void atualizarDisponibilidadeItens(Loja *loja, Player *jogador);
 
 #endif

@@ -79,7 +79,7 @@ void criarBoss(Boss **bosses, TipoBoss tipo, Vector2 posicao, Texture2D spriteFr
     *bosses = novoBoss;
 }
 
-void atualizarBossComPathfinding(Boss **bosses, Player *jogador, Bala **balas, float deltaTime, const Mapa *mapa, PathfindingGrid *grid) {
+void atualizarBossComPathfinding(Boss **bosses, Player *jogador, Bala **balas, float deltaTime, const Mapa *mapa, PathfindingGrid *grid, Recursos *recursos) {
     Boss *bossAtual = *bosses;
 
     while (bossAtual != NULL) {
@@ -150,6 +150,11 @@ void atualizarBossComPathfinding(Boss **bosses, Player *jogador, Bala **balas, f
 
                 if (bossAtual->tempoAtaque >= bossAtual->cooldownAtaque) {
                     bossAtual->atacando = true;
+                    
+                    // Tocar som do boss da fase 1 (Prowler)
+                    if (recursos != NULL && recursos->sfxBossFase1.frameCount > 0) {
+                        PlaySound(recursos->sfxBossFase1);
+                    }
 
                     if (distancia <= 80.0f && !jogador->modoDeus) {
                         jogador->vida -= 15; 
@@ -215,6 +220,11 @@ void atualizarBossComPathfinding(Boss **bosses, Player *jogador, Bala **balas, f
                     if (bossAtual->tempoAtaque >= 1.0f && !jogador->modoDeus) { 
                         jogador->vida -= 20;
                         bossAtual->tempoAtaque = 0.0f;
+                        
+                        // Tocar som do boss da fase 2 (Hunter)
+                        if (recursos != NULL && recursos->sfxBossFase2.frameCount > 0) {
+                            PlaySound(recursos->sfxBossFase2);
+                        }
                     }
                 }
                 break;
@@ -222,6 +232,11 @@ void atualizarBossComPathfinding(Boss **bosses, Player *jogador, Bala **balas, f
 
             case BOSS_ABOMINATION: {
                 if (bossAtual->tempoAtaque >= bossAtual->cooldownAtaque) {
+                    // Tocar som do boss da fase 3 (Abomination)
+                    if (recursos != NULL && recursos->sfxBossFase3.frameCount > 0) {
+                        PlaySound(recursos->sfxBossFase3);
+                    }
+                    
                     int numProjeteis = 16;
                     float anguloBase = bossAtual->anguloRotacao;
 
@@ -348,7 +363,7 @@ void desenharBoss(Boss *bosses) {
     }
 }
 
-void verificarColisoesBossBala(Boss **bosses, Bala **balas, Item *itemProgresso, Item *itemArma, Player *jogador, Moeda **moedas) {
+void verificarColisoesBossBala(Boss **bosses, Bala **balas, Item *itemProgresso, Item *itemArma, Player *jogador, Moeda **moedas, Recursos *recursos) {
     if (bosses == NULL || balas == NULL || *balas == NULL) return;
     
     Boss *bossAtual = *bosses;
@@ -390,6 +405,11 @@ void verificarColisoesBossBala(Boss **bosses, Bala **balas, Item *itemProgresso,
         
         if (bossAtual->vida <= 0 && bossAtual->ativo) {
             bossAtual->ativo = false;
+            
+            // Tocar som de morte do boss
+            if (recursos != NULL && recursos->sfxBossMorte.frameCount > 0) {
+                PlaySound(recursos->sfxBossMorte);
+            }
             
             // Incrementar contador de bosses mortos
             if (jogador != NULL) {

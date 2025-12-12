@@ -191,7 +191,7 @@ void desenharPorta(Porta *porta, Texture2D texturaPorta) {
     (void)porta;  
 }
 
-bool verificarInteracaoPorta(Porta *porta, Player *jogador) {
+bool verificarInteracaoPorta(Porta *porta, Player *jogador, Recursos *recursos) {
     if (!porta->ativa) {
         return false;
     }
@@ -223,6 +223,11 @@ bool verificarInteracaoPorta(Porta *porta, Player *jogador) {
                 }
 
                 porta->trancada = false;
+            }
+            
+            // Tocar som de porta
+            if (recursos != NULL && recursos->sfxPorta.frameCount > 0) {
+                PlaySound(recursos->sfxPorta);
             }
 
             return true;
@@ -262,7 +267,7 @@ void desenharMoedas(Moeda *moedas) {
     }
 }
 
-void verificarColetaMoedas(Moeda **moedas, Player *jogador) {
+void verificarColetaMoedas(Moeda **moedas, Player *jogador, Recursos *recursos) {
     if (moedas == NULL || *moedas == NULL) return;
     
     Moeda *atual = *moedas;
@@ -282,6 +287,11 @@ void verificarColetaMoedas(Moeda **moedas, Player *jogador) {
                     jogador->moedas += atual->valor;
                     jogador->moedasColetadas += atual->valor;
                     printf("Coletou %d moedas! Total: %d\n", atual->valor, jogador->moedas);
+                    
+                    // Tocar som de moeda
+                    if (recursos != NULL) {
+                        PlaySound(recursos->sfxMoeda);
+                    }
                     
                     // Remover moeda da lista
                     if (anterior == NULL) {
