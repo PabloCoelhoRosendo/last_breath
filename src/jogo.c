@@ -1266,6 +1266,7 @@ void criarEscrivaninha(Escrivaninha *esc, Vector2 posicao) {
     esc->altura = 40.0f;
     esc->ativa = true;
     esc->lida = false;
+    esc->trancada = true;  // Começa trancada
 }
 
 void desenharEscrivaninha(Escrivaninha *esc) {
@@ -1297,21 +1298,37 @@ void desenharEscrivaninha(Escrivaninha *esc) {
 
 bool verificarInteracaoEscrivaninha(Escrivaninha *esc, Player *jogador) {
     if (!esc->ativa) return false;
-    
+
     float distancia = sqrtf(
         (jogador->posicao.x - esc->posicao.x) * (jogador->posicao.x - esc->posicao.x) +
         (jogador->posicao.y - esc->posicao.y) * (jogador->posicao.y - esc->posicao.y)
     );
-    
+
     if (distancia <= 60.0f) {
-        DrawText("Pressione E para ler", (int)esc->posicao.x - 70, (int)esc->posicao.y - 50, 14, YELLOW);
-        
-        if (IsKeyPressed(KEY_E) && !esc->lida) {
-            esc->lida = true;
-            jogador->leuRelatorio = true;
-            return true;
+        // Se está trancada, precisa da chave misteriosa
+        if (esc->trancada) {
+            if (!jogador->temChaveMisteriosa) {
+                DrawText("TRANCADA - Precisa de chave especial", (int)esc->posicao.x - 120, (int)esc->posicao.y - 50, 14, RED);
+                return false;
+            }
+            // Tem a chave, destrancar
+            DrawText("Pressione E para destrancar", (int)esc->posicao.x - 90, (int)esc->posicao.y - 50, 14, YELLOW);
+            if (IsKeyPressed(KEY_E)) {
+                esc->trancada = false;
+                jogador->temChaveMisteriosa = false;  // Usa a chave
+                printf("Escrivaninha destrancada! Pressione E novamente para ler.\n");
+                return false;
+            }
+        } else if (!esc->lida) {
+            // Não está trancada e ainda não foi lida
+            DrawText("Pressione E para ler", (int)esc->posicao.x - 70, (int)esc->posicao.y - 50, 14, YELLOW);
+            if (IsKeyPressed(KEY_E)) {
+                esc->lida = true;
+                jogador->leuRelatorio = true;
+                return true;
+            }
         }
     }
-    
+
     return false;
 }

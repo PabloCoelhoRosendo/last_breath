@@ -436,12 +436,6 @@ int main(void) {
                     if (portaBanheiro.ativa) break;
                 }
             }
-            
-            // Se tem a chave misteriosa, destrancar a porta
-            if (jogador.temChaveMisteriosa && portaBanheiro.trancada) {
-                portaBanheiro.trancada = false;
-                printf("A porta do banheiro foi destrancada!\n");
-            }
         }
         
         // Só atualiza o jogo se não estiver pausado pela loja
@@ -477,6 +471,11 @@ int main(void) {
                 if (!portaRetorno3.ativa) {
                     portaRetorno3.ativa = true;
                     printf("Uma porta para a RUA foi destrancada!\n");
+                }
+                // Destrancar porta do banheiro após ler o relatório
+                if (portaBanheiro.trancada) {
+                    portaBanheiro.trancada = false;
+                    printf("A porta do BANHEIRO foi destrancada!\n");
                 }
             }
             // Fechar relatório com tecla F
@@ -1149,9 +1148,9 @@ int main(void) {
                     portaBanheiro.posicao = (Vector2){100, 400};
                     portaBanheiro.largura = 50.0f;
                     portaBanheiro.altura = 60.0f;
-                    portaBanheiro.trancada = !jogador.temChaveMisteriosa;  // Trancada se não tem chave
-                    
-                    if (jogador.temChaveMisteriosa) {
+                    portaBanheiro.trancada = !jogador.leuRelatorio;  // Trancada se não leu o relatório
+
+                    if (jogador.leuRelatorio) {
                         printf("Porta do banheiro reaparece destrancada na loja!\n");
                     } else {
                         printf("Porta do banheiro está na loja (trancada).\n");
@@ -1796,14 +1795,20 @@ int main(void) {
             DrawText(TextFormat("Moedas: %d", jogador.moedas), 10, 120, 20, YELLOW);
 
             if ((jogador.fase == 2 && jogador.temChave && porta.ativa) ||
-                (jogador.fase == 3 && jogador.temMapa && porta.ativa)) {
+                (jogador.fase == 3 && jogador.temMapa && porta.ativa) ||
+                (jogador.fase == 4 && jogador.temChaveMisteriosa && escrivaninha.trancada)) {
                 float tempoTotal = GetTime();
                 int mostrar = ((int)(tempoTotal * 2)) % 2;
 
                 if (mostrar) {
-                    const char* mensagem = (jogador.fase == 2) ?
-                        ">> VA PARA A PORTA! <<" :
-                        ">> VA PARA A PORTA DO LABORATORIO! <<";
+                    const char* mensagem;
+                    if (jogador.fase == 2) {
+                        mensagem = ">> VA PARA A PORTA! <<";
+                    } else if (jogador.fase == 3) {
+                        mensagem = ">> VA PARA A PORTA DO LABORATORIO! <<";
+                    } else {
+                        mensagem = ">> VA PARA A ESCRIVANINHA! <<";
+                    }
                     int larguraMensagem = MeasureText(mensagem, 20);
                     int posX = 1024 - larguraMensagem - 10;
                     int posY = 40;

@@ -164,6 +164,7 @@ typedef struct {
     float altura;
     bool ativa;
     bool lida;
+    bool trancada;
 } Escrivaninha;
 
 typedef struct Cartucho {
