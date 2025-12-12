@@ -494,8 +494,8 @@ int main(void) {
             }
         }
 
-        // Só atualiza hordas se jogo não estiver pausado
-        if (!jogoPausado && (jogador.fase == 2 || jogador.fase == 3)) {
+        // Só atualiza hordas se jogo não estiver pausado E se a menina NÃO estiver seguindo
+        if (!jogoPausado && (jogador.fase == 2 || jogador.fase == 3) && !menina.seguindo) {
             atualizarHorda(&jogador, &listaZumbis, &listaBosses, GetFrameTime());
             
             // Ativar porta de retorno quando horda completa
@@ -676,6 +676,7 @@ int main(void) {
                     printf("=== INICIO SPAWN: RUA (Fase 3) com menina ===\n");
                 }
                 deveSpawnar = true;
+                maxZumbis = 7; // Apenas 7 zumbis na fase da rua com a menina
             }
             
             if (deveSpawnar && jogador.zumbisSpawnadosRetorno < maxZumbis) {
@@ -687,8 +688,8 @@ int main(void) {
                     jogador.zumbisSpawnadosRetorno++;
                     jogador.tempoSpawnRetorno = 0.0f;
                     
-                    printf("Zumbi %d/5 spawnado no caminho de volta (Fase %d)\n", 
-                           jogador.zumbisSpawnadosRetorno, jogador.fase);
+                    printf("Zumbi %d/%d spawnado no caminho de volta (Fase %d)\n", 
+                           jogador.zumbisSpawnadosRetorno, maxZumbis, jogador.fase);
                     
                     // Marcar como completo quando spawnar todos
                     if (jogador.zumbisSpawnadosRetorno >= maxZumbis) {
@@ -697,7 +698,7 @@ int main(void) {
                             printf("=== TODOS OS 5 ZUMBIS DO MERCADO SPAWNADOS! ===\n");
                         } else if (jogador.fase == 3) {
                             jogador.spawnadoRetornoFase3 = true;
-                            printf("=== TODOS OS 5 ZUMBIS DA RUA SPAWNADOS! ===\n");
+                            printf("=== TODOS OS 7 ZUMBIS DA RUA SPAWNADOS! ===\n");
                         }
                     }
                 }
