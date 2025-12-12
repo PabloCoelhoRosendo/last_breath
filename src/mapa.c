@@ -154,6 +154,7 @@ void desenharMapaTiles(const Mapa* mapa, Texture2D texturasTiles[]) {
     bool temChaoMercado = false;
     bool temChaoLab = false;
     bool temChaoDeposito = false;
+    bool temChaoBanheiro = false;
     for (int i = 0; i < mapa->altura; i++) {
         for (int j = 0; j < mapa->largura; j++) {
             if (mapa->tiles[i][j] == TILE_CHAO_MERCADO) {
@@ -165,11 +166,17 @@ void desenharMapaTiles(const Mapa* mapa, Texture2D texturasTiles[]) {
             if (mapa->tiles[i][j] == TILE_CHAO_DEPOSITO) {
                 temChaoDeposito = true;
             }
+            if (mapa->tiles[i][j] == TILE_CHAO_BANHEIRO) {
+                temChaoBanheiro = true;
+            }
         }
     }
 
     Texture2D texturaChao;
-    if (temChaoDeposito && texturasTiles != NULL && texturasTiles[TILE_CHAO_DEPOSITO].id != 0) {
+    if (temChaoBanheiro && texturasTiles != NULL && texturasTiles[TILE_CHAO_BANHEIRO].id != 0) {
+        texturaChao = texturasTiles[TILE_CHAO_BANHEIRO];
+        printf("[DEBUG] Usando textura do BANHEIRO (tile 16) - ID: %d\n", texturaChao.id);
+    } else if (temChaoDeposito && texturasTiles != NULL && texturasTiles[TILE_CHAO_DEPOSITO].id != 0) {
         texturaChao = texturasTiles[TILE_CHAO_DEPOSITO];
     } else if (temChaoMercado && texturasTiles != NULL && texturasTiles[TILE_CHAO_MERCADO].id != 0) {
         texturaChao = texturasTiles[TILE_CHAO_MERCADO];
@@ -303,8 +310,10 @@ bool isTileSolido(const Mapa* mapa, int linhaGrid, int colunaGrid) {
             tipoTile != TILE_CHAO_MERCADO &&
             tipoTile != TILE_CHAO_LAB &&
             tipoTile != TILE_CHAO_DEPOSITO &&
+            tipoTile != TILE_CHAO_BANHEIRO &&
             tipoTile != TILE_PORTA_MERCADO &&
-            tipoTile != TILE_PORTA_LAB);
+            tipoTile != TILE_PORTA_LAB &&
+            tipoTile != TILE_PORTA_BANHEIRO);
 }
 
 bool verificarColisaoMapa(const Mapa* mapa, Vector2 posicao, float raio) {
@@ -356,6 +365,90 @@ bool posicaoValidaNoMapa(int linhaGrid, int colunaGrid) {
             colunaGrid >= 0 && colunaGrid < LARGURA_MAPA);
 }
 
+bool isPosicaoWalkable(const Mapa* mapa, Vector2 posicao, float raio) {
+    if (mapa == NULL) {
+        return false;
+    }
+
+    // Verificar se a posição central está em tile walkable
+    Vector2 gridPos = pixelParaGrid(posicao);
+    if (isTileSolido(mapa, (int)gridPos.y, (int)gridPos.x)) {
+        return false;
+    }
+
+    // Verificar os 4 pontos cardinais ao redor do raio
+    Vector2 pontos[4] = {
+        {posicao.x, posicao.y - raio},
+        {posicao.x, posicao.y + raio},
+        {posicao.x - raio, posicao.y},
+        {posicao.x + raio, posicao.y}
+    };
+
+    for (int i = 0; i < 4; i++) {
+        Vector2 pontoGrid = pixelParaGrid(pontos[i]);
+        if (isTileSolido(mapa, (int)pontoGrid.y, (int)pontoGrid.x)) {
+            return false;
+        }
+    }
+
+    return true;
+}
+
+Vector2 certificarPosicaoWalkable(const Mapa* mapa, Vector2 posicaoDesejada, float raio) {
+    if (mapa == NULL) {
+        printf("[AVISO] Mapa NULL em certificarPosicaoWalkable, usando posição padrão\n");
+        return (Vector2){400, 300};
+    }
+
+    // Se a posição desejada já é walkable, retorná-la
+    if (isPosicaoWalkable(mapa, posicaoDesejada, raio)) {
+        printf("[CERTIFICAÇÃO] Posição (%.0f, %.0f) é walkable - OK\n",
+               posicaoDesejada.x, posicaoDesejada.y);
+        return posicaoDesejada;
+    }
+
+    // Se não é walkable, procurar a posição walkable mais próxima
+    printf("[AVISO] Posição desejada (%.0f, %.0f) NÃO é walkable! Procurando alternativa...\n",
+           posicaoDesejada.x, posicaoDesejada.y);
+
+    Vector2 gridOriginal = pixelParaGrid(posicaoDesejada);
+    int linhaOriginal = (int)gridOriginal.y;
+    int colunaOriginal = (int)gridOriginal.x;
+
+    // Busca em espiral ao redor da posição original
+    for (int raioGrid = 1; raioGrid <= 10; raioGrid++) {
+        for (int di = -raioGrid; di <= raioGrid; di++) {
+            for (int dj = -raioGrid; dj <= raioGrid; dj++) {
+                // Apenas verificar a borda do quadrado (espiral)
+                if (abs(di) != raioGrid && abs(dj) != raioGrid) {
+                    continue;
+                }
+
+                int novaLinha = linhaOriginal + di;
+                int novaColuna = colunaOriginal + dj;
+
+                if (!posicaoValidaNoMapa(novaLinha, novaColuna)) {
+                    continue;
+                }
+
+                if (!isTileSolido(mapa, novaLinha, novaColuna)) {
+                    Vector2 novaPosicao = gridParaPixel(novaLinha, novaColuna);
+
+                    if (isPosicaoWalkable(mapa, novaPosicao, raio)) {
+                        printf("[CERTIFICAÇÃO] Nova posição walkable encontrada: (%.0f, %.0f) [grid: %d, %d]\n",
+                               novaPosicao.x, novaPosicao.y, novaLinha, novaColuna);
+                        return novaPosicao;
+                    }
+                }
+            }
+        }
+    }
+
+    // Se não encontrou nenhuma posição próxima, usar gerarPosicaoValidaSpawn como fallback
+    printf("[ERRO] Não encontrou posição walkable próxima! Usando geração aleatória...\n");
+    return gerarPosicaoValidaSpawn(mapa, raio);
+}
+
 Vector2 gerarPosicaoValidaSpawn(const Mapa* mapa, float raio) {
     if (mapa == NULL) {
         return (Vector2){400, 300};
@@ -378,7 +471,24 @@ Vector2 gerarPosicaoValidaSpawn(const Mapa* mapa, float raio) {
             Vector2 posicaoPixel = gridParaPixel(linhaGrid, colunaGrid);
 
             if (!verificarColisaoMapa(mapa, posicaoPixel, raio)) {
+                printf("[SPAWN] Posição aleatória gerada: (%.0f, %.0f) [grid: %d, %d]\n",
+                       posicaoPixel.x, posicaoPixel.y, linhaGrid, colunaGrid);
                 return posicaoPixel;
+            }
+        }
+    }
+
+    // Fallback: procurar qualquer tile walkable
+    printf("[AVISO] Não conseguiu gerar spawn aleatório, buscando primeiro tile walkable...\n");
+    for (int i = 0; i < ALTURA_MAPA; i++) {
+        for (int j = 0; j < LARGURA_MAPA; j++) {
+            if (!isTileSolido(mapa, i, j)) {
+                Vector2 posicao = gridParaPixel(i, j);
+                if (isPosicaoWalkable(mapa, posicao, raio)) {
+                    printf("[SPAWN FALLBACK] Usando primeiro tile walkable: (%.0f, %.0f) [grid: %d, %d]\n",
+                           posicao.x, posicao.y, i, j);
+                    return posicao;
+                }
             }
         }
     }

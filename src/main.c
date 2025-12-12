@@ -230,7 +230,8 @@ int main(void) {
                     iniciarJogo(&jogador);
 
                     if (jogador.fase == 4) {
-                        jogador.posicao = (Vector2){16 * 32 + 16, 21 * 32 + 16};
+                        Vector2 posicaoDesejadaInicialFase4 = (Vector2){16 * 32 + 16, 21 * 32 + 16};
+                        jogador.posicao = certificarPosicaoWalkable(mapaAtual, posicaoDesejadaInicialFase4, 15.0f);
                         printf("Spawn inicial Fase 4: (linha=21, coluna=16 - meio) -> (%.0f, %.0f)\n",
                                jogador.posicao.x, jogador.posicao.y);
                     } else {
@@ -691,36 +692,43 @@ int main(void) {
             );
             
             // Só permite entrar se não estiver trancada E apertar E
-            if (distPorta <= 50.0f && IsKeyPressed(KEY_E) && !loja.menuAberto) {
+            if (distPorta <= 80.0f && IsKeyPressed(KEY_E) && !loja.menuAberto) {
+                printf("=== ENTRANDO NO BANHEIRO ===\n");
+
                 // Carregar mapa do banheiro
-                if (!carregarMapaDeArquivo(mapaAtual, "assets/maps/banheiro.txt")) {
-                    printf("Erro: Não foi possível carregar banheiro.txt\n");
+                if (carregarMapaDeArquivo(mapaAtual, "assets/maps/banheiro.txt")) {
+                    printf("Mapa banheiro.txt carregado com sucesso!\n");
+                    printf("Tile [0][0] = %d, Tile [1][1] = %d\n", mapaAtual->tiles[0][0], mapaAtual->tiles[1][1]);
+                } else {
+                    printf("ERRO: Não foi possível carregar banheiro.txt\n");
                 }
-                
+
                 // Marcar que está no banheiro
                 jogador.estaNoBanheiro = true;
-                
-                // Mudar textura de fundo para chão do laboratório (azulejo)
-                texturaMapa = recursos->chaoLab;
-                
+
                 // Desativar loja no banheiro
                 loja.ativo = false;
-                
+
+                // Desativar porta do banheiro (já está dentro)
+                portaBanheiro.ativa = false;
+
                 // Spawnar menina e zumbi no banheiro (layout da imagem)
                 // Menina no centro-direita (perto do box/chuveiro)
                 menina.posicao = (Vector2){20 * 32, 10 * 32};  // Coluna 20, linha 10
                 menina.ativa = true;
                 menina.seguindo = false;
                 jogador.conheceuMenina = true;
-                
+
                 // Zumbi spawna na esquerda (perto dos vasos sanitários)
                 Vector2 spawnZumbi = {4 * 32, 10 * 32};  // Coluna 4, linha 10
                 adicionarZumbi(&zumbiBanheiro, spawnZumbi, recursos->zumbis);
-                
+
                 // Jogador spawna perto da porta de saída (centro-sul)
-                jogador.posicao = (Vector2){16 * 32, 20 * 32};  // Meio do mapa, perto da porta
-                
+                Vector2 posicaoDesejadaBanheiro = (Vector2){16 * 32, 20 * 32};
+                jogador.posicao = certificarPosicaoWalkable(mapaAtual, posicaoDesejadaBanheiro, 15.0f);
+
                 printf("Você entrou no banheiro! Há uma menina e um zumbi!\n");
+                printf("=== FIM ENTRADA NO BANHEIRO ===\n");
             }
         }
         
@@ -767,7 +775,8 @@ int main(void) {
                 jogador.tempoSpawnRetorno = 0.0f;
                 
                 texturaMapa = recursos->fundoMapa;
-                jogador.posicao = (Vector2){100, 450};
+                Vector2 posicaoDesejadaRetornoLoja1 = (Vector2){100, 450};
+                jogador.posicao = certificarPosicaoWalkable(mapaAtual, posicaoDesejadaRetornoLoja1, 15.0f);
                 if (menina.seguindo) {
                     menina.posicao = gerarPosicaoValidaProximaAoJogador(mapaAtual, jogador.posicao, menina.raio);
                 }
@@ -801,8 +810,9 @@ int main(void) {
                             
                             // Voltar textura da loja
                             texturaMapa = recursos->fundoMapa;
-                            
-                            jogador.posicao = (Vector2){200, 400};
+
+                            Vector2 posicaoDesejadaRetornoLoja2 = (Vector2){200, 400};
+                            jogador.posicao = certificarPosicaoWalkable(mapaAtual, posicaoDesejadaRetornoLoja2, 15.0f);
                             if (menina.seguindo) {
                                 menina.posicao = gerarPosicaoValidaProximaAoJogador(mapaAtual, jogador.posicao, menina.raio);
                             }
@@ -855,7 +865,17 @@ int main(void) {
             verificarColetaItem(&itemArma, &jogador);
         }
 
-        if (porta.ativa && verificarInteracaoPorta(&porta, &jogador)) {
+        // Não verificar porta principal se estiver perto da porta do banheiro na fase 1
+        bool pertoDaPortaBanheiro = false;
+        if (jogador.fase == 1 && portaBanheiro.ativa) {
+            float distBanheiro = sqrtf(
+                (jogador.posicao.x - portaBanheiro.posicao.x) * (jogador.posicao.x - portaBanheiro.posicao.x) +
+                (jogador.posicao.y - portaBanheiro.posicao.y) * (jogador.posicao.y - portaBanheiro.posicao.y)
+            );
+            pertoDaPortaBanheiro = (distBanheiro <= 80.0f);
+        }
+
+        if (porta.ativa && !pertoDaPortaBanheiro && verificarInteracaoPorta(&porta, &jogador)) {
             printf("Usando porta! Indo para Fase %d\n", porta.faseDestino);
             jogador.fase = porta.faseDestino;
             jogador.timerBoss = 0.0f;
@@ -955,7 +975,8 @@ int main(void) {
                         printf("Fase 2 já concluída. Sem inimigos.\n");
                     }
                 } else {
-                    jogador.posicao = (Vector2){8 * 32 + 16, 9 * 32 + 16};
+                    Vector2 posicaoDesejadaFase2 = (Vector2){8 * 32 + 16, 9 * 32 + 16};
+                    jogador.posicao = certificarPosicaoWalkable(mapaAtual, posicaoDesejadaFase2, 15.0f);
                     if (menina.seguindo) {
                         menina.posicao = gerarPosicaoValidaProximaAoJogador(mapaAtual, jogador.posicao, menina.raio);
                     }
@@ -1008,7 +1029,8 @@ int main(void) {
                     }
                     portaRetorno2.ativa = true;  // Ativar porta de retorno
                 } else {
-                    jogador.posicao = (Vector2){8 * 32 + 16, 9 * 32 + 16};
+                    Vector2 posicaoDesejadaFase3 = (Vector2){8 * 32 + 16, 9 * 32 + 16};
+                    jogador.posicao = certificarPosicaoWalkable(mapaAtual, posicaoDesejadaFase3, 15.0f);
                     if (menina.seguindo) {
                         menina.posicao = gerarPosicaoValidaProximaAoJogador(mapaAtual, jogador.posicao, menina.raio);
                     }
@@ -1020,7 +1042,8 @@ int main(void) {
                     printf("Horda da RUA iniciada!\n");
                 }
             } else if (jogador.fase == 4) {
-                jogador.posicao = (Vector2){16 * 32 + 16, 21 * 32 + 16};
+                Vector2 posicaoDesejadaFase4 = (Vector2){16 * 32 + 16, 21 * 32 + 16};
+                jogador.posicao = certificarPosicaoWalkable(mapaAtual, posicaoDesejadaFase4, 15.0f);
                 if (menina.seguindo) {
                     menina.posicao = gerarPosicaoValidaProximaAoJogador(mapaAtual, jogador.posicao, menina.raio);
                 }
@@ -1112,7 +1135,8 @@ int main(void) {
                     printf("Erro ao carregar fase1.txt\n");
                 }
                 
-                jogador.posicao = (Vector2){512, 400};
+                Vector2 posicaoDesejadaLoja1 = (Vector2){512, 400};
+                jogador.posicao = certificarPosicaoWalkable(mapaAtual, posicaoDesejadaLoja1, 15.0f);
                 if (menina.seguindo) {
                     menina.posicao = gerarPosicaoValidaProximaAoJogador(mapaAtual, jogador.posicao, menina.raio);
                 }
@@ -1151,7 +1175,8 @@ int main(void) {
                 printf("Erro ao carregar fase1.txt\n");
             }
 
-            jogador.posicao = (Vector2){512, 400};
+            Vector2 posicaoDesejadaLoja2 = (Vector2){512, 400};
+            jogador.posicao = certificarPosicaoWalkable(mapaAtual, posicaoDesejadaLoja2, 15.0f);
             if (menina.seguindo) {
                 menina.posicao = gerarPosicaoValidaProximaAoJogador(mapaAtual, jogador.posicao, menina.raio);
             }
@@ -1518,7 +1543,8 @@ int main(void) {
                             jogador.estadoHorda = HORDA_COMPLETA; // Fase já concluída
                             printf("Retornando à fase 2 já concluída. Sem inimigos.\n");
                         } else {
-                            jogador.posicao = (Vector2){3 * 32 + 16, 6 * 32 + 16};
+                            Vector2 posicaoDesejadaRetornoFase2 = (Vector2){3 * 32 + 16, 6 * 32 + 16};
+                            jogador.posicao = certificarPosicaoWalkable(mapaAtual, posicaoDesejadaRetornoFase2, 15.0f);
                             if (menina.seguindo) {
                                 menina.posicao = gerarPosicaoValidaProximaAoJogador(mapaAtual, jogador.posicao, menina.raio);
                             }

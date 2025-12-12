@@ -7,7 +7,7 @@
 #define LARGURA_MAPA 32
 #define ALTURA_MAPA 24
 #define TAMANHO_TILE 32
-#define MAX_TIPOS_TILE 16
+#define MAX_TIPOS_TILE 17
 
 typedef enum {
     TILE_CHAO = 0,
@@ -26,6 +26,7 @@ typedef enum {
     TILE_PORTA_BANHEIRO = 13,
     TILE_CHAO_DEPOSITO = 14,
     TILE_LOJA = 15,
+    TILE_CHAO_BANHEIRO = 16,
 } TipoTile;
 
 typedef struct {
@@ -59,5 +60,7 @@ Vector2 pixelParaGrid(Vector2 posicaoPixel);
 Vector2 gridParaPixel(int linhaGrid, int colunaGrid);
 bool posicaoValidaNoMapa(int linhaGrid, int colunaGrid);
 Vector2 gerarPosicaoValidaSpawn(const Mapa* mapa, float raio);
+Vector2 certificarPosicaoWalkable(const Mapa* mapa, Vector2 posicaoDesejada, float raio);
+bool isPosicaoWalkable(const Mapa* mapa, Vector2 posicao, float raio);
 
 #endif

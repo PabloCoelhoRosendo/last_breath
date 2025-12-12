@@ -417,7 +417,7 @@ void iniciarJogo(Player *jogador) {
     jogador->fase2Concluida = false;
     jogador->fase3Concluida = false;
     jogador->matouBossFinal = false;
-    jogador->temChaveMisteriosa = false;
+    jogador->temChaveMisteriosa = false;  // Não começa com a chave do banheiro
     jogador->spawnadoRetornoFase2 = false;
     jogador->spawnadoRetornoFase3 = false;
     jogador->spawnadoRetornoFase4 = false;
