@@ -30,6 +30,14 @@ typedef struct {
     Texture2D texturaShotgun;
     Texture2D texturaSMG;
 
+    // Sprites da menina
+    Texture2D meninaDeitada;
+    Texture2D meninaFrenteDireita;
+    Texture2D meninaFrenteEsquerda;
+    Texture2D meninaCostas;
+    Texture2D meninaAtirandoDireita;
+    Texture2D meninaAtirandoEsquerda;
+
     // Sons do jogo
     Sound sfxTiroPistol;
     Sound sfxTiroShotgun;

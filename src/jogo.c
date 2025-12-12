@@ -426,8 +426,8 @@ void iniciarJogo(Player *jogador) {
     jogador->posicao = (Vector2){512, 384};
     jogador->vida = 100;
     jogador->tempoTotal = 0.0f;
-    jogador->fase = 1;  
-    jogador->velocidadeBase = 3.0f;  
+    jogador->fase = 1;
+    jogador->velocidadeBase = 3.0f;
     jogador->direcaoVertical = 0;
     jogador->direcaoHorizontal = 1;
     jogador->estaRecarregando = false;
@@ -438,11 +438,11 @@ void iniciarJogo(Player *jogador) {
     jogador->timerBoss = 0.0f;
     jogador->bossSpawnado = false;
 
-    jogador->temChave = false;
+    jogador->temChave = true;   // DEBUG: Começar com a chave do banheiro
     jogador->temMapa = false;
     jogador->temCure = false;
     jogador->jogoVencido = false;
-    
+
 
     jogador->hordaAtual = 0;
     jogador->estadoHorda = HORDA_NAO_INICIADA;
@@ -457,9 +457,9 @@ void iniciarJogo(Player *jogador) {
 
     jogador->cooldownDanoBala = 0.0f;
     jogador->cooldownDanoZumbi = 0.0f;
-    
+
     jogador->modoDeus = false; // Modo Deus desativado por padrão
-    
+
     jogador->leuRelatorio = false;
     jogador->conheceuMenina = false;
     jogador->meninaLiberada = false;
@@ -468,7 +468,7 @@ void iniciarJogo(Player *jogador) {
     jogador->fase2Concluida = false;
     jogador->fase3Concluida = false;
     jogador->matouBossFinal = false;
-    jogador->temChaveMisteriosa = false;  // Não começa com a chave do banheiro
+    jogador->temChaveMisteriosa = true;  // DEBUG: Começar com a chave misteriosa
     jogador->spawnadoRetornoFase2 = false;
     jogador->spawnadoRetornoFase3 = false;
     jogador->spawnadoRetornoFase4 = false;
@@ -1256,103 +1256,6 @@ void verificarColisoesJogadorZumbi(Player *jogador, Zumbi *zumbis, Recursos *rec
 
         zumbiAtual = zumbiAtual->proximo;
     }
-}
-
-// ========== FUNÇÕES DA MENINA ==========
-
-void atualizarMenina(Menina *menina, Player *jogador, Mapa *mapa, float deltaTime, Zumbi **zumbis, Bala **balas, Recursos *recursos) {
-    if (!menina->ativa || !menina->seguindo) return;
-    
-    // Atualizar timer do som da garota (suspiro a cada 8 segundos)
-    menina->timerSom += deltaTime;
-    if (menina->timerSom >= 8.0f) {
-        if (recursos != NULL && recursos->sfxGarotaSuspiro.frameCount > 0) {
-            PlaySound(recursos->sfxGarotaSuspiro);
-        }
-        menina->timerSom = 0.0f;
-    }
-    
-    // Atualizar cooldown de tiro
-    if (menina->cooldownTiro > 0.0f) {
-        menina->cooldownTiro -= deltaTime;
-    }
-    
-    // Menina segue o jogador com distância de 50 pixels
-    Vector2 direcao = {
-        jogador->posicao.x - menina->posicao.x,
-        jogador->posicao.y - menina->posicao.y
-    };
-    
-    float distancia = sqrtf(direcao.x * direcao.x + direcao.y * direcao.y);
-    
-    if (distancia > 50.0f) {
-        float velocidade = 2.5f;
-        
-        // Calcular nova posição
-        Vector2 novaPosicao = {
-            menina->posicao.x + (direcao.x / distancia) * velocidade * 60.0f * deltaTime,
-            menina->posicao.y + (direcao.y / distancia) * velocidade * 60.0f * deltaTime
-        };
-        
-        // Verificar colisão com o mapa antes de mover
-        if (mapa != NULL) {
-            if (!verificarColisaoMapa(mapa, novaPosicao, menina->raio)) {
-                // Não há colisão, pode mover
-                menina->posicao = novaPosicao;
-            } else {
-                // Tentar mover apenas no eixo X
-                Vector2 posicaoX = {novaPosicao.x, menina->posicao.y};
-                if (!verificarColisaoMapa(mapa, posicaoX, menina->raio)) {
-                    menina->posicao.x = novaPosicao.x;
-                } else {
-                    // Tentar mover apenas no eixo Y
-                    Vector2 posicaoY = {menina->posicao.x, novaPosicao.y};
-                    if (!verificarColisaoMapa(mapa, posicaoY, menina->raio)) {
-                        menina->posicao.y = novaPosicao.y;
-                    }
-                }
-            }
-        } else {
-            // Sem mapa, move livremente
-            menina->posicao = novaPosicao;
-        }
-    }
-    
-    // Sistema de tiro da menina
-    if (menina->cooldownTiro <= 0.0f && zumbis != NULL && *zumbis != NULL) {
-        // Procurar zumbi mais próximo dentro do alcance
-        Zumbi *zumbiMaisProximo = NULL;
-        float menorDistancia = menina->alcanceVisao;
-        
-        Zumbi *zumbiAtual = *zumbis;
-        while (zumbiAtual != NULL) {
-            float dx = zumbiAtual->posicao.x - menina->posicao.x;
-            float dy = zumbiAtual->posicao.y - menina->posicao.y;
-            float dist = sqrtf(dx * dx + dy * dy);
-            
-            if (dist < menorDistancia) {
-                menorDistancia = dist;
-                zumbiMaisProximo = zumbiAtual;
-            }
-            
-            zumbiAtual = zumbiAtual->proximo;
-        }
-        
-        // Se encontrou zumbi, atirar
-        if (zumbiMaisProximo != NULL) {
-            adicionarBala(balas, menina->posicao, zumbiMaisProximo->posicao, 0, (float)menina->danoTiro);
-            menina->cooldownTiro = 0.8f; // Atira a cada 0.8 segundos
-        }
-    }
-}
-
-void desenharMenina(Menina *menina) {
-    if (!menina->ativa) return;
-    
-    // Desenhar menina como círculo rosa/roxo
-    DrawCircleV(menina->posicao, menina->raio, PINK);
-    DrawCircleLines((int)menina->posicao.x, (int)menina->posicao.y, menina->raio, PURPLE);
-    DrawText("MENINA", (int)menina->posicao.x - 30, (int)menina->posicao.y - 30, 12, WHITE);
 }
 
 // ========== FUNÇÕES DA ESCRIVANINHA ==========

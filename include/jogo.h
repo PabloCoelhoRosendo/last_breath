@@ -160,17 +160,6 @@ struct Bala {
 
 typedef struct {
     Vector2 posicao;
-    bool ativa;
-    bool seguindo;
-    float raio;
-    float cooldownTiro;
-    float alcanceVisao;
-    int danoTiro;
-    float timerSom;
-} Menina;
-
-typedef struct {
-    Vector2 posicao;
     float largura;
     float altura;
     bool ativa;
@@ -234,9 +223,7 @@ void verificarColisoesBalaZumbi(Bala **balas, Zumbi **zumbis, Player *jogador, M
 void verificarColisoesBalaJogador(Bala **balas, Player *jogador);
 void verificarColisoesJogadorZumbi(Player *jogador, Zumbi *zumbis, Recursos *recursos);
 
-// Funções da Menina e Escrivaninha
-void atualizarMenina(Menina *menina, Player *jogador, Mapa *mapa, float deltaTime, Zumbi **zumbis, Bala **balas, Recursos *recursos);
-void desenharMenina(Menina *menina);
+// Funções da Escrivaninha
 void criarEscrivaninha(Escrivaninha *esc, Vector2 posicao);
 void desenharEscrivaninha(Escrivaninha *esc);
 bool verificarInteracaoEscrivaninha(Escrivaninha *esc, Player *jogador);

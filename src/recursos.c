@@ -124,6 +124,14 @@ void carregarRecursos(Recursos* recursos) {
     carregarTextura(&recursos->jogadorTrasCostasEsquerda, "assets/avatar/costas esquerda.png", NULL, "Costas Esquerda");
     carregarTextura(&recursos->jogadorFrente, "assets/avatar/direita frente.png", NULL, "Frente");
 
+    printf("  - Carregando texturas da menina...\n");
+    carregarTextura(&recursos->meninaDeitada, "assets/menina/menina deitada.png", NULL, "Menina Deitada");
+    carregarTextura(&recursos->meninaFrenteDireita, "assets/menina/menina frente direita.png", NULL, "Menina Frente Direita");
+    carregarTextura(&recursos->meninaFrenteEsquerda, "assets/menina/menina frente esquerda.png", NULL, "Menina Frente Esquerda");
+    carregarTextura(&recursos->meninaCostas, "assets/menina/menina costas.png", NULL, "Menina Costas");
+    carregarTextura(&recursos->meninaAtirandoDireita, "assets/menina/Menina atirando direita.png", NULL, "Menina Atirando Direita");
+    carregarTextura(&recursos->meninaAtirandoEsquerda, "assets/menina/Menina atirando esquerda.png", NULL, "Menina Atirando Esquerda");
+
     printf("  - Carregando texturas de zumbis...\n");
     const char* nomesDirecoesZumbi[] = {"frente direita", "frente esquerda", "costas direita", "costas esquerda"};
 
@@ -360,6 +368,32 @@ void descarregarRecursos(Recursos* recursos) {
     if (texturaValida(recursos->jogadorDireita)) {
         UnloadTexture(recursos->jogadorDireita);
         recursos->jogadorDireita.id = 0;
+    }
+
+    // Descarregar texturas da menina
+    if (texturaValida(recursos->meninaDeitada)) {
+        UnloadTexture(recursos->meninaDeitada);
+        recursos->meninaDeitada.id = 0;
+    }
+    if (texturaValida(recursos->meninaFrenteDireita)) {
+        UnloadTexture(recursos->meninaFrenteDireita);
+        recursos->meninaFrenteDireita.id = 0;
+    }
+    if (texturaValida(recursos->meninaFrenteEsquerda)) {
+        UnloadTexture(recursos->meninaFrenteEsquerda);
+        recursos->meninaFrenteEsquerda.id = 0;
+    }
+    if (texturaValida(recursos->meninaCostas)) {
+        UnloadTexture(recursos->meninaCostas);
+        recursos->meninaCostas.id = 0;
+    }
+    if (texturaValida(recursos->meninaAtirandoDireita)) {
+        UnloadTexture(recursos->meninaAtirandoDireita);
+        recursos->meninaAtirandoDireita.id = 0;
+    }
+    if (texturaValida(recursos->meninaAtirandoEsquerda)) {
+        UnloadTexture(recursos->meninaAtirandoEsquerda);
+        recursos->meninaAtirandoEsquerda.id = 0;
     }
 
     for (int i = 0; i < 5; i++) {

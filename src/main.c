@@ -11,6 +11,7 @@
 #include "item.h"
 #include "horda.h"
 #include "loja.h"
+#include "menina.h"
 
 // Função helper para spawnar menina próxima ao jogador sem colisão
 Vector2 gerarPosicaoValidaProximaAoJogador(const Mapa* mapa, Vector2 posJogador, float raio) {
@@ -200,13 +201,7 @@ int main(void) {
     portaBanheiro.trancada = true;  // Começa trancada
     
     Menina menina;
-    menina.ativa = false;
-    menina.seguindo = false;
-    menina.raio = 15.0f;
-    menina.cooldownTiro = 0.0f;
-    menina.alcanceVisao = 300.0f;
-    menina.danoTiro = 5;
-    menina.timerSom = 0.0f;
+    inicializarMenina(&menina);
     
     Escrivaninha escrivaninha;
     escrivaninha.ativa = false;
@@ -271,7 +266,7 @@ int main(void) {
 
                     jogador.spriteAtual = spriteFrenteDireita;
                     jogoIniciado = true;
-                    
+
                     // Inicializar loja na fase 1
                     if (jogador.fase == 1) {
                         inicializarLoja(&loja, &jogador);
@@ -781,18 +776,20 @@ int main(void) {
                 loja.ativo = false;
                 
                 // Spawnar menina e zumbi no banheiro (layout da imagem)
-                // Menina no centro-direita (perto do box/chuveiro)
-                menina.posicao = (Vector2){20 * 32, 10 * 32};  // Coluna 20, linha 10
+                // Menina no lado esquerdo (walkable)
+                menina.posicao = (Vector2){7 * 32, 17 * 32};  // Coluna 7, linha 17
                 menina.ativa = true;
                 menina.seguindo = false;
                 jogador.conheceuMenina = true;
-                
+                carregarSpritesMenina(&menina, recursos);  // Carregar sprites
+
                 // Zumbi spawna na esquerda (perto dos vasos sanitários)
                 Vector2 spawnZumbi = {4 * 32, 10 * 32};  // Coluna 4, linha 10
                 adicionarZumbi(&zumbiBanheiro, spawnZumbi, recursos->zumbis);
-                
-                // Jogador spawna perto da porta de saída (centro-sul)
-                jogador.posicao = (Vector2){16 * 32, 20 * 32};  // Meio do mapa, perto da porta
+
+                // Jogador spawna onde a menina estava antes (centro-direita)
+                // Coluna 20, linha 10
+                jogador.posicao = (Vector2){20 * 32, 10 * 32};  // Onde a menina estava
                 
                 printf("Você entrou no banheiro! Há uma menina e um zumbi!\n");
             }
@@ -1616,21 +1613,10 @@ int main(void) {
                 }
             }
             
-            // Desenhar porta de saída do banheiro (volta para loja) - SÓ NO BANHEIRO
+            // Porta de saída do banheiro sem visual (apenas detecta proximidade)
             if (jogador.estaNoBanheiro && jogador.conheceuMenina && jogador.meninaLiberada) {
                 Vector2 portaSaidaBanheiro = {512, 700};
-                DrawRectangle(
-                    (int)portaSaidaBanheiro.x - 30,
-                    (int)portaSaidaBanheiro.y - 40,
-                    60, 80, (Color){50, 180, 50, 255}  // Verde
-                );
-                DrawRectangleLines(
-                    (int)portaSaidaBanheiro.x - 30,
-                    (int)portaSaidaBanheiro.y - 40,
-                    60, 80, BLACK
-                );
-                DrawText("SAIDA", (int)portaSaidaBanheiro.x - 25, (int)portaSaidaBanheiro.y - 50, 12, WHITE);
-                
+
                 float distSaida = sqrtf(
                     (jogador.posicao.x - portaSaidaBanheiro.x) * (jogador.posicao.x - portaSaidaBanheiro.x) +
                     (jogador.posicao.y - portaSaidaBanheiro.y) * (jogador.posicao.y - portaSaidaBanheiro.y)
