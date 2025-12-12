@@ -426,7 +426,7 @@ void iniciarJogo(Player *jogador) {
     jogador->posicao = (Vector2){512, 384};
     jogador->vida = 100;
     jogador->tempoTotal = 0.0f;
-    jogador->fase = 3;  // DEBUG: Começar na fase 3
+    jogador->fase = 1;
     jogador->velocidadeBase = 3.0f;
     jogador->direcaoVertical = 0;
     jogador->direcaoHorizontal = 1;
@@ -438,8 +438,8 @@ void iniciarJogo(Player *jogador) {
     jogador->timerBoss = 0.0f;
     jogador->bossSpawnado = false;
 
-    jogador->temChave = true;   // DEBUG: Começar com a chave do banheiro
-    jogador->temChaveMisteriosa = true;  // DEBUG: Começar com a chave misteriosa
+    jogador->temChave = false;
+    jogador->temChaveMisteriosa = false;
     jogador->temMapa = false;
     jogador->temCure = false;
     jogador->jogoVencido = false;
@@ -461,18 +461,18 @@ void iniciarJogo(Player *jogador) {
 
     jogador->modoDeus = false; // Modo Deus desativado por padrão
 
-    jogador->leuRelatorio = false;  // DEBUG: Pode ler o relatório
-    jogador->conheceuMenina = true;  // DEBUG: Já conheceu a menina
-    jogador->meninaLiberada = true;  // DEBUG: Menina liberada para segui-lo
+    jogador->leuRelatorio = false;
+    jogador->conheceuMenina = false;
+    jogador->meninaLiberada = false;
     jogador->estaNoBanheiro = false;
     jogador->finalFeliz = false;
-    jogador->fase2Concluida = true;  // DEBUG: Fase 2 completa
-    jogador->fase3Concluida = false;  // DEBUG: Fase 3 NÃO completa (vai completar agora)
-    jogador->matouBossFinal = false;  // DEBUG: Boss final não morreu ainda
-    jogador->temChaveMisteriosa = true;  // DEBUG: Começar com a chave misteriosa
-    jogador->spawnadoRetornoFase2 = true;  // DEBUG: Já spawnou retorno da fase 2
-    jogador->spawnadoRetornoFase3 = false;  // DEBUG: Ainda NÃO spawnou retorno da fase 3
-    jogador->spawnadoRetornoFase4 = false;  // DEBUG: Ainda não spawnou retorno da fase 4
+    jogador->fase2Concluida = false;
+    jogador->fase3Concluida = false;
+    jogador->matouBossFinal = false;
+    jogador->temChaveMisteriosa = false;
+    jogador->spawnadoRetornoFase2 = false;
+    jogador->spawnadoRetornoFase3 = false;
+    jogador->spawnadoRetornoFase4 = false;
     jogador->zumbisSpawnadosRetorno = 0;
     jogador->tempoSpawnRetorno = 0.0f;
 
