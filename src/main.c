@@ -54,11 +54,11 @@ void detectarPortaNoMapa(Mapa* mapa, Porta* portaPtr, int faseAtual) {
 
     // Fase 1: Porta fixa no lado direito do depósito (posição hardcoded)
     if (faseAtual == 1) {
-        // Porta na coluna 31, entre linhas 10-11 (pixels: x=992, y≈352)
-        Vector2 posPorta = {992, 352};
+        // Porta na coluna 31, entre linhas 12-13 (pixels: x=992, y≈400)
+        Vector2 posPorta = {992, 400};
         criarPorta(portaPtr, posPorta, 2);
-        portaPtr->largura = 32.0f;
-        portaPtr->altura = 64.0f;
+        portaPtr->largura = 64.0f;
+        portaPtr->altura = 96.0f;
         portaPtr->trancada = false;  // Porta do mercado sempre aberta
         printf("Porta do Mercado criada na posicao fixa (%.0f, %.0f) [Area: %.0fx%.0f]\n",
                posPorta.x, posPorta.y, portaPtr->largura, portaPtr->altura);
