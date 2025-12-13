@@ -39,6 +39,7 @@ Recursos* criarRecursos(void) {
     recursos->texturaChave.id = 0;
     recursos->texturaShotgun.id = 0;
     recursos->texturaSMG.id = 0;
+    recursos->documentoIntro.id = 0;
 
     // Inicializar sons
     recursos->sfxTiroPistol.frameCount = 0;
@@ -136,6 +137,7 @@ void carregarRecursos(Recursos* recursos) {
     carregarTextura(&recursos->mesaComFolha, "assets/tiles/Mesa com folha.png", NULL, "Mesa com Folha");
     carregarTextura(&recursos->mesaSemFolha, "assets/tiles/Mesa sem folha.png", NULL, "Mesa sem Folha");
     carregarTextura(&recursos->relatorio, "assets/tiles/Relatorio.png", NULL, "Relatório");
+    carregarTextura(&recursos->documentoIntro, "assets/tiles/DocumentoIntro.png", NULL, "Documento Introdutório");
 
     printf("  - Carregando texturas de zumbis...\n");
     const char* nomesDirecoesZumbi[] = {"frente direita", "frente esquerda", "costas direita", "costas esquerda"};
@@ -423,6 +425,10 @@ void descarregarRecursos(Recursos* recursos) {
     if (texturaValida(recursos->relatorio)) {
         UnloadTexture(recursos->relatorio);
         recursos->relatorio.id = 0;
+    }
+    if (texturaValida(recursos->documentoIntro)) {
+        UnloadTexture(recursos->documentoIntro);
+        recursos->documentoIntro.id = 0;
     }
 
     for (int i = 0; i < 5; i++) {

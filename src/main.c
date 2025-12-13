@@ -278,36 +278,8 @@ int main(void) {
             bool mouseNoBot = CheckCollisionPointRec(mousePos, botaoJogar);
 
             if (mouseNoBot && IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) {
-                if (!jogoIniciado) {
-                    iniciarJogo(&jogador);
-
-                    if (jogador.fase == 4) {
-                        jogador.posicao = certificarPosicaoWalkable(mapaAtual, (Vector2){16 * 32 + 16, 21 * 32 + 16}, 15.0f);
-                        printf("Spawn inicial Fase 4: (linha=21, coluna=16 - meio) -> (%.0f, %.0f)\n",
-                               jogador.posicao.x, jogador.posicao.y);
-                    } else {
-                        jogador.posicao = gerarPosicaoValidaSpawn(mapaAtual, 15.0f);
-                    }
-
-                    jogador.spriteAtual = spriteFrenteDireita;
-                    jogoIniciado = true;
-
-                    // Inicializar loja na fase 1
-                    if (jogador.fase == 1) {
-                        inicializarLoja(&loja, &jogador);
-                    }
-                }
-                jogador.estadoJogo = ESTADO_JOGANDO;
-                printf("Jogo iniciado!\n");
-                
-                // Trocar para música de gameplay
-                if (recursos->musicGameplay.frameCount > 0) {
-                    StopMusicStream(recursos->musicMenu);
-                    musicaAtual = &recursos->musicGameplay;
-                    PlayMusicStream(*musicaAtual);
-                    SetMusicVolume(*musicaAtual, 0.15f);
-                    musicaMenuTocando = false;
-                }
+                jogador.estadoJogo = ESTADO_INTRODUCAO;
+                printf("Mostrando introdução...\n");
             }
 
             BeginDrawing();
@@ -354,6 +326,111 @@ int main(void) {
                 30,
                 WHITE
             );
+
+            EndDrawing();
+            continue;
+        }
+
+        // ========== TELA DE INTRODUÇÃO ==========
+        if (jogador.estadoJogo == ESTADO_INTRODUCAO) {
+            // Permitir pular a introdução com qualquer tecla
+            if (IsKeyPressed(KEY_SPACE) || IsKeyPressed(KEY_ENTER) || IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) {
+                if (!jogoIniciado) {
+                    iniciarJogo(&jogador);
+
+                    if (jogador.fase == 4) {
+                        jogador.posicao = certificarPosicaoWalkable(mapaAtual, (Vector2){16 * 32 + 16, 21 * 32 + 16}, 15.0f);
+                        printf("Spawn inicial Fase 4: (linha=21, coluna=16 - meio) -> (%.0f, %.0f)\n",
+                               jogador.posicao.x, jogador.posicao.y);
+                    } else {
+                        jogador.posicao = gerarPosicaoValidaSpawn(mapaAtual, 15.0f);
+                    }
+
+                    jogador.spriteAtual = spriteFrenteDireita;
+                    jogoIniciado = true;
+
+                    // Inicializar loja na fase 1
+                    if (jogador.fase == 1) {
+                        inicializarLoja(&loja, &jogador);
+                    }
+                }
+                jogador.estadoJogo = ESTADO_JOGANDO;
+                printf("Jogo iniciado!\n");
+                
+                // Trocar para música de gameplay
+                if (recursos->musicGameplay.frameCount > 0) {
+                    StopMusicStream(recursos->musicMenu);
+                    musicaAtual = &recursos->musicGameplay;
+                    PlayMusicStream(*musicaAtual);
+                    SetMusicVolume(*musicaAtual, 0.15f);
+                    musicaMenuTocando = false;
+                }
+            }
+
+            BeginDrawing();
+            ClearBackground(BLACK);
+
+            // Desenhar documento introdutório se disponível
+            if (recursos->documentoIntro.id > 0) {
+                // Calcular escala para preencher a tela mantendo proporção
+                float escalaX = (float)GetScreenWidth() / recursos->documentoIntro.width;
+                float escalaY = (float)GetScreenHeight() / recursos->documentoIntro.height;
+                float escala = (escalaX < escalaY) ? escalaX : escalaY;
+
+                float largura = recursos->documentoIntro.width * escala * 0.9f;
+                float altura = recursos->documentoIntro.height * escala * 0.9f;
+
+                Rectangle destino = {
+                    (GetScreenWidth() - largura) / 2,
+                    (GetScreenHeight() - altura) / 2,
+                    largura,
+                    altura
+                };
+
+                Rectangle origem = {
+                    0, 0,
+                    (float)recursos->documentoIntro.width,
+                    (float)recursos->documentoIntro.height
+                };
+
+                DrawTexturePro(recursos->documentoIntro, origem, destino, (Vector2){0, 0}, 0.0f, WHITE);
+            } else {
+                // Fallback: mostrar texto se a imagem não carregar
+                const char* titulo = "DIARIO PESSOAL";
+                const char* linhas[] = {
+                    "Dia 127 apos o surto...",
+                    "",
+                    "Eu achava que era o ultimo sobrevivente na Terra.",
+                    "Vaguei por meses entre ruinas e mortos-vivos,",
+                    "buscando qualquer sinal de vida.",
+                    "",
+                    "Hoje, finalmente encontrei algo...",
+                    "Um laboratorio abandonado.",
+                    "",
+                    "Mas a verdade que descobri la dentro",
+                    "mudou tudo que eu pensava sobre mim.",
+                    "",
+                    "Eu nao sou humano. Sou um robo.",
+                    "E minha missao verdadeira:",
+                    "Salvar a filha do cientista.",
+                    "",
+                    "Ela e a ULTIMA sobrevivente humana.",
+                    "E eu sou a unica esperanca dela.",
+                    ""
+                };
+
+                int startY = 150;
+                DrawText(titulo, GetScreenWidth() / 2 - MeasureText(titulo, 32) / 2, startY, 32, GOLD);
+                
+                for (int i = 0; i < sizeof(linhas) / sizeof(linhas[0]); i++) {
+                    int larguraLinha = MeasureText(linhas[i], 20);
+                    DrawText(linhas[i], GetScreenWidth() / 2 - larguraLinha / 2, startY + 60 + (i * 25), 20, WHITE);
+                }
+            }
+
+            // Instrução para continuar
+            DrawText("Pressione ESPACO ou ENTER para continuar", 
+                     GetScreenWidth() / 2 - 220, GetScreenHeight() - 50, 20, YELLOW);
 
             EndDrawing();
             continue;

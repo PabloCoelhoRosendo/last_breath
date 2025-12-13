@@ -1,0 +1,52 @@
+INSTRUÇÕES PARA CRIAR DocumentoIntro.png
+==========================================
+
+Crie uma imagem PNG com as seguintes características:
+
+DIMENSÕES: 800x600 pixels (ou proporção similar)
+
+FUNDO: Papel envelhecido/amarelado (tom bege/sépia)
+
+TEXTO (centralizado, fonte estilo máquina de escrever ou manuscrito):
+
+═══════════════════════════════════════════════
+
+                DIÁRIO PESSOAL
+            Dia 127 após o surto...
+
+─────────────────────────────────────────────
+
+Eu achava que era o último sobrevivente na Terra.
+
+Vaguei por meses entre ruínas e mortos-vivos,
+buscando qualquer sinal de vida.
+
+Hoje, finalmente encontrei algo...
+Um laboratório abandonado.
+
+Mas a verdade que descobri lá dentro
+mudou tudo que eu pensava sobre mim.
+
+
+    EU NÃO SOU HUMANO. SOU UM ROBÔ.
+
+
+E minha missão verdadeira:
+Salvar a filha do cientista.
+
+Ela é a ÚLTIMA sobrevivente humana.
+
+E eu sou a única esperança dela.
+
+═══════════════════════════════════════════════
+
+DETALHES VISUAIS:
+- Bordas da página levemente rasgadas/desgastadas
+- Manchas de café ou sujeira para dar aspecto envelhecido
+- Texto em preto ou marrom escuro
+- Título em destaque (maior e/ou sublinhado)
+- A frase sobre ser um robô pode estar circulada ou destacada
+- Opcional: adicionar um pequeno desenho/esquema de um robô ao lado
+
+SALVAR COMO: DocumentoIntro.png
+FORMATO: PNG com transparência nas bordas (opcional)

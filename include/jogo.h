@@ -11,8 +11,9 @@ typedef struct Moeda Moeda;
 
 typedef enum {
     ESTADO_MENU = 0,
-    ESTADO_JOGANDO = 1,
-    ESTADO_PAUSADO = 2
+    ESTADO_INTRODUCAO = 1,
+    ESTADO_JOGANDO = 2,
+    ESTADO_PAUSADO = 3
 } EstadoJogo;
 
 typedef enum {
