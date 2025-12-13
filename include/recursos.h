@@ -19,7 +19,7 @@ typedef struct {
 
     Texture2D zumbis[5][4];
 
-    Texture2D bosses[3][4];
+    Texture2D bosses[4][4];
 
     Texture2D fundoMapa;
 

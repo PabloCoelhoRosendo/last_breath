@@ -162,6 +162,11 @@ int main(void) {
     Texture2D abominationDireita = recursos->bosses[2][3];
     Texture2D abominationEsquerda = recursos->bosses[2][2];
 
+    Texture2D periclesFrente = recursos->bosses[3][0];
+    Texture2D periclesCostas = recursos->bosses[3][1];
+    Texture2D periclesDireita = recursos->bosses[3][3];
+    Texture2D periclesEsquerda = recursos->bosses[3][2];
+
     Player jogador;
     Zumbi *listaZumbis = NULL;
     Boss *listaBosses = NULL;
@@ -819,10 +824,19 @@ int main(void) {
                 Vector2 spawnZumbi = {4 * 32, 10 * 32};  // Coluna 4, linha 10
                 adicionarZumbi(&zumbiBanheiro, spawnZumbi, recursos->zumbis);
 
+                // Boss Pericles spawna no centro do banheiro
+                if (!jogador.periclesSpawnado) {
+                    Vector2 spawnPericles = {12 * 32, 12 * 32};  // Centro do mapa
+                    criarBoss(&listaBosses, BOSS_PERICLES, spawnPericles,
+                             periclesFrente, periclesCostas, periclesDireita, periclesEsquerda);
+                    jogador.periclesSpawnado = true;
+                    printf("Boss Pericles apareceu no banheiro!\n");
+                }
+
                 // Jogador spawna onde a menina estava antes (centro-direita)
                 // Coluna 20, linha 10
                 jogador.posicao = certificarPosicaoWalkable(mapaAtual, (Vector2){20 * 32, 10 * 32}, 15.0f);
-                
+
                 printf("Você entrou no banheiro! Há uma menina e um zumbi!\n");
             }
         }
@@ -857,6 +871,7 @@ int main(void) {
                 
                 // Marcar que saiu do banheiro e que completou todas as fases
                 jogador.estaNoBanheiro = false;
+                jogador.periclesSpawnado = false;
                 jogador.fase = 1;
                 jogador.matouBossFinal = true; // Veio do laboratório
                 jogador.fase2Concluida = true;  // Marca que passou pelo mercado
@@ -902,7 +917,8 @@ int main(void) {
                             
                             // Marcar que saiu do banheiro
                             jogador.estaNoBanheiro = false;
-                            
+                            jogador.periclesSpawnado = false;
+
                             // Voltar textura da loja
                             texturaMapa = recursos->fundoMapa;
 

@@ -465,6 +465,7 @@ void iniciarJogo(Player *jogador) {
     jogador->conheceuMenina = false;
     jogador->meninaLiberada = false;
     jogador->estaNoBanheiro = false;
+    jogador->periclesSpawnado = false;
     jogador->finalFeliz = false;
     jogador->fase2Concluida = false;
     jogador->fase3Concluida = false;

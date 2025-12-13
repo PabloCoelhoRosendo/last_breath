@@ -25,7 +25,7 @@ Recursos* criarRecursos(void) {
         }
     }
 
-    for (int i = 0; i < 3; i++) {
+    for (int i = 0; i < 4; i++) {
         for (int j = 0; j < 4; j++) {
             recursos->bosses[i][j].id = 0;
         }
@@ -155,10 +155,10 @@ void carregarRecursos(Recursos* recursos) {
     }
 
     printf("  - Carregando texturas de bosses...\n");
-    const char* tiposBoss[] = {"prowler", "hunter", "abomination"};
+    const char* tiposBoss[] = {"prowler", "hunter", "abomination", "pericles"};
     const char* direcoesBoss[] = {"frente", "costas", "esquerda", "direita"};
 
-    for (int i = 0; i < 3; i++) {
+    for (int i = 0; i < 4; i++) {
         for (int j = 0; j < 4; j++) {
             char caminho[256];
             snprintf(caminho, sizeof(caminho), "assets/bosses/%s/%s.PNG", tiposBoss[i], direcoesBoss[j]);
@@ -179,6 +179,16 @@ void carregarRecursos(Recursos* recursos) {
             for (int j = 1; j < 4; j++) {
                 if (!texturaValida(recursos->bosses[2][j])) {
                     recursos->bosses[2][j] = recursos->bosses[2][0];
+                }
+            }
+        }
+
+        // Se Pericles não tiver sprites, usar as do Prowler como placeholder
+        if (i == 3) {
+            for (int j = 0; j < 4; j++) {
+                if (!texturaValida(recursos->bosses[3][j]) && texturaValida(recursos->bosses[0][j])) {
+                    recursos->bosses[3][j] = recursos->bosses[0][j];
+                    printf("    * Usando sprite do Prowler como placeholder para Pericles %s\n", direcoesBoss[j]);
                 }
             }
         }
@@ -427,7 +437,7 @@ void descarregarRecursos(Recursos* recursos) {
     unsigned int idsDescarregados[12] = {0};
     int numDescarregados = 0;
 
-    for (int i = 0; i < 3; i++) {
+    for (int i = 0; i < 4; i++) {
         for (int j = 0; j < 4; j++) {
             if (texturaValida(recursos->bosses[i][j])) {
                 bool jaDescarregado = false;

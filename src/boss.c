@@ -40,25 +40,33 @@ void criarBoss(Boss **bosses, TipoBoss tipo, Vector2 posicao, Texture2D spriteFr
             novoBoss->vida = 150;
             novoBoss->velocidade = 2.5f;
             novoBoss->raio = 25.0f;
-            novoBoss->cooldownAtaque = 3.0f; 
+            novoBoss->cooldownAtaque = 3.0f;
             break;
-            
+
         case BOSS_HUNTER:
             novoBoss->vidaMax = 80;
             novoBoss->vida = 80;
             novoBoss->velocidade = 3.0f;
             novoBoss->raio = 20.0f;
-            novoBoss->cooldownAtaque = 0.0f; 
+            novoBoss->cooldownAtaque = 0.0f;
             break;
-            
+
         case BOSS_ABOMINATION:
             novoBoss->vidaMax = 250;
             novoBoss->vida = 250;
-            novoBoss->velocidade = 0.0f; 
+            novoBoss->velocidade = 0.0f;
             novoBoss->raio = 60.0f;
-            novoBoss->cooldownAtaque = 0.4f; 
+            novoBoss->cooldownAtaque = 0.4f;
             break;
-            
+
+        case BOSS_PERICLES:
+            novoBoss->vidaMax = 150;
+            novoBoss->vida = 150;
+            novoBoss->velocidade = 2.5f;
+            novoBoss->raio = 50.0f;
+            novoBoss->cooldownAtaque = 3.0f;
+            break;
+
         default:
             novoBoss->vidaMax = 100;
             novoBoss->vida = 100;
@@ -236,7 +244,7 @@ void atualizarBossComPathfinding(Boss **bosses, Player *jogador, Bala **balas, f
                     if (recursos != NULL && recursos->sfxBossFase3.frameCount > 0) {
                         PlaySound(recursos->sfxBossFase3);
                     }
-                    
+
                     int numProjeteis = 16;
                     float anguloBase = bossAtual->anguloRotacao;
 
@@ -268,6 +276,74 @@ void atualizarBossComPathfinding(Boss **bosses, Player *jogador, Bala **balas, f
                 break;
             }
 
+            case BOSS_PERICLES: {
+                float dx = jogador->posicao.x - bossAtual->posicao.x;
+                float dy = jogador->posicao.y - bossAtual->posicao.y;
+                float distancia = sqrtf(dx * dx + dy * dy);
+
+                bool usarPathfinding = (mapa != NULL && grid != NULL && distancia > TAMANHO_TILE * 2.0f);
+
+                if (usarPathfinding) {
+                    if (precisaRecalcularCaminho(&bossAtual->caminho, jogador->posicao, deltaTime)) {
+                        calcularCaminho(grid, mapa, bossAtual->posicao, jogador->posicao, &bossAtual->caminho);
+                    }
+
+                    if (bossAtual->caminho.valido && bossAtual->caminho.tamanho > 0) {
+                        atualizarSeguimentoCaminho(&bossAtual->caminho, bossAtual->posicao, TAMANHO_TILE * 0.5f);
+                        Vector2 direcao = obterDirecaoCaminho(&bossAtual->caminho, bossAtual->posicao);
+
+                        if (distancia > 0) {
+                            bossAtual->posicao.x += direcao.x * bossAtual->velocidade;
+                            bossAtual->posicao.y += direcao.y * bossAtual->velocidade;
+                        }
+                    } else {
+                        if (distancia > 0) {
+                            bossAtual->posicao.x += (dx / distancia) * bossAtual->velocidade;
+                            bossAtual->posicao.y += (dy / distancia) * bossAtual->velocidade;
+                        }
+                    }
+                } else {
+                    if (distancia > 0) {
+                        bossAtual->posicao.x += (dx / distancia) * bossAtual->velocidade;
+                        bossAtual->posicao.y += (dy / distancia) * bossAtual->velocidade;
+                    }
+                }
+
+                float absDx = fabsf(dx);
+                float absDy = fabsf(dy);
+
+                if (absDx > absDy) {
+                    if (dx > 0) {
+                        bossAtual->spriteAtual = bossAtual->spriteDireita;
+                    } else {
+                        bossAtual->spriteAtual = bossAtual->spriteEsquerda;
+                    }
+                } else {
+                    if (dy > 0) {
+                        bossAtual->spriteAtual = bossAtual->spriteFrente;
+                    } else {
+                        bossAtual->spriteAtual = bossAtual->spriteCostas;
+                    }
+                }
+
+                if (bossAtual->tempoAtaque >= bossAtual->cooldownAtaque) {
+                    bossAtual->atacando = true;
+
+                    // Tocar som do boss Pericles (por enquanto usa o mesmo do Prowler)
+                    if (recursos != NULL && recursos->sfxBossFase1.frameCount > 0) {
+                        PlaySound(recursos->sfxBossFase1);
+                    }
+
+                    if (distancia <= 160.0f && !jogador->modoDeus) {
+                        jogador->vida -= 18;
+                    }
+
+                    bossAtual->tempoAtaque = 0.0f;
+                    bossAtual->atacando = false;
+                }
+                break;
+            }
+
             default:
                 break;
         }
@@ -286,10 +362,14 @@ void desenharBoss(Boss *bosses) {
         }
         
         if (bossAtual->spriteAtual.id > 0) {
-            float escala = 0.15f; 
+            float escala = 0.15f;
 
             if (bossAtual->tipo == BOSS_ABOMINATION) {
-                escala = 0.30f; 
+                escala = 0.30f;
+            }
+
+            if (bossAtual->tipo == BOSS_PERICLES) {
+                escala = 0.30f;
             }
 
             float largura = bossAtual->spriteAtual.width * escala;
@@ -315,19 +395,22 @@ void desenharBoss(Boss *bosses) {
             Color corBoss;
             switch (bossAtual->tipo) {
                 case BOSS_PROWLER:
-                    corBoss = PURPLE; 
+                    corBoss = PURPLE;
                     break;
                 case BOSS_HUNTER:
-                    corBoss = ORANGE; 
+                    corBoss = ORANGE;
                     break;
                 case BOSS_ABOMINATION:
-                    corBoss = DARKGREEN; 
+                    corBoss = DARKGREEN;
+                    break;
+                case BOSS_PERICLES:
+                    corBoss = DARKBLUE;
                     break;
                 default:
                     corBoss = BLACK;
                     break;
             }
-            
+
             // Fica vermelho ao levar dano
             if (bossAtual->tempoDano > 0.0f) {
                 corBoss = RED;
@@ -337,13 +420,13 @@ void desenharBoss(Boss *bosses) {
             DrawCircleLines((int)bossAtual->posicao.x, (int)bossAtual->posicao.y, bossAtual->raio, DARKGRAY);
         }
         
-        float barraLargura = 60.0f;
+        float barraLargura = (bossAtual->tipo == BOSS_ABOMINATION || bossAtual->tipo == BOSS_PERICLES) ? 120.0f : 60.0f;
         float barraAltura = 8.0f;
         float porcentagemVida = (float)bossAtual->vida / (float)bossAtual->vidaMax;
 
         float offsetY;
         if (bossAtual->spriteAtual.id > 0) {
-            float escala = (bossAtual->tipo == BOSS_ABOMINATION) ? 0.30f : 0.15f;
+            float escala = (bossAtual->tipo == BOSS_ABOMINATION || bossAtual->tipo == BOSS_PERICLES) ? 0.30f : 0.15f;
             offsetY = bossAtual->spriteAtual.height * escala / 2 + 15.0f;
         } else {
             offsetY = bossAtual->raio + 15.0f;
@@ -354,11 +437,15 @@ void desenharBoss(Boss *bosses) {
         DrawRectangleV(barraPos, (Vector2){barraLargura, barraAltura}, RED);
         DrawRectangleV(barraPos, (Vector2){barraLargura * porcentagemVida, barraAltura}, GREEN);
         DrawRectangleLinesEx((Rectangle){barraPos.x, barraPos.y, barraLargura, barraAltura}, 1, BLACK);
-        
+
         if (bossAtual->tipo == BOSS_PROWLER && bossAtual->atacando) {
             DrawCircleLines((int)bossAtual->posicao.x, (int)bossAtual->posicao.y, 80.0f, RED);
         }
-        
+
+        if (bossAtual->tipo == BOSS_PERICLES && bossAtual->atacando) {
+            DrawCircleLines((int)bossAtual->posicao.x, (int)bossAtual->posicao.y, 160.0f, BLUE);
+        }
+
         bossAtual = bossAtual->proximo;
     }
 }
@@ -459,17 +546,24 @@ void verificarColisoesBossBala(Boss **bosses, Bala **balas, Item *itemProgresso,
                         adicionarMoeda(moedas, bossAtual->posicao, 500);
                         printf("Boss Abomination morreu! Dropou 500 moedas!\n");
                     }
-                    
+
                     // Dropar a CHAVE MISTERIOSA que estava no estomago do monstro
                     if (itemProgresso != NULL && !itemProgresso->ativo) {
                         criarItem(itemProgresso, ITEM_CHAVE, posicaoItem1);
                         printf("O monstro cuspiu algo... A CHAVE MISTERIOSA!\n");
                     }
-                    
+
                     // Marcar que matou o boss final
                     if (jogador != NULL && jogador->fase == 4) {
                         jogador->matouBossFinal = true;
                         printf("Boss final derrotado! Você encontrou a chave!\n");
+                    }
+                    break;
+                case BOSS_PERICLES:
+                    // Boss Pericles dropa moedas
+                    if (moedas != NULL) {
+                        adicionarMoeda(moedas, bossAtual->posicao, 175);
+                        printf("Boss Pericles morreu! Dropou 175 moedas!\n");
                     }
                     break;
                 default:

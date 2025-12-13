@@ -41,7 +41,8 @@ typedef enum {
     BOSS_NENHUM = 0,
     BOSS_PROWLER = 1,
     BOSS_HUNTER = 2,
-    BOSS_ABOMINATION = 3
+    BOSS_ABOMINATION = 3,
+    BOSS_PERICLES = 4
 } TipoBoss;
 
 typedef struct {
@@ -108,6 +109,7 @@ typedef struct {
     bool conheceuMenina;
     bool meninaLiberada;
     bool estaNoBanheiro;  // Flag para saber se está no mapa do banheiro
+    bool periclesSpawnado; // Flag para saber se o boss Pericles já foi spawnado no banheiro
     bool finalFeliz;
     bool fase2Concluida; // Marca se a fase 2 (mercado) já foi completada
     bool fase3Concluida; // Marca se a fase 3 (rua) já foi completada
