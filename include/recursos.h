@@ -42,6 +42,7 @@ typedef struct {
     Texture2D mesaComFolha;
     Texture2D mesaSemFolha;
     Texture2D relatorio;
+    Texture2D documentoIntro;
 
     // Texturas da porta do laboratório
     Texture2D portaLabTrancada;

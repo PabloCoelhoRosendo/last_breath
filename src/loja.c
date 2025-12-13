@@ -17,7 +17,7 @@ void inicializarLoja(Loja *loja, Player *jogador) {
         "Municao Pistol (30 balas)",
         "Recarregue sua pistola",
         50,
-        true
+        false  // Desabilitado - pistola tem munição infinita
     };
     
     loja->itens[ITEM_LOJA_MUNICAO_SHOTGUN] = (ItemLoja){
@@ -165,6 +165,9 @@ void atualizarLoja(Loja *loja, Player *jogador, const Mapa *mapa, Recursos *recu
         
         // Detectar hover sobre itens
         for (int i = 0; i < ITEM_LOJA_TOTAL; i++) {
+            // Pular munição de pistola
+            if (i == ITEM_LOJA_MUNICAO_PISTOL) continue;
+            
             Rectangle itemRect = {
                 menuX + 10,
                 itemY + (i * 55),
@@ -218,13 +221,8 @@ void comprarItem(Loja *loja, Player *jogador, TipoItemLoja item, Recursos *recur
     
     switch (item) {
         case ITEM_LOJA_MUNICAO_PISTOL:
-            for (int i = 0; i < 3; i++) {
-                if (jogador->slots[i].tipo == ARMA_PISTOL) {
-                    jogador->slots[i].municaoTotal += 30;
-                    printf("Municao adquirida: +30 projeteis\n");
-                    break;
-                }
-            }
+            // Pistola tem munição infinita - item desabilitado
+            printf("A pistola possui municao infinita!\n");
             break;
             
         case ITEM_LOJA_MUNICAO_SHOTGUN:
@@ -357,6 +355,9 @@ void desenharLoja(Loja *loja, Player *jogador, const Mapa *mapa) {
         // Lista de itens
         int itemY = menuY + 70;
         for (int i = 0; i < ITEM_LOJA_TOTAL; i++) {
+            // Pular munição de pistola (não exibir na lista)
+            if (i == ITEM_LOJA_MUNICAO_PISTOL) continue;
+            
             ItemLoja *item = &loja->itens[i];
             
             Color corItem = item->disponivel ? WHITE : DARKGRAY;
