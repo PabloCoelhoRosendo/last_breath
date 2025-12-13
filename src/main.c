@@ -812,17 +812,13 @@ int main(void) {
                 // Desativar loja no banheiro
                 loja.ativo = false;
                 
-                // Spawnar menina e zumbi no banheiro (layout da imagem)
+                // Spawnar menina no banheiro
                 // Menina no lado esquerdo (walkable)
                 menina.posicao = (Vector2){7 * 32, 17 * 32};  // Coluna 7, linha 17
                 menina.ativa = true;
                 menina.seguindo = false;
                 jogador.conheceuMenina = true;
                 carregarSpritesMenina(&menina, recursos);  // Carregar sprites
-
-                // Zumbi spawna na esquerda (perto dos vasos sanitários)
-                Vector2 spawnZumbi = {4 * 32, 10 * 32};  // Coluna 4, linha 10
-                adicionarZumbi(&zumbiBanheiro, spawnZumbi, recursos->zumbis);
 
                 // Boss Pericles spawna no centro do banheiro
                 if (!jogador.periclesSpawnado) {
@@ -837,7 +833,7 @@ int main(void) {
                 // Coluna 20, linha 10
                 jogador.posicao = certificarPosicaoWalkable(mapaAtual, (Vector2){20 * 32, 10 * 32}, 15.0f);
 
-                printf("Você entrou no banheiro! Há uma menina e um zumbi!\n");
+                printf("Você entrou no banheiro! Há uma menina e o Boss Pericles!\n");
             }
         }
         
