@@ -43,6 +43,10 @@ typedef struct {
     Texture2D mesaSemFolha;
     Texture2D relatorio;
 
+    // Texturas da porta do laboratório
+    Texture2D portaLabTrancada;
+    Texture2D portaLabAberta;
+
     // Sons do jogo
     Sound sfxTiroPistol;
     Sound sfxTiroShotgun;

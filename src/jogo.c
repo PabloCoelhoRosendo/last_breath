@@ -427,7 +427,7 @@ void iniciarJogo(Player *jogador) {
     jogador->posicao = (Vector2){512, 384};
     jogador->vida = 100;
     jogador->tempoTotal = 0.0f;
-    jogador->fase = 1;
+    jogador->fase = 3;  // DEBUG: Começar na fase 3
     jogador->velocidadeBase = 3.0f;
     jogador->direcaoVertical = 0;
     jogador->direcaoHorizontal = 1;
@@ -439,9 +439,9 @@ void iniciarJogo(Player *jogador) {
     jogador->timerBoss = 0.0f;
     jogador->bossSpawnado = false;
 
-    jogador->temChave = false;
+    jogador->temChave = true;   // DEBUG
     jogador->temChaveMisteriosa = false;
-    jogador->temMapa = false;
+    jogador->temMapa = true;    // DEBUG: Já tem o mapa para abrir porta do lab
     jogador->temCure = false;
     jogador->jogoVencido = false;
 
@@ -463,16 +463,16 @@ void iniciarJogo(Player *jogador) {
     jogador->modoDeus = false; // Modo Deus desativado por padrão
 
     jogador->leuRelatorio = false;
-    jogador->conheceuMenina = false;
-    jogador->meninaLiberada = false;
+    jogador->conheceuMenina = true;   // DEBUG
+    jogador->meninaLiberada = true;   // DEBUG
     jogador->estaNoBanheiro = false;
     jogador->periclesSpawnado = false;
     jogador->finalFeliz = false;
-    jogador->fase2Concluida = false;
-    jogador->fase3Concluida = false;
+    jogador->fase2Concluida = true;   // DEBUG
+    jogador->fase3Concluida = false;  // Fase 3 ainda não completa
     jogador->matouBossFinal = false;
     jogador->temChaveMisteriosa = false;
-    jogador->spawnadoRetornoFase2 = false;
+    jogador->spawnadoRetornoFase2 = true;   // DEBUG
     jogador->spawnadoRetornoFase3 = false;
     jogador->spawnadoRetornoFase4 = false;
     jogador->zumbisSpawnadosRetorno = 0;

@@ -574,6 +574,13 @@ int main(void) {
                     jogador.posicao = posicaoAnteriorJogador;
                 }
             }
+
+            // Colisão com porta final na fase 4
+            if (jogador.fase == 4 && portaFinal.ativa) {
+                if (verificarColisaoCirculos(jogador.posicao, 15.0f, portaFinal.posicao, 30.0f)) {
+                    jogador.posicao = posicaoAnteriorJogador;
+                }
+            }
         }
 
         Zumbi *zumbiAtual = listaZumbis;
@@ -950,17 +957,22 @@ int main(void) {
             }
         }
 
-        // Verificar BAD ENDING - jogador entrou na porta sem a menina
-        if (jogador.fase == 4 && portaFinal.ativa && !jogador.meninaLiberada && !portaFinal.trancada) {
+        // Verificar interação com porta final
+        if (jogador.fase == 4 && portaFinal.ativa && !portaFinal.trancada) {
             float distJogadorPortaFinal = sqrtf(
                 (jogador.posicao.x - portaFinal.posicao.x) * (jogador.posicao.x - portaFinal.posicao.x) +
                 (jogador.posicao.y - portaFinal.posicao.y) * (jogador.posicao.y - portaFinal.posicao.y)
             );
 
-            if (distJogadorPortaFinal <= 50.0f && IsKeyPressed(KEY_E)) {
+            if (distJogadorPortaFinal <= 80.0f && IsKeyPressed(KEY_E)) {
                 jogador.jogoVencido = true;
-                jogador.finalFeliz = false;
-                printf("=== BAD ENDING: Você escapou sozinho... ===\n");
+                if (jogador.meninaLiberada) {
+                    jogador.finalFeliz = true;
+                    printf("=== HAPPY ENDING! Você salvou a menina! ===\n");
+                } else {
+                    jogador.finalFeliz = false;
+                    printf("=== BAD ENDING: Você escapou sozinho... ===\n");
+                }
             }
         }
 
@@ -1180,7 +1192,7 @@ int main(void) {
                 criarEscrivaninha(&escrivaninha, (Vector2){512, 175});
 
                 // Criar porta final (BAD ENDING) ao lado da escrivaninha
-                criarPorta(&portaFinal, (Vector2){612, 150}, 5);  // fase 5 = ending
+                criarPorta(&portaFinal, (Vector2){680, 150}, 5);  // fase 5 = ending
 
                 // Se já leu o relatório, manter tudo destrancado
                 if (jogador.leuRelatorio) {
@@ -1397,8 +1409,8 @@ int main(void) {
             float dx = jogador.posicao.x - portaRetorno3.posicao.x;
             float dy = jogador.posicao.y - portaRetorno3.posicao.y;
             float distancia = sqrtf(dx * dx + dy * dy);
-            
-            if (distancia <= 60.0f && IsKeyPressed(KEY_E)) {
+
+            if (distancia <= 80.0f && IsKeyPressed(KEY_E)) {
                 if (!portaRetorno3.ativa) {
                     printf("A porta está trancada. Explore o laboratório.\n");
                 } else {
@@ -1614,27 +1626,56 @@ int main(void) {
 
             // Desenhar porta final na fase 4
             if (jogador.fase == 4 && portaFinal.ativa) {
-                DrawRectangle(
-                    (int)portaFinal.posicao.x - 25,
-                    (int)portaFinal.posicao.y - 40,
-                    50, 80, DARKGRAY
-                );
-                DrawRectangleLines(
-                    (int)portaFinal.posicao.x - 25,
-                    (int)portaFinal.posicao.y - 40,
-                    50, 80, RED
-                );
-                DrawText("SAIDA", (int)portaFinal.posicao.x - 25, (int)portaFinal.posicao.y - 50, 12, RED);
+                // Selecionar textura baseado no estado do boss
+                Texture2D texturaPorta = jogador.matouBossFinal ?
+                                         recursos->portaLabAberta :
+                                         recursos->portaLabTrancada;
+
+                // Tamanho fixo para ambas as texturas (garante mesmo tamanho)
+                float larguraFixa = 100.0f;
+                float alturaFixa = 140.0f;
+
+                if (texturaPorta.id > 0) {
+                    Rectangle destino = {
+                        portaFinal.posicao.x - larguraFixa / 2,
+                        portaFinal.posicao.y - alturaFixa / 2,
+                        larguraFixa,
+                        alturaFixa
+                    };
+
+                    Rectangle origem = {
+                        0, 0,
+                        (float)texturaPorta.width,
+                        (float)texturaPorta.height
+                    };
+
+                    DrawTexturePro(texturaPorta, origem, destino, (Vector2){0, 0}, 0.0f, WHITE);
+                } else {
+                    // Fallback: desenhar retângulo se textura não carregou
+                    Color corPorta = jogador.matouBossFinal ? GREEN : DARKGRAY;
+                    DrawRectangle(
+                        (int)portaFinal.posicao.x - (int)(larguraFixa / 2),
+                        (int)portaFinal.posicao.y - (int)(alturaFixa / 2),
+                        (int)larguraFixa, (int)alturaFixa, corPorta
+                    );
+                    DrawRectangleLines(
+                        (int)portaFinal.posicao.x - (int)(larguraFixa / 2),
+                        (int)portaFinal.posicao.y - (int)(alturaFixa / 2),
+                        (int)larguraFixa, (int)alturaFixa, RED
+                    );
+                }
 
                 float dist = sqrtf(
                     (jogador.posicao.x - portaFinal.posicao.x) * (jogador.posicao.x - portaFinal.posicao.x) +
                     (jogador.posicao.y - portaFinal.posicao.y) * (jogador.posicao.y - portaFinal.posicao.y)
                 );
-                if (dist <= 50.0f) {
-                    if (portaFinal.trancada) {
-                        DrawText("TRANCADA - Leia o relatorio", (int)portaFinal.posicao.x - 100, (int)portaFinal.posicao.y + 50, 14, RED);
+                if (dist <= 80.0f) {
+                    if (!jogador.matouBossFinal) {
+                        DrawText("TRANCADA - Derrote o boss!", (int)portaFinal.posicao.x - 100, (int)portaFinal.posicao.y + 50, 14, RED);
+                    } else if (portaFinal.trancada) {
+                        DrawText("Leia o relatório!", (int)portaFinal.posicao.x - 60, (int)portaFinal.posicao.y + 50, 14, YELLOW);
                     } else {
-                        DrawText("Pressione E para sair", (int)portaFinal.posicao.x - 70, (int)portaFinal.posicao.y + 50, 14, YELLOW);
+                        DrawText("Pressione E para sair", (int)portaFinal.posicao.x - 70, (int)portaFinal.posicao.y + 50, 14, GREEN);
                     }
                 }
             }
@@ -1808,20 +1849,8 @@ int main(void) {
                 }
             }
             
-            // Desenhar porta de retorno ao mercado (esquerda) na fase 3
+            // Porta de retorno ao mercado (esquerda) na fase 3 (invisível)
             if (portaRetorno2.ativa && jogador.fase == 3) {
-                DrawRectangle(
-                    (int)portaRetorno2.posicao.x - 30,
-                    (int)portaRetorno2.posicao.y - 40,
-                    60, 80, (Color){50, 180, 50, 255}  // Verde escuro
-                );
-                DrawRectangleLines(
-                    (int)portaRetorno2.posicao.x - 30,
-                    (int)portaRetorno2.posicao.y - 40,
-                    60, 80, BLACK
-                );
-                DrawText("MERCADO", (int)portaRetorno2.posicao.x - 35, (int)portaRetorno2.posicao.y - 50, 10, WHITE);
-                
                 float distPortaMercado = sqrtf(
                     (jogador.posicao.x - portaRetorno2.posicao.x) * (jogador.posicao.x - portaRetorno2.posicao.x) +
                     (jogador.posicao.y - portaRetorno2.posicao.y) * (jogador.posicao.y - portaRetorno2.posicao.y)
@@ -1831,20 +1860,8 @@ int main(void) {
                 }
             }
             
-            // Desenhar porta para LABORATORIO na fase 3
+            // Porta para LABORATORIO na fase 3 (invisível - detectada pelo tile do mapa)
             if (porta.ativa && jogador.fase == 3) {
-                DrawRectangle(
-                    (int)porta.posicao.x - 30,
-                    (int)porta.posicao.y - 40,
-                    60, 80, (Color){100, 50, 150, 255}  // Roxo escuro
-                );
-                DrawRectangleLines(
-                    (int)porta.posicao.x - 30,
-                    (int)porta.posicao.y - 40,
-                    60, 80, BLACK
-                );
-                DrawText("LAB", (int)porta.posicao.x - 15, (int)porta.posicao.y - 50, 12, WHITE);
-                
                 float distPortaLab = sqrtf(
                     (jogador.posicao.x - porta.posicao.x) * (jogador.posicao.x - porta.posicao.x) +
                     (jogador.posicao.y - porta.posicao.y) * (jogador.posicao.y - porta.posicao.y)
@@ -1858,27 +1875,13 @@ int main(void) {
                 }
             }
             
-            // Desenhar porta de retorno à RUA (inferior) na fase 4
+            // Porta de retorno à RUA (inferior) na fase 4 (invisível)
             if (jogador.fase == 4) {
-                Color corPorta = portaRetorno3.ativa ? (Color){50, 180, 50, 255} : (Color){120, 50, 50, 255}; // Verde se ativa, vermelho se trancada
-                
-                DrawRectangle(
-                    (int)portaRetorno3.posicao.x - 30,
-                    (int)portaRetorno3.posicao.y - 40,
-                    60, 80, corPorta
-                );
-                DrawRectangleLines(
-                    (int)portaRetorno3.posicao.x - 30,
-                    (int)portaRetorno3.posicao.y - 40,
-                    60, 80, BLACK
-                );
-                DrawText("RUA", (int)portaRetorno3.posicao.x - 15, (int)portaRetorno3.posicao.y - 50, 10, WHITE);
-                
                 float distPortaRua = sqrtf(
                     (jogador.posicao.x - portaRetorno3.posicao.x) * (jogador.posicao.x - portaRetorno3.posicao.x) +
                     (jogador.posicao.y - portaRetorno3.posicao.y) * (jogador.posicao.y - portaRetorno3.posicao.y)
                 );
-                if (distPortaRua <= 60.0f) {
+                if (distPortaRua <= 80.0f) {
                     if (portaRetorno3.ativa) {
                         DrawText("Pressione E para voltar a RUA", (int)portaRetorno3.posicao.x - 110, (int)portaRetorno3.posicao.y + 50, 14, GREEN);
                     } else {

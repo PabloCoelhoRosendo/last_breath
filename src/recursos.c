@@ -137,6 +137,10 @@ void carregarRecursos(Recursos* recursos) {
     carregarTextura(&recursos->mesaSemFolha, "assets/tiles/Mesa sem folha.png", NULL, "Mesa sem Folha");
     carregarTextura(&recursos->relatorio, "assets/tiles/Relatorio.png", NULL, "Relatório");
 
+    printf("  - Carregando texturas da porta do laboratório...\n");
+    carregarTextura(&recursos->portaLabTrancada, "assets/tiles/Porta lab.png", NULL, "Porta Lab Trancada");
+    carregarTextura(&recursos->portaLabAberta, "assets/tiles/Porta lab aberta.png", NULL, "Porta Lab Aberta");
+
     printf("  - Carregando texturas de zumbis...\n");
     const char* nomesDirecoesZumbi[] = {"frente direita", "frente esquerda", "costas direita", "costas esquerda"};
 
@@ -423,6 +427,16 @@ void descarregarRecursos(Recursos* recursos) {
     if (texturaValida(recursos->relatorio)) {
         UnloadTexture(recursos->relatorio);
         recursos->relatorio.id = 0;
+    }
+
+    // Descarregar texturas da porta do laboratório
+    if (texturaValida(recursos->portaLabTrancada)) {
+        UnloadTexture(recursos->portaLabTrancada);
+        recursos->portaLabTrancada.id = 0;
+    }
+    if (texturaValida(recursos->portaLabAberta)) {
+        UnloadTexture(recursos->portaLabAberta);
+        recursos->portaLabAberta.id = 0;
     }
 
     for (int i = 0; i < 5; i++) {
