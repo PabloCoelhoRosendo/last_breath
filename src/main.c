@@ -1851,7 +1851,7 @@ int main(void) {
                 );
                 if (distPortaLab <= 60.0f) {
                     if (porta.trancada) {
-                        DrawText("Porta trancada! Precisa do MAPA", (int)porta.posicao.x - 120, (int)porta.posicao.y + 50, 14, RED);
+                        DrawText("Porta trancada! Precisa da CHAVE", (int)porta.posicao.x - 120, (int)porta.posicao.y + 50, 14, RED);
                     } else {
                         DrawText("Pressione E para ir ao LABORATORIO", (int)porta.posicao.x - 130, (int)porta.posicao.y + 50, 14, YELLOW);
                     }
