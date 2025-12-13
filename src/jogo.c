@@ -333,7 +333,8 @@ void recarregarArma(Player *jogador, Recursos *recursos) {
     
 
     if (armaAtual->penteAtual >= armaAtual->penteMax) return;
-    if (armaAtual->municaoTotal <= 0) return;
+    // Pistola tem munição infinita, então pode sempre recarregar
+    if (armaAtual->tipo != ARMA_PISTOL && armaAtual->municaoTotal <= 0) return;
     
 
     jogador->estaRecarregando = true;
@@ -502,12 +503,18 @@ void atualizarJogoComPathfinding(Player *jogador, Zumbi **zumbis, Bala **balas, 
         if (jogador->tempoRecargaAtual <= 0.0f) {
 
             int municaoNecessaria = armaAtual->penteMax - armaAtual->penteAtual;
-            if (armaAtual->municaoTotal >= municaoNecessaria) {
+            
+            // Pistola tem munição infinita
+            if (armaAtual->tipo == ARMA_PISTOL) {
                 armaAtual->penteAtual = armaAtual->penteMax;
-                armaAtual->municaoTotal -= municaoNecessaria;
             } else {
-                armaAtual->penteAtual += armaAtual->municaoTotal;
-                armaAtual->municaoTotal = 0;
+                if (armaAtual->municaoTotal >= municaoNecessaria) {
+                    armaAtual->penteAtual = armaAtual->penteMax;
+                    armaAtual->municaoTotal -= municaoNecessaria;
+                } else {
+                    armaAtual->penteAtual += armaAtual->municaoTotal;
+                    armaAtual->municaoTotal = 0;
+                }
             }
             jogador->estaRecarregando = false;
             jogador->tempoRecargaAtual = 0.0f;
