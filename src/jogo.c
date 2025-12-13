@@ -460,7 +460,7 @@ void iniciarJogo(Player *jogador) {
     jogador->cooldownDanoBala = 0.0f;
     jogador->cooldownDanoZumbi = 0.0f;
 
-    jogador->modoDeus = false; // Modo Deus desativado por padrão
+    jogador->modoDeus = false; 
 
     jogador->leuRelatorio = false;
     jogador->conheceuMenina = false;

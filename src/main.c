@@ -1062,6 +1062,7 @@ int main(void) {
 
         // Não verificar porta principal se estiver perto da porta do banheiro na fase 1
         bool pertoDaPortaBanheiro = false;
+        bool transicaoRealizadaNesteFrame = false;  // Flag para evitar dupla transição no mesmo frame
         if (jogador.fase == 1 && portaBanheiro.ativa) {
             float distBanheiro = sqrtf(
                 (jogador.posicao.x - portaBanheiro.posicao.x) * (jogador.posicao.x - portaBanheiro.posicao.x) +
@@ -1080,6 +1081,7 @@ int main(void) {
             } else if (porta.faseDestino == 4) {
                 jogador.fase3Concluida = true; // Completou rua, indo para laboratório
                 printf("Fase 3 (RUA) marcada como concluída!\n");
+                transicaoRealizadaNesteFrame = true;  // Evitar que portaRetorno3 seja ativada no mesmo frame
             }
 
             jogador.fase = porta.faseDestino;
@@ -1482,7 +1484,8 @@ int main(void) {
         }
         
         // Verificar interação com porta de retorno à RUA (fase 4 -> fase 3)
-        if (jogador.fase == 4) {
+        // Não verificar se acabamos de entrar na fase 4 neste frame (evita dupla transição)
+        if (jogador.fase == 4 && !transicaoRealizadaNesteFrame) {
             float dx = jogador.posicao.x - portaRetorno3.posicao.x;
             float dy = jogador.posicao.y - portaRetorno3.posicao.y;
             float distancia = sqrtf(dx * dx + dy * dy);
